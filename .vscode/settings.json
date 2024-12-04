@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "tusb.h": "c",
+        "qpc.h": "c",
+        "tusb_option.h": "c"
+    }
+}
