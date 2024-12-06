@@ -32,6 +32,9 @@
 #ifndef BSP_H_
 #define BSP_H_
 
+#include "serial_io_interface.h"
+#include "stdint.h"
+
 #define BSP_TICKS_PER_SEC    100U
 
 void BSP_start(void);
@@ -42,7 +45,18 @@ void BSP_terminate(int16_t result);
 void BSP_randomSeed(uint32_t seed); // random seed
 uint32_t BSP_random(void);          // pseudo-random generator
 
+/**
+ ***************************************************************************************************
+ * @brief   Functions for blinky LED
+ **************************************************************************************************/
 void BSP_ledOn(void);
 void BSP_ledOff(void);
+
+/**
+ ***************************************************************************************************
+ * @brief   Retrieve Serial IO interface for the USB Interface serial comms channels
+ **************************************************************************************************/
+const Serial_IO_T *BSP_Get_Serial_IO_Interface_USB0();
+const Serial_IO_T *BSP_Get_Serial_IO_Interface_USB1();
 
 #endif // BSP_H_

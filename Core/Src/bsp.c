@@ -36,6 +36,8 @@
 #include "usb.h"
 #include "bsp.h"                 // Board Support Package
 #include "pubsub_signals.h"
+#include "app_cli.h"
+#include "tusb.h"
 
 #include "stm32g4xx_hal.h"
 // add other drivers if necessary...
@@ -47,6 +49,19 @@
 #ifdef Q_SPY
 #error The Simple Blinky Application does not support Spy build configuration
 #endif
+#define USB_INTERFACE_CLI    0
+#define USB_INTERFACE_PC_COM 1
+// #define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
+
+// Static Function Declarations
+
+static uint16_t USB0_TransmitData(const uint8_t *data_ptr, const uint16_t data_len);
+static uint16_t USB0_ReceiveData(uint8_t *data_ptr, const uint16_t max_data_len);
+static void USB0_RegisterDataReadyCB(Serial_IO_Data_Ready_Callback cb, void *cb_data);
+
+static uint16_t USB1_TransmitData(const uint8_t *data_ptr, const uint16_t data_len);
+static uint16_t USB1_ReceiveData(uint8_t *data_ptr, const uint16_t max_data_len);
+static void USB1_RegisterDataReadyCB(Serial_IO_Data_Ready_Callback cb, void *cb_data);
 
 // QP Priorities for Active Objects must be unique
 // Lower number is lower priority
@@ -55,8 +70,100 @@ typedef enum
 {
     AO_RESERVED = 0U,
     AO_PRIO_BLINKY,
+    AO_PRIO_APP_CLI,
     AO_PRIO_USB,
 } AO_Priority_T;
+
+static Serial_IO_Data_Ready_Callback s_usb0_data_ready_cb = 0;
+static void *s_usb0_data_ready_cb_data                    = 0;
+
+static Serial_IO_Data_Ready_Callback s_usb1_data_ready_cb = 0;
+static void *s_usb1_data_ready_cb_data                    = 0;
+
+const Serial_IO_T s_bsp_serial_io_usb0 = {
+    .tx_func          = USB0_TransmitData,
+    .rx_func          = USB0_ReceiveData,
+    .register_cb_func = USB0_RegisterDataReadyCB,
+};
+
+static const Serial_IO_T s_bsp_serial_io_usb1 = {
+    .tx_func          = USB1_TransmitData,
+    .rx_func          = USB1_ReceiveData,
+    .register_cb_func = USB1_RegisterDataReadyCB,
+};
+
+
+
+/**
+ ***************************************************************************************************
+ * @brief   Functions for USB
+ **************************************************************************************************/
+
+static uint16_t USB0_TransmitData(const uint8_t *data_ptr, const uint16_t data_len)
+{
+    uint16_t n_written = tud_cdc_n_write(USB_INTERFACE_CLI, data_ptr, data_len);
+    tud_cdc_n_write_flush(USB_INTERFACE_CLI);
+
+    return n_written;
+}
+
+static uint16_t USB0_ReceiveData(uint8_t *data_ptr, const uint16_t max_data_len)
+{
+    uint32_t count = 0;
+    if (tud_cdc_n_available(USB_INTERFACE_CLI))
+    {
+        count = tud_cdc_n_read(USB_INTERFACE_CLI, data_ptr, max_data_len);
+    }
+
+    return count;
+}
+
+static void USB0_RegisterDataReadyCB(Serial_IO_Data_Ready_Callback cb, void *cb_data)
+{
+    s_usb0_data_ready_cb      = cb;
+    s_usb0_data_ready_cb_data = cb_data;
+}
+
+static uint16_t USB1_TransmitData(const uint8_t *data_ptr, const uint16_t data_len)
+{
+    uint16_t n_written = tud_cdc_n_write(USB_INTERFACE_PC_COM, data_ptr, data_len);
+    tud_cdc_n_write_flush(USB_INTERFACE_PC_COM);
+
+    return n_written;
+}
+
+static uint16_t USB1_ReceiveData(uint8_t *data_ptr, const uint16_t max_data_len)
+{
+    uint32_t count = 0;
+    if (tud_cdc_n_available(USB_INTERFACE_PC_COM))
+    {
+        count = tud_cdc_n_read(USB_INTERFACE_PC_COM, data_ptr, max_data_len);
+    }
+
+    return count;
+}
+
+static void USB1_RegisterDataReadyCB(Serial_IO_Data_Ready_Callback cb, void *cb_data)
+{
+    s_usb1_data_ready_cb      = cb;
+    s_usb1_data_ready_cb_data = cb_data;
+}
+
+void tud_cdc_rx_cb(uint8_t itf)
+{
+    if (itf == USB_INTERFACE_CLI && s_usb0_data_ready_cb != 0)
+    {
+        s_usb0_data_ready_cb(s_usb0_data_ready_cb_data);
+    }
+    else if (itf == USB_INTERFACE_PC_COM && s_usb1_data_ready_cb != 0)
+    {
+        s_usb1_data_ready_cb(s_usb1_data_ready_cb_data);
+    }
+    else
+    {
+        // do nothing
+    }
+}
 
 //============================================================================
 // Error handler and ISRs...
@@ -116,6 +223,17 @@ void BSP_start(void) {
         (void *)0);                  // no initialization param
 
 
+
+    // static QEvt const *app_cli_QueueSto[10];
+    // AppCLI_ctor(BSP_Get_Serial_IO_Interface_USB0());
+    // QACTIVE_START(
+    //     AO_AppCLI,
+    //     AO_PRIO_APP_CLI,         // QP prio. of the AO
+    //     app_cli_QueueSto,        // event queue storage
+    //     Q_DIM(app_cli_QueueSto), // queue length [events]
+    //     (void *) 0,              // stack storage (not used in QK)
+    //     0U,                      // stack size [bytes] (not used in QK)
+    //     (void *) 0);             // no initialization param
 
     static QEvt const *usb_QueueSto[10];
     USB_ctor();
@@ -225,3 +343,29 @@ void QV_onIdle(void) { // called with interrupts DISABLED, see NOTE01
 // Please note that the LED is toggled with interrupts locked, so no interrupt
 // execution time contributes to the brightness of the User LED.
 //
+
+
+
+
+const Serial_IO_T *BSP_Get_Serial_IO_Interface_USB0()
+{
+    return &s_bsp_serial_io_usb0;
+}
+
+const Serial_IO_T *BSP_Get_Serial_IO_Interface_USB1()
+{
+    return &s_bsp_serial_io_usb1;
+}
+
+
+// PUTCHAR_PROTOTYPE
+// {
+//   /* Place your implementation of fputc here */
+//   /* e.g. write a character to the USART1 and Loop until the end of transmission */
+// //  HAL_UART_Transmit(&huart1, (uint8_t *)&ch, 1, 0xFFFF);
+
+//     tud_cdc_n_write(USB_INTERFACE_CLI, (uint8_t *)&ch, 1);
+//     tud_cdc_n_write_flush(USB_INTERFACE_CLI);
+
+//   return ch;
+// }

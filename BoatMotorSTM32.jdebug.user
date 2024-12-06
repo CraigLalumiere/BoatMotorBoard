@@ -1,13 +1,21 @@
 
 
-OpenDocument="main.c", FilePath="C:/Data/Jobs/Personal/BoatMotorSTM32/Core/Src/main.c", Line=88
+
+Breakpoint=C:/Data/Jobs/Personal/BoatMotorSTM32/Core/Src/blinky.c:113, State=BP_STATE_ON
+Breakpoint=C:/Data/Jobs/Personal/BoatMotorSTM32/Core/Src/main.c:162:3, State=BP_STATE_DISABLED
+OpenDocument="bsp.c", FilePath="C:/Data/Jobs/Personal/BoatMotorSTM32/Core/Src/bsp.c", Line=55
+OpenDocument="blinky.c", FilePath="C:/Data/Jobs/Personal/BoatMotorSTM32/Core/Src/blinky.c", Line=62
+OpenDocument="qv.c", FilePath="C:/Data/Jobs/Personal/BoatMotorSTM32/Middlewares/Third_Party/QuantumLeaps_RTEF_qpc/src/qv/qv.c", Line=182
+OpenDocument="qp.h", FilePath="C:/Data/Jobs/Personal/BoatMotorSTM32/Middlewares/Third_Party/QuantumLeaps_RTEF_qpc/include/qp.h", Line=681
+OpenDocument="main.c", FilePath="C:/Data/Jobs/Personal/BoatMotorSTM32/Core/Src/main.c", Line=86
 OpenToolbar="Debug", Floating=0, x=0, y=0
-OpenWindow="Call Stack", DockArea=RIGHT, x=0, y=1, w=946, h=291, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
-OpenWindow="Registers 1", DockArea=RIGHT, x=0, y=0, w=946, h=585, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0, FilteredItems=[], RefreshRate=1
-OpenWindow="Console", DockArea=BOTTOM, x=0, y=0, w=2400, h=321, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Call Stack", DockArea=RIGHT, x=0, y=2, w=488, h=118, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Registers 1", DockArea=RIGHT, x=0, y=1, w=488, h=203, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0, FilteredItems=[], RefreshRate=1
+OpenWindow="Disassembly", DockArea=RIGHT, x=0, y=0, w=488, h=241, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Console", DockArea=BOTTOM, x=0, y=0, w=1536, h=170, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
 SmartViewPlugin="", Page="", Toolbar="Hidden", Window="SmartView 1"
-TableHeader="Call Stack", SortCol="Function", SortOrder="ASCENDING", VisibleCols=["Function";"Stack Frame";"Source";"PC";"Return Address";"Stack Used"], ColWidths=[249;112;100;100;168;217]
+TableHeader="Call Stack", SortCol="Function", SortOrder="ASCENDING", VisibleCols=["Function";"Stack Frame";"Source";"PC";"Return Address";"Stack Used"], ColWidths=[249;112;100;100;168;100]
 TableHeader="Power Sampling", SortCol="None", SortOrder="ASCENDING", VisibleCols=["Index";"Time";"Ch 0"], ColWidths=[100;100;100]
-TableHeader="Registers 1", SortCol="Name", SortOrder="ASCENDING", VisibleCols=["Name";"Value";"Description"], ColWidths=[220;105;621]
+TableHeader="Registers 1", SortCol="Name", SortOrder="ASCENDING", VisibleCols=["Name";"Value";"Description"], ColWidths=[220;105;224]
 TableHeader="RegisterSelectionDialog", SortCol="None", SortOrder="ASCENDING", VisibleCols=[], ColWidths=[]
-TableHeader="TargetExceptionDialog", SortCol="Name", SortOrder="ASCENDING", VisibleCols=["Name";"Value";"Address";"Description"], ColWidths=[27;137;146;843]
+TableHeader="TargetExceptionDialog", SortCol="Name", SortOrder="ASCENDING", VisibleCols=["Name";"Value";"Address";"Description"], ColWidths=[27;137;146;851]

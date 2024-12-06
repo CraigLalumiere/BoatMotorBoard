@@ -54,6 +54,8 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     ./Core/Src/usb_board_api.c
     ./Core/Src/usb_descriptors.c
     ./Core/Src/usb.c
+    ./Core/Services/app_cli/app_cli.c
+    ./Core/Services/app_cli/app_cli_commands.c
 
     # Explicitly list required TinyUSB sources
     #   It might be preferable to do this with tinyusb/src/CMakeLists.txt, but this works 
@@ -69,6 +71,8 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined include paths
     ./library/tinyusb/src
+    ./library/embedded-cli
+    ./Core/Services/app_cli
 )
 
 # Add project symbols (macros)

@@ -2,6 +2,9 @@
     "files.associations": {
         "tusb.h": "c",
         "qpc.h": "c",
-        "tusb_option.h": "c"
+        "tusb_option.h": "c",
+        "app_cli_commands.h": "c",
+        "app_cli.h": "c",
+        "stm32g4xx_hal.h": "c"
     }
 }
