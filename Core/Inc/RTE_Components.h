@@ -25,7 +25,6 @@
 /* QuantumLeaps.qpc.7.3.4 */
 #define RTE_RTEF_QPC_QEP /* QP/C QEP */
 #define RTE_RTEF_QPC_QF /* QP/C QF */
-#define RTE_RTEF_QPC_QS /* QP/C QS */
 #define RTE_RTEF_QPC_QV /* QP/C QV kernel */
 
 #endif /* __RTE_COMPONENTS_H__ */

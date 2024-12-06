@@ -131,12 +131,12 @@ void BSP_start(void) {
 //............................................................................
 void BSP_ledOn() {
   printf("LED on\n\r");
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_7, 1);
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, 1);
 }
 //............................................................................
 void BSP_ledOff() {
   printf("LED off\n\r");
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_7, 0);
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, 0);
 }
 //............................................................................
 void BSP_terminate(int16_t result) {
