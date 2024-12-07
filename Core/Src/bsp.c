@@ -51,7 +51,7 @@
 #endif
 #define USB_INTERFACE_CLI    0
 #define USB_INTERFACE_PC_COM 1
-// #define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
+#define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
 
 // Static Function Declarations
 
@@ -224,16 +224,16 @@ void BSP_start(void) {
 
 
 
-    // static QEvt const *app_cli_QueueSto[10];
-    // AppCLI_ctor(BSP_Get_Serial_IO_Interface_USB0());
-    // QACTIVE_START(
-    //     AO_AppCLI,
-    //     AO_PRIO_APP_CLI,         // QP prio. of the AO
-    //     app_cli_QueueSto,        // event queue storage
-    //     Q_DIM(app_cli_QueueSto), // queue length [events]
-    //     (void *) 0,              // stack storage (not used in QK)
-    //     0U,                      // stack size [bytes] (not used in QK)
-    //     (void *) 0);             // no initialization param
+    static QEvt const *app_cli_QueueSto[10];
+    AppCLI_ctor(BSP_Get_Serial_IO_Interface_USB0());
+    QACTIVE_START(
+        AO_AppCLI,
+        AO_PRIO_APP_CLI,         // QP prio. of the AO
+        app_cli_QueueSto,        // event queue storage
+        Q_DIM(app_cli_QueueSto), // queue length [events]
+        (void *) 0,              // stack storage (not used in QK)
+        0U,                      // stack size [bytes] (not used in QK)
+        (void *) 0);             // no initialization param
 
     static QEvt const *usb_QueueSto[10];
     USB_ctor();
@@ -358,14 +358,14 @@ const Serial_IO_T *BSP_Get_Serial_IO_Interface_USB1()
 }
 
 
-// PUTCHAR_PROTOTYPE
-// {
-//   /* Place your implementation of fputc here */
-//   /* e.g. write a character to the USART1 and Loop until the end of transmission */
-// //  HAL_UART_Transmit(&huart1, (uint8_t *)&ch, 1, 0xFFFF);
+PUTCHAR_PROTOTYPE
+{
+  /* Place your implementation of fputc here */
+  /* e.g. write a character to the USART1 and Loop until the end of transmission */
+//  HAL_UART_Transmit(&huart1, (uint8_t *)&ch, 1, 0xFFFF);
 
-//     tud_cdc_n_write(USB_INTERFACE_CLI, (uint8_t *)&ch, 1);
-//     tud_cdc_n_write_flush(USB_INTERFACE_CLI);
+    tud_cdc_n_write(USB_INTERFACE_PC_COM, (uint8_t *)&ch, 1);
+    tud_cdc_n_write_flush(USB_INTERFACE_PC_COM);
 
-//   return ch;
-// }
+  return ch;
+}

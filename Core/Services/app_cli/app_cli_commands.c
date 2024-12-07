@@ -42,8 +42,8 @@ void AppCLI_AddCommandsToCLI(EmbeddedCli *cli)
 static void on_cli_toggle_led(EmbeddedCli *cli, char *args, void *context)
 {
     // statically allocated and const event to post to the Blinky active object
-    // static QEvt const ToggleLEDEvent = QEVT_INITIALIZER(POSTED_BLINKY_TOGGLE_USER_LED_2);
+    static QEvt const ToggleLEDEvent = QEVT_INITIALIZER(POSTED_BLINKY_TOGGLE_USER_LED);
 
     // send (post) the event to the Blinky active object
-    // QACTIVE_POST(AO_Blinky, &ToggleLEDEvent, AO_AppCLI);
+    QACTIVE_POST(AO_Blinky, &ToggleLEDEvent, AO_AppCLI);
 }

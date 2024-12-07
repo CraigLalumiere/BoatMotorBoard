@@ -64,6 +64,7 @@ extern Blinky Blinky_inst; // the Blinky active object
 static QState Blinky_initial(Blinky * const me, void const * const par);
 static QState Blinky_off(Blinky * const me, QEvt const * const e);
 static QState Blinky_on(Blinky * const me, QEvt const * const e);
+static QState Blinky_standby(Blinky * const me, QEvt const * const e);
 
 //----------------------------------------------------------------------------
 Blinky Blinky_inst;
@@ -98,6 +99,10 @@ QState Blinky_off(Blinky * const me, QEvt const * const e) {
             status = Q_TRAN(&Blinky_on);
             break;
         }
+        case POSTED_BLINKY_TOGGLE_USER_LED: {
+            status = Q_TRAN(&Blinky_standby);
+            break;
+        }
         default: {
             status = Q_SUPER(&QHsm_top);
             break;
@@ -116,6 +121,30 @@ QState Blinky_on(Blinky * const me, QEvt const * const e) {
         }
         case BLINKY_TIMEOUT_SIG: {
             status = Q_TRAN(&Blinky_off);
+            break;
+        }
+        case POSTED_BLINKY_TOGGLE_USER_LED: {
+            status = Q_TRAN(&Blinky_standby);
+            break;
+        }
+        default: {
+            status = Q_SUPER(&QHsm_top);
+            break;
+        }
+    }
+    return status;
+}
+//............................................................................
+QState Blinky_standby(Blinky * const me, QEvt const * const e) {
+    QState status;
+    switch (e->sig) {
+        case Q_ENTRY_SIG: {
+            BSP_ledOff();
+            status = Q_HANDLED();
+            break;
+        }
+        case POSTED_BLINKY_TOGGLE_USER_LED: {
+            status = Q_TRAN(&Blinky_on);
             break;
         }
         default: {
