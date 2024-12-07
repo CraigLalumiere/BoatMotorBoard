@@ -5,6 +5,7 @@
         "tusb_option.h": "c",
         "app_cli_commands.h": "c",
         "app_cli.h": "c",
-        "stm32g4xx_hal.h": "c"
+        "stm32g4xx_hal.h": "c",
+        "pubsub_signals.h": "c"
     }
 }

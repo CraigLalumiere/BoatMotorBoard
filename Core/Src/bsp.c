@@ -38,12 +38,14 @@
 #include "pubsub_signals.h"
 #include "app_cli.h"
 #include "tusb.h"
+#include "i2c_bus.h"
 
 #include "stm32g4xx_hal.h"
 // add other drivers if necessary...
 #include <stdio.h>
 
-//Q_DEFINE_THIS_FILE  // define the name of this file for assertions
+
+Q_DEFINE_THIS_MODULE("bsp.c")
 
 
 #ifdef Q_SPY
@@ -73,6 +75,8 @@ typedef enum
     AO_PRIO_APP_CLI,
     AO_PRIO_USB,
 } AO_Priority_T;
+
+
 
 static Serial_IO_Data_Ready_Callback s_usb0_data_ready_cb = 0;
 static void *s_usb0_data_ready_cb_data                    = 0;

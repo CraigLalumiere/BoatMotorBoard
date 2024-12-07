@@ -50,6 +50,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
     
     ./Core/Src/bsp.c
+    ./Core/Src/bsp_manual.c
     ./Core/Src/blinky.c
     ./Core/Src/usb_board_api.c
     ./Core/Src/usb_descriptors.c
