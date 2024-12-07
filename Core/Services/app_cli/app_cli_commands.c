@@ -24,7 +24,7 @@ static void on_cli_toggle_led(EmbeddedCli *cli, char *args, void *context);
 static CliCommandBinding cli_cmd_list[] = {
     (CliCommandBinding) {
         "toggle-led",               // command name (spaces are not allowed)
-        "Toggles the red user LED", // Optional help for a command (NULL for no help)
+        "Activates the green blinky LED", // Optional help for a command (NULL for no help)
         false,                      // flag whether to tokenize arguments
         NULL,                       // optional pointer to any application context
         on_cli_toggle_led           // binding function
