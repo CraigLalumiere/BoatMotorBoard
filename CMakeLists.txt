@@ -52,6 +52,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     ./Core/bsp/drivers/bsp.c
     ./Core/bsp/drivers/bsp_manual.c
     ./Core/Src/blinky.c
+    ./Core/Src/SSD1306.c
     ./Core/bsp/drivers/usb_board_api.c
     ./Core/bsp/drivers/usb_descriptors.c
     ./Core/bsp/drivers/usb.c

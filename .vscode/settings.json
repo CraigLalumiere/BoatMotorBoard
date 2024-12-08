@@ -10,6 +10,7 @@
         "gpio_stm32.h": "c",
         "i2c_bus_stm32.h": "c",
         "stm32g4xx.h": "c",
-        "app_cli_manual_commands.h": "c"
+        "app_cli_manual_commands.h": "c",
+        "private_signal_ranges.h": "c"
     }
 }

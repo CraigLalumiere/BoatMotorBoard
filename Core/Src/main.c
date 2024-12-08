@@ -31,6 +31,7 @@
 #include "app_cli.h"
 #include "usb.h"
 #include <ctype.h>
+#include "SSD1306.h"
 
 Q_DEFINE_THIS_MODULE("main")
 /* USER CODE END Includes */
@@ -46,6 +47,7 @@ typedef enum
 {
     AO_RESERVED = 0U,
     AO_PRIO_BLINKY,
+    AO_PRIO_SSD1306,
     AO_PRIO_APP_CLI,
     AO_PRIO_USB,
 } AO_Priority_T;
@@ -154,6 +156,18 @@ int main(void)
   AO_PRIO_BLINKY,              // QP prio. of the AO
       blinkyQueueSto,              // event queue storage
       Q_DIM(blinkyQueueSto),       // queue length [events]
+      (void *)0, 0U,               // no stack storage
+      (void *)0);                  // no initialization param
+
+  static QEvt const *SSD1306QueueSto[10];
+  SSD1306_ctor(
+        BSP_Get_I2C_Write_SSD1306(),
+        BSP_Get_I2C_Read_SSD1306());
+  QACTIVE_START(
+  AO_SSD1306,
+  AO_PRIO_SSD1306,              // QP prio. of the AO
+      SSD1306QueueSto,              // event queue storage
+      Q_DIM(SSD1306QueueSto),       // queue length [events]
       (void *)0, 0U,               // no stack storage
       (void *)0);                  // no initialization param
 

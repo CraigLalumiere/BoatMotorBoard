@@ -66,6 +66,24 @@ static uint16_t USB1_ReceiveData(uint8_t *data_ptr, const uint16_t max_data_len)
 static void USB1_RegisterDataReadyCB(Serial_IO_Data_Ready_Callback cb, void *cb_data);
 
 
+static I2C_Return_T BSP_I2C_Write_SSD1306(
+    uint8_t address,
+    uint8_t *tx_buffer,
+    const uint16_t data_len,
+    I2C_Complete_Callback complete_cb,
+    I2C_Error_Callback error_cb,
+    void *cb_data);
+
+static I2C_Return_T BSP_I2C_Read_SSD1306(
+    uint8_t address,
+    uint8_t *tx_buffer,
+    const uint16_t data_len,
+    I2C_Complete_Callback complete_cb,
+    I2C_Error_Callback error_cb,
+    void *cb_data);
+
+
+
 
 static Serial_IO_Data_Ready_Callback s_usb0_data_ready_cb = 0;
 static void *s_usb0_data_ready_cb_data                    = 0;
@@ -188,6 +206,44 @@ void SysTick_Handler(void); // prototype
 void SysTick_Handler(void) {
     QTIMEEVT_TICK_X(0U, &l_SysTick_Handler); // time events at rate 0
     QV_ARM_ERRATUM_838869();
+}
+
+
+
+
+I2C_Write BSP_Get_I2C_Write_SSD1306()
+{
+    return BSP_I2C_Write_SSD1306;
+}
+
+I2C_Read BSP_Get_I2C_Read_SSD1306()
+{
+    return BSP_I2C_Read_SSD1306;
+}
+
+
+static I2C_Return_T BSP_I2C_Write_SSD1306(
+    uint8_t address,
+    uint8_t *tx_buffer,
+    const uint16_t data_len,
+    I2C_Complete_Callback complete_cb,
+    I2C_Error_Callback error_cb,
+    void *cb_data)
+{
+    return I2C_Bus_Write(
+        I2C_BUS_ID_2, address, tx_buffer, data_len, complete_cb, error_cb, cb_data);
+}
+
+static I2C_Return_T BSP_I2C_Read_SSD1306(
+    uint8_t address,
+    uint8_t *rx_buffer,
+    const uint16_t data_len,
+    I2C_Complete_Callback complete_cb,
+    I2C_Error_Callback error_cb,
+    void *cb_data)
+{
+    return I2C_Bus_Read(
+        I2C_BUS_ID_2, address, rx_buffer, data_len, complete_cb, error_cb, cb_data);
 }
 
 //============================================================================
