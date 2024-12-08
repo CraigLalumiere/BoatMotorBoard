@@ -11,8 +11,6 @@ Q_DEFINE_THIS_MODULE("SSD1306")
 * Private macros
 \**************************************************************************************************/
 
-#define N_BYTES_I2C_DATA 27
-
 // Success / Error
 // ------------------------------------------------------------------------------------
 #define SSD1306_SUCCESS           0
@@ -88,7 +86,10 @@ Q_DEFINE_THIS_MODULE("SSD1306")
 
 // Init Procedure
 // ------------------------------------------------------------------------------------
-#define NUM_INIT_COMMANDS 17
+#define NUM_BYTES_INIT 27
+
+
+#define N_BYTES_I2C_DATA CACHE_SIZE_MEM
 
 
 /**************************************************************************************************\
@@ -156,33 +157,7 @@ const uint8_t INIT_SEQUENCE[] = {
     SSD1306_DISPLAY_ON,                                         // 0xAF = Set Display ON
 };
 
-// @const uint8_t - List of init commands according to datasheet SSD1306
-const uint8_t INIT_SSD1306[] = {
-  SSD1306_DISPLAY_OFF, 0,                                         // 0xAE = Set Display OFF
-  SSD1306_SET_MUX_RATIO, 1, 0x1F,                                 // 0xA8 - 0x3F for 128 x 64 version (64MUX)
-                                                                  //      - 0x1F for 128 x 32 version (32MUX)
-  SSD1306_MEMORY_ADDR_MODE, 1, 0x00,                              // 0x20 = Set Memory Addressing Mode
-                                                                  // 0x00 - Horizontal Addressing Mode
-                                                                  // 0x01 - Vertical Addressing Mode
-                                                                  // 0x02 - Page Addressing Mode (RESET)
-  SSD1306_SET_START_LINE, 0,                                      // 0x40
-  SSD1306_DISPLAY_OFFSET, 1, 0x00,                                // 0xD3
-  SSD1306_SEG_REMAP_OP, 0,                                        // 0xA0 / remap 0xA1
-  SSD1306_COM_SCAN_DIR_OP, 0,                                     // 0xC0 / remap 0xC8
-  SSD1306_COM_PIN_CONF, 1, 0x02,                                  // 0xDA, 0x12 - Disable COM Left/Right remap, Alternative COM pin configuration
-                                                                  //       0x12 - for 128 x 64 version
-                                                                  //       0x02 - for 128 x 32 version
-  SSD1306_SET_CONTRAST, 1, 0x7F,                                  // 0x81, 0x7F - reset value (max 0xFF)
-  SSD1306_DIS_ENT_DISP_ON, 0,                                     // 0xA4
-  SSD1306_DIS_NORMAL, 0,                                          // 0xA6
-  SSD1306_SET_OSC_FREQ, 1, 0x80,                                  // 0xD5, 0x80 => D=1; DCLK = Fosc / D <=> DCLK = Fosc
-  SSD1306_SET_PRECHARGE, 1, 0xc2,                                 // 0xD9, higher value less blinking
-                                                                  // 0xC2, 1st phase = 2 DCLK,  2nd phase = 13 DCLK
-  SSD1306_VCOM_DESELECT, 1, 0x20,                                 // Set V COMH Deselect, reset value 0x22 = 0,77xUcc
-  SSD1306_SET_CHAR_REG, 1, 0x14,                                  // 0x8D, Enable charge pump during display on
-  SSD1306_DEACT_SCROLL, 0,                                        // 0x2E
-  SSD1306_DISPLAY_ON, 0                                           // 0xAF = Set Display ON
-};
+static char cacheMemLcd[CACHE_SIZE_MEM];
 
 /**************************************************************************************************\
 * Private prototypes
@@ -194,6 +169,7 @@ static QState startup(SSD1306 *const me, QEvt const *const e);
 static QState startup_error(SSD1306 *const me, QEvt const *const e);
 
 static QState standby(SSD1306 *const me, QEvt const *const e);
+static QState update_screen(SSD1306 *const me, QEvt const *const e);
 
 
 
@@ -214,6 +190,8 @@ void SSD1306_ctor(I2C_Write i2c_write_fn, I2C_Read i2c_read_fn)
 
     me->i2c_write = i2c_write_fn;
     me->i2c_read = i2c_read_fn;
+
+    memset (cacheMemLcd, 0x00, CACHE_SIZE_MEM);
 
     QActive_ctor(&me->super, Q_STATE_CAST(&initial));
     QTimeEvt_ctorX(&me->wait_evt, &me->super, WAIT_TIMEOUT_SIG, 0U);
@@ -243,12 +221,12 @@ static QState startup(SSD1306 *const me, QEvt const *const e)
     {
         case Q_ENTRY_SIG: {
 
-            memcpy(me->i2c_data, INIT_SEQUENCE, N_BYTES_I2C_DATA);
+            memcpy(me->i2c_data, INIT_SEQUENCE, NUM_BYTES_INIT);
 
             I2C_Return_T retval = me->i2c_write(
                 SSD1306_ADDR,
                 me->i2c_data,
-                N_BYTES_I2C_DATA,
+                NUM_BYTES_INIT,
                 I2C_Complete_CB,
                 I2C_Error_CB,
                 &ssd1306_inst);
@@ -263,7 +241,7 @@ static QState startup(SSD1306 *const me, QEvt const *const e)
             break;
         }
         case I2C_COMPLETE_SIG: {
-            status = Q_TRAN(&standby);
+            status = Q_TRAN(&update_screen);
             break;
         }
         case I2C_ERROR_SIG: {
@@ -312,6 +290,51 @@ static QState standby(SSD1306 *const me, QEvt const *const e)
     {
         case Q_ENTRY_SIG: {
             status = Q_HANDLED();
+            break;
+        }
+        default: {
+            status = Q_SUPER(&QHsm_top);
+            break;
+        }
+    }
+
+    return status;
+}
+
+
+static QState update_screen(SSD1306 *const me, QEvt const *const e)
+{
+    QState status;
+
+    switch (e->sig)
+    {
+        case Q_ENTRY_SIG: {
+
+            memcpy(me->i2c_data, *cacheMemLcd, CACHE_SIZE_MEM);
+
+            I2C_Return_T retval = me->i2c_write(
+                SSD1306_ADDR,
+                me->i2c_data,
+                CACHE_SIZE_MEM,
+                I2C_Complete_CB,
+                I2C_Error_CB,
+                &ssd1306_inst);
+
+            if (retval != I2C_RTN_SUCCESS)
+            {
+                static QEvt const event = QEVT_INITIALIZER(I2C_ERROR_SIG);
+                QACTIVE_POST(me, &event, me);
+            }
+
+            status = Q_HANDLED();
+            break;
+        }
+        case I2C_COMPLETE_SIG: {
+            status = Q_TRAN(&standby);
+            break;
+        }
+        case I2C_ERROR_SIG: {
+            status = Q_TRAN(&startup_error);
             break;
         }
         default: {
