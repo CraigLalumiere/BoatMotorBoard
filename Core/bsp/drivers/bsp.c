@@ -319,7 +319,9 @@ void QF_onStartup(void) {
     // set priorities of ALL ISRs used in the system, see NOTE1
     NVIC_SetPriority(USART2_IRQn,    0); // kernel UNAWARE interrupt
     NVIC_SetPriority(EXTI0_IRQn,   QF_AWARE_ISR_CMSIS_PRI + 0U);
-    NVIC_SetPriority(SysTick_IRQn,   QF_AWARE_ISR_CMSIS_PRI + 1U);
+    NVIC_SetPriority(I2C2_EV_IRQn, QF_AWARE_ISR_CMSIS_PRI + 1U);
+    NVIC_SetPriority(I2C2_ER_IRQn, QF_AWARE_ISR_CMSIS_PRI + 1U);
+    NVIC_SetPriority(SysTick_IRQn,   QF_AWARE_ISR_CMSIS_PRI + 2U);
     // ...
 
     // enable IRQs...
