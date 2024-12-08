@@ -23,6 +23,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "tusb.h"
+#include "i2c_bus_stm32.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -226,6 +227,30 @@ void USBWakeUp_IRQHandler(void)
 {
   tud_int_handler(0);
   return;
+}
+
+
+
+/**
+ ***************************************************************************************************
+ * @brief   I2C 2 Event
+ **************************************************************************************************/
+void I2C2_EV_IRQHandler(void)
+{
+    // QK_ISR_ENTRY();
+    HAL_I2C_EV_IRQHandler(STM32_GetI2CHandle(I2C_BUS_ID_2));
+    // QK_ISR_EXIT();
+}
+
+/**
+ ***************************************************************************************************
+ * @brief   I2C 2 Error
+ **************************************************************************************************/
+void I2C2_ER_IRQHandler(void)
+{
+    // QK_ISR_ENTRY();
+    HAL_I2C_ER_IRQHandler(STM32_GetI2CHandle(I2C_BUS_ID_2));
+    // QK_ISR_EXIT();
 }
 
 
