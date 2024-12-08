@@ -49,14 +49,17 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
     
-    ./Core/Src/bsp.c
-    ./Core/Src/bsp_manual.c
+    ./Core/bsp/drivers/bsp.c
+    ./Core/bsp/drivers/bsp_manual.c
     ./Core/Src/blinky.c
-    ./Core/Src/usb_board_api.c
-    ./Core/Src/usb_descriptors.c
-    ./Core/Src/usb.c
-    ./Core/Services/app_cli/app_cli.c
-    ./Core/Services/app_cli/app_cli_commands.c
+    ./Core/bsp/drivers/usb_board_api.c
+    ./Core/bsp/drivers/usb_descriptors.c
+    ./Core/bsp/drivers/usb.c
+    ./Core/services/app_cli/app_cli.c
+    ./Core/services/app_cli/app_cli_commands.c
+    ./Core/services/app_cli/app_cli_manual_commands.c
+    ./Core/bsp/drivers/i2c_bus.c
+    ./Core/bsp/drivers/i2c_bus_stm32.c
 
     # Explicitly list required TinyUSB sources
     #   It might be preferable to do this with tinyusb/src/CMakeLists.txt, but this works 
@@ -73,7 +76,10 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined include paths
     ./library/tinyusb/src
     ./library/embedded-cli
-    ./Core/Services/app_cli
+    ./Core/services/app_cli
+    ./Core/bsp
+    ./Core/bsp/interfaces
+    ./Core/bsp/drivers
 )
 
 # Add project symbols (macros)

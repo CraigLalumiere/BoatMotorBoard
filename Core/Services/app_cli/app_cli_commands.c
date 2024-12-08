@@ -1,4 +1,5 @@
 #include "app_cli_commands.h"
+#include "app_cli_manual_commands.h"
 #include "bsp.h"
 #include "posted_signals.h"
 #include "qpc.h"
@@ -26,12 +27,7 @@ static void on_cli_toggle_led(EmbeddedCli *cli, char *args, void *context);
 void on_cli_digital_out_set(EmbeddedCli *cli, char *args, void *context);
 void on_cli_digital_in_read(EmbeddedCli *cli, char *args, void *context);
 // void on_cli_spi(EmbeddedCli *cli, char *args, void *context);
-// void on_cli_i2c(EmbeddedCli *cli, char *args, void *context);
-
-
-// static SPI_Bus_ID_T Get_SPI_Bus_ID(unsigned long arg_bus_id);
-static GPIO_Port_ID_T Get_SPI_Bus_Port(char arg_port);
-// static I2C_Bus_ID_T Get_I2C_Bus_ID(unsigned long arg_bus_id);
+void on_cli_i2c(EmbeddedCli *cli, char *args, void *context);
 
 static CliCommandBinding cli_cmd_list[] = {
     (CliCommandBinding) {
@@ -60,14 +56,14 @@ static CliCommandBinding cli_cmd_list[] = {
         on_cli_digital_in_read // binding function
     },
 
-    // (CliCommandBinding) {
-    //     "i2c",                                 // command name (spaces are not allowed)
-    //     "Perform I2C write or read operation", // Optional help for
-    //                                            // a command
-    //     true,                                  // flag whether to tokenize arguments
-    //     NULL,                                  // optional pointer to any application context
-    //     on_cli_i2c                             // binding function
-    // },
+    (CliCommandBinding) {
+        "i2c",                                 // command name (spaces are not allowed)
+        "Perform I2C write or read operation", // Optional help for
+                                               // a command
+        true,                                  // flag whether to tokenize arguments
+        NULL,                                  // optional pointer to any application context
+        on_cli_i2c                             // binding function
+    },
 };
 
 void AppCLI_AddCommandsToCLI(EmbeddedCli *cli)
@@ -107,109 +103,4 @@ GPIO_Port_ID_T Get_SPI_Bus_Port(char arg_port)
             Q_ASSERT(false);
             return GPIO_PORT_NONE_ID;
     }
-}
-
-#define HELP_FULL_DIGITAL_OUT_SET \
-    "\r\n\
- Usage: digital-out-set PORT PIN VALUE\r\n\
- \r\n\
- PORT   Character A through K\r\n\
- PIN    Number 0 through 15\r\n\
- Value  0 (for low) or 1 (for high)\r\n"
-
-void on_cli_digital_out_set(EmbeddedCli *cli, char *args, void *context)
-{
-    char arg_port;
-    unsigned long arg_pin;
-    unsigned long arg_value;
-    char *arg_end;
-    bool is_invalid_arg = false;
-
-    if (embeddedCliGetTokenCount(args) != 3)
-    {
-        embeddedCliPrint(cli, HELP_FULL_DIGITAL_OUT_SET);
-        return;
-    }
-
-    const char *arg1 = embeddedCliGetToken(args, 1);
-    const char *arg2 = embeddedCliGetToken(args, 2);
-    const char *arg3 = embeddedCliGetToken(args, 3);
-
-    arg_port  = *arg1;
-    arg_pin   = strtoul(arg2, &arg_end, 10);
-    arg_value = strtoul(arg3, &arg_end, 10);
-
-    if (strlen(arg1) > 1 || arg_port < 'A' || arg_port > 'K')
-    {
-        embeddedCliPrint(cli, " PORT must be a character between A and K\r\n");
-        is_invalid_arg = true;
-    }
-
-    if (arg_pin > 15)
-    {
-        embeddedCliPrint(cli, " PIN must be a number between 0 and 15\r\n");
-        is_invalid_arg = true;
-    }
-
-    if (arg_value > 1)
-    {
-        embeddedCliPrint(cli, " VALUE must be 0 (for low) or 1 (for high)\r\n");
-        is_invalid_arg = true;
-    }
-
-    if (is_invalid_arg)
-    {
-        embeddedCliPrint(cli, HELP_FULL_DIGITAL_OUT_SET);
-        return;
-    }
-
-    BSP_Manual_Config_and_Set_Digital_Output(arg_port, (uint8_t) arg_pin, (arg_value > 0));
-}
-
-#define HELP_FULL_DIGITAL_IN_READ \
-    "\r\n\
- Usage: digital-in-read PORT PIN\r\n\
- \r\n\
- PORT   Character A through K\r\n\
- PIN    Number 0 through 15\r\n"
-
-void on_cli_digital_in_read(EmbeddedCli *cli, char *args, void *context)
-{
-    char arg_port;
-    unsigned long arg_pin;
-    char *arg_end;
-    bool is_invalid_arg = false;
-
-    if (embeddedCliGetTokenCount(args) != 2)
-    {
-        embeddedCliPrint(cli, HELP_FULL_DIGITAL_IN_READ);
-        return;
-    }
-
-    const char *arg1 = embeddedCliGetToken(args, 1);
-    const char *arg2 = embeddedCliGetToken(args, 2);
-
-    arg_port = *arg1;
-    arg_pin  = strtoul(arg2, &arg_end, 10);
-
-    if (strlen(arg1) > 1 || arg_port < 'A' || arg_port > 'K')
-    {
-        embeddedCliPrint(cli, " PORT must be a character between A and K\r\n");
-        is_invalid_arg = true;
-    }
-
-    if (arg_pin > 15)
-    {
-        embeddedCliPrint(cli, " PIN must be a number between 0 and 15\r\n");
-        is_invalid_arg = true;
-    }
-
-    if (is_invalid_arg)
-    {
-        embeddedCliPrint(cli, HELP_FULL_DIGITAL_IN_READ);
-        return;
-    }
-
-    bool is_set = BSP_Manual_Config_and_Read_Digital_Input(arg_port, (uint8_t) arg_pin);
-    embeddedCliPrint(cli, is_set ? "\r\n1\r\n" : "\r\n0\r\n");
 }

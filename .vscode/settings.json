@@ -6,6 +6,10 @@
         "app_cli_commands.h": "c",
         "app_cli.h": "c",
         "stm32g4xx_hal.h": "c",
-        "pubsub_signals.h": "c"
+        "pubsub_signals.h": "c",
+        "gpio_stm32.h": "c",
+        "i2c_bus_stm32.h": "c",
+        "stm32g4xx.h": "c",
+        "app_cli_manual_commands.h": "c"
     }
 }

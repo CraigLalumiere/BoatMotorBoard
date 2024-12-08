@@ -32,16 +32,12 @@
 // <info@state-machine.com>
 //============================================================================
 #include "qpc.h"                 // QP/C real-time embedded framework
-#include "blinky.h"              // Blinky Application interface
-#include "usb.h"
 #include "bsp.h"                 // Board Support Package
 #include "pubsub_signals.h"
-#include "app_cli.h"
 #include "tusb.h"
 #include "i2c_bus.h"
 
 #include "stm32g4xx_hal.h"
-// add other drivers if necessary...
 #include <stdio.h>
 
 
@@ -55,6 +51,10 @@ Q_DEFINE_THIS_MODULE("bsp.c")
 #define USB_INTERFACE_PC_COM 1
 #define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
 
+
+// Static Data
+static I2C_Bus_T s_i2c_bus2;
+
 // Static Function Declarations
 
 static uint16_t USB0_TransmitData(const uint8_t *data_ptr, const uint16_t data_len);
@@ -64,17 +64,6 @@ static void USB0_RegisterDataReadyCB(Serial_IO_Data_Ready_Callback cb, void *cb_
 static uint16_t USB1_TransmitData(const uint8_t *data_ptr, const uint16_t data_len);
 static uint16_t USB1_ReceiveData(uint8_t *data_ptr, const uint16_t max_data_len);
 static void USB1_RegisterDataReadyCB(Serial_IO_Data_Ready_Callback cb, void *cb_data);
-
-// QP Priorities for Active Objects must be unique
-// Lower number is lower priority
-// 0 is reserved, lowest available is 1
-typedef enum
-{
-    AO_RESERVED = 0U,
-    AO_PRIO_BLINKY,
-    AO_PRIO_APP_CLI,
-    AO_PRIO_USB,
-} AO_Priority_T;
 
 
 
@@ -205,50 +194,47 @@ void SysTick_Handler(void) {
 // BSP functions...
 
 //............................................................................
-void BSP_start(void) {
-    // initialize event pools
-    static QF_MPOOL_EL(QEvt) smlPoolSto[10];
-    QF_poolInit(smlPoolSto, sizeof(smlPoolSto), sizeof(smlPoolSto[0]));
+void BSP_Init_I2C(void) {
+    HAL_StatusTypeDef retval;
 
-    // initialize publish-subscribe
-    static QSubscrList subscrSto[PUBSUB_MAX_SIG];
-    QActive_psInit(subscrSto, Q_DIM(subscrSto));
+    /////////////////////////
+    // I2C Bus 2
+    /////////////////////////
 
-    // instantiate and start AOs/threads...
+    // I2C Bus 2 Peripheral
+    I2C_HandleTypeDef *p_hi2c2 = STM32_GetI2CHandle(I2C_BUS_ID_2);
 
-    static QEvt const *blinkyQueueSto[10];
-    Blinky_ctor();
-    QACTIVE_START(
-		AO_Blinky,
-		AO_PRIO_BLINKY,              // QP prio. of the AO
-        blinkyQueueSto,              // event queue storage
-        Q_DIM(blinkyQueueSto),       // queue length [events]
-        (void *)0, 0U,               // no stack storage
-        (void *)0);                  // no initialization param
+    p_hi2c2->Instance              = I2C2;
+    p_hi2c2->Init.Timing           = 0x20404768;
+    p_hi2c2->Init.OwnAddress1      = 0;
+    p_hi2c2->Init.AddressingMode   = I2C_ADDRESSINGMODE_7BIT;
+    p_hi2c2->Init.DualAddressMode  = I2C_DUALADDRESS_DISABLE;
+    p_hi2c2->Init.OwnAddress2      = 0;
+    p_hi2c2->Init.OwnAddress2Masks = I2C_OA2_NOMASK;
+    p_hi2c2->Init.GeneralCallMode  = I2C_GENERALCALL_DISABLE;
+    p_hi2c2->Init.NoStretchMode    = I2C_NOSTRETCH_DISABLE;
+
+    retval = HAL_I2C_Init(p_hi2c2);
+    Q_ASSERT(retval == HAL_OK);
+
+    retval = HAL_I2CEx_ConfigAnalogFilter(p_hi2c2, I2C_ANALOGFILTER_ENABLE);
+    Q_ASSERT(retval == HAL_OK);
+
+    retval = HAL_I2CEx_ConfigDigitalFilter(p_hi2c2, 0);
+    Q_ASSERT(retval == HAL_OK);
+    
+    I2C_Bus_Init(&s_i2c_bus2, I2C_BUS_ID_2);
+}
+
+//............................................................................
+void BSP_Init(void) {
 
 
-
-    static QEvt const *app_cli_QueueSto[10];
-    AppCLI_ctor(BSP_Get_Serial_IO_Interface_USB0());
-    QACTIVE_START(
-        AO_AppCLI,
-        AO_PRIO_APP_CLI,         // QP prio. of the AO
-        app_cli_QueueSto,        // event queue storage
-        Q_DIM(app_cli_QueueSto), // queue length [events]
-        (void *) 0,              // stack storage (not used in QK)
-        0U,                      // stack size [bytes] (not used in QK)
-        (void *) 0);             // no initialization param
-
-    static QEvt const *usb_QueueSto[10];
-    USB_ctor();
-    QACTIVE_START(
-        AO_USB,
-        AO_PRIO_USB,         // QP prio. of the AO
-        usb_QueueSto,        // event queue storage
-        Q_DIM(usb_QueueSto), // queue length [events]
-        (void *) 0,          // stack storage (not used in QK)
-        0U,                  // stack size [bytes] (not used in QK)
-        (void *) 0);         // no initialization param
+    // Initialize I2C buses
+    BSP_Init_I2C();
+    
+    // initialize TinyUSB device stack on configured roothub port
+    tud_init(BOARD_TUD_RHPORT);
 }
 //............................................................................
 void BSP_ledOn() {

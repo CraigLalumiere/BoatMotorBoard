@@ -26,12 +26,29 @@
 #include "blinky.h"
 #include "bsp.h"
 #include "tusb.h"
+#include "pubsub_signals.h"
+#include "blinky.h"
+#include "app_cli.h"
+#include "usb.h"
 #include <ctype.h>
+
+Q_DEFINE_THIS_MODULE("main")
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
 
+
+// QP Priorities for Active Objects must be unique
+// Lower number is lower priority
+// 0 is reserved, lowest available is 1
+typedef enum
+{
+    AO_RESERVED = 0U,
+    AO_PRIO_BLINKY,
+    AO_PRIO_APP_CLI,
+    AO_PRIO_USB,
+} AO_Priority_T;
 
 /* USER CODE END PTD */
 
@@ -111,13 +128,60 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USB_PCD_Init();
-  MX_I2C2_Init();
+  // MX_I2C2_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
 
   QF_init();       // initialize the framework and the underlying RT kernel
-  tud_init(BOARD_TUD_RHPORT);
-  BSP_start();     // start the AOs/Threads
+  BSP_Init();
+
+
+
+  // initialize event pools
+  static QF_MPOOL_EL(QEvt) smlPoolSto[10];
+  QF_poolInit(smlPoolSto, sizeof(smlPoolSto), sizeof(smlPoolSto[0]));
+
+  // initialize publish-subscribe
+  static QSubscrList subscrSto[PUBSUB_MAX_SIG];
+  QActive_psInit(subscrSto, Q_DIM(subscrSto));
+
+  // instantiate and start AOs/threads...
+
+  static QEvt const *blinkyQueueSto[10];
+  Blinky_ctor();
+  QACTIVE_START(
+  AO_Blinky,
+  AO_PRIO_BLINKY,              // QP prio. of the AO
+      blinkyQueueSto,              // event queue storage
+      Q_DIM(blinkyQueueSto),       // queue length [events]
+      (void *)0, 0U,               // no stack storage
+      (void *)0);                  // no initialization param
+
+
+
+  static QEvt const *app_cli_QueueSto[10];
+  AppCLI_ctor(BSP_Get_Serial_IO_Interface_USB0());
+  QACTIVE_START(
+      AO_AppCLI,
+      AO_PRIO_APP_CLI,         // QP prio. of the AO
+      app_cli_QueueSto,        // event queue storage
+      Q_DIM(app_cli_QueueSto), // queue length [events]
+      (void *) 0,              // stack storage (not used in QK)
+      0U,                      // stack size [bytes] (not used in QK)
+      (void *) 0);             // no initialization param
+
+  static QEvt const *usb_QueueSto[10];
+  USB_ctor();
+  QACTIVE_START(
+      AO_USB,
+      AO_PRIO_USB,         // QP prio. of the AO
+      usb_QueueSto,        // event queue storage
+      Q_DIM(usb_QueueSto), // queue length [events]
+      (void *) 0,          // stack storage (not used in QK)
+      0U,                  // stack size [bytes] (not used in QK)
+      (void *) 0);         // no initialization param
+
+
   return QF_run(); // run the QF application
   /* USER CODE END 2 */
 
