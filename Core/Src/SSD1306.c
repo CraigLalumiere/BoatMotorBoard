@@ -4,7 +4,7 @@
 #include "pubsub_signals.h"
 #include <stdio.h>
 #include <string.h>
-#include "font.h"
+#include "ssd1306_fonts.h"
 
 Q_DEFINE_THIS_MODULE("SSD1306")
 
@@ -12,10 +12,6 @@ Q_DEFINE_THIS_MODULE("SSD1306")
 * Private macros
 \**************************************************************************************************/
 
-// Success / Error
-// ------------------------------------------------------------------------------------
-#define SSD1306_SUCCESS 0
-#define SSD1306_ERROR 1
 
 // Address definition
 // ------------------------------------------------------------------------------------
@@ -63,36 +59,16 @@ Q_DEFINE_THIS_MODULE("SSD1306")
 #define SSD1306_NOP 0xE3              // No operation
 #define SSD1306_RESET 0xE4            // Maybe SW RESET, @source https://github.com/SmingHub/Sming/issues/501
 
-// Clear Color
+// Screen dimensions
 // ------------------------------------------------------------------------------------
-#define CLEAR_COLOR 0x00
-
-// Init Status
-// ------------------------------------------------------------------------------------
-#define INIT_STATUS 0xFF
-
-// AREA definition
-// ------------------------------------------------------------------------------------
-#define START_PAGE_ADDR 0
-#define END_PAGE_ADDR 7 // 7 for 128x64, 3 for 128x32 version
-#define START_COLUMN_ADDR 0
-#define END_COLUMN_ADDR 127
-#define RAM_X_END END_COLUMN_ADDR + 1
-#define RAM_Y_END END_PAGE_ADDR + 1
-
-#define WIDTH 128
-#define HEIGHT 64
-#define CACHE_SIZE_MEM (WIDTH * ((HEIGHT + 7) / 8))
-//(1 + END_PAGE_ADDR) * (1 + END_COLUMN_ADDR)
-
-#define MAX_X END_COLUMN_ADDR
-#define MAX_Y (END_PAGE_ADDR + 1) * 8
+#define SSD1306_WIDTH 128
+#define SSD1306_HEIGHT 64
+#define SSD1306_BUFFER_SIZE SSD1306_WIDTH *SSD1306_HEIGHT / 8
 
 // Init Procedure
 // ------------------------------------------------------------------------------------
-#define NUM_BYTES_INIT 27
 
-#define N_BYTES_I2C_DATA CACHE_SIZE_MEM
+#define N_BYTES_I2C_DATA 1 + SSD1306_WIDTH
 
 /**************************************************************************************************\
 * Private type definitions
@@ -107,9 +83,22 @@ enum SSD1306Signals
 
 typedef enum
 {
-    HV_high,
-    HV_low,
-} HV_polarity_T;
+    SSD1306_OK = 0x00,
+    SSD1306_ERR = 0x01 // Generic error.
+} SSD1306_Error_t;
+
+typedef struct
+{
+    uint8_t x;
+    uint8_t y;
+} SSD1306_VERTEX;
+
+// Enumeration for screen colors
+typedef enum
+{
+    Black = 0x00, // Black color, no pixel
+    White = 0x01  // Pixel is set. Color depends on OLED
+} SSD1306_COLOR;
 
 typedef struct
 {
@@ -119,12 +108,7 @@ typedef struct
     I2C_Read i2c_read;
     uint8_t i2c_data[N_BYTES_I2C_DATA];
 
-    uint8_t _counter;
-
-    uint16_t xfer_counter;
-    char *xfer_ptr;
-
-    char cacheMemLcd[CACHE_SIZE_MEM + 1];
+    char SSD1306_Buffer[SSD1306_BUFFER_SIZE];
 
     // submachine state memory
     QStateHandler substate_next_state;
@@ -133,8 +117,16 @@ typedef struct
     uint8_t num_args;
     uint8_t *args;
 
+    // Variables used by startup routine
     uint8_t init_command_num;
     uint8_t *init_command_ptr;
+
+    // Variables used by 'update screen' routine
+    uint8_t pageNumber;
+
+    // Variables used by the graphics algorithms
+    uint16_t CurrentX;
+    uint16_t CurrentY;
 
 } SSD1306;
 
@@ -204,7 +196,6 @@ const uint8_t INIT_SEQUENCE[] = {
     SSD1306_DISPLAY_ON,
 };
 
-#define NUM_INIT_COMMANDS 17
 const uint8_t INIT_SSD1306_ADAFRUIT[] = {
     SSD1306_DISPLAY_OFF, 0,            // 0xAE / Set Display OFF
     SSD1306_SET_OSC_FREQ, 1, 0x80,     // 0xD5 / 0x80 => D=1; DCLK = Fosc / D <=> DCLK = Fosc
@@ -231,6 +222,33 @@ const uint8_t INIT_SSD1306_ADAFRUIT[] = {
     SSD1306_DEACT_SCROLL, 0,           // 0x2E
     SSD1306_DISPLAY_ON, 0              // 0xAF / Set Display ON
 };
+
+#define NUM_INIT_COMMANDS 19
+const uint8_t INIT_SSD1306_ST[] = {
+    SSD1306_DISPLAY_OFF, 0,            // 0xAE / Set Display OFF
+    SSD1306_MEMORY_ADDR_MODE, 1, 0x00, // 0x20 / Set Memory Addressing Mode
+    0xB0, 0,                           // Set Page Start Address for Page Addressing Mode,0-7
+    SSD1306_COM_SCAN_DIR_OP, 0,        // 0xC8
+    0x00, 0,                           //---set low column address
+    0x10, 0,                           //---set high column address
+    0x10, 0,                           //--set start line address - CHECK
+    SSD1306_SET_CONTRAST, 1, 0xFF,     // 0x81 / 0x8F - reset value (max 0xFF)
+    SSD1306_SEG_REMAP_OP, 0,           // 0xA0 / remap 0xA1
+    SSD1306_DIS_NORMAL, 0,             // 0xA6
+    SSD1306_SET_MUX_RATIO, 1, 0x3F,    // 0xA8 / 0x3F (64MUX) for 128 x 64 version
+                                       //      / 0x1F (32MUX) for 128 x 32 version
+    SSD1306_DIS_ENT_DISP_ON, 0,        // 0xA4
+    SSD1306_DISPLAY_OFFSET, 1, 0x00,   // 0xD3
+    SSD1306_SET_OSC_FREQ, 1, 0xF0,     // 0xD5 / 0x80 => D=1; DCLK = Fosc / D <=> DCLK = Fosc
+    SSD1306_SET_PRECHARGE, 1, 0x22,    // 0xD9 / higher value less blinking
+                                       //        0xC2, 1st phase = 2 DCLK,  2nd phase = 13 DCLK
+    SSD1306_COM_PIN_CONF, 1, 0x12,     // 0xDA / 0x12 - Disable COM Left/Right remap, Alternative COM pin configuration
+                                       //        0x12 - for 128 x 64 version
+                                       //        0x02 - for 128 x 32 version
+    SSD1306_VCOM_DESELECT, 1, 0x20,    // 0xDB / Set V COMH Deselect, reset value 0x22 = 0,77xUcc
+    SSD1306_SET_CHAR_REG, 1, 0x14,     // 0x8D / Enable charge pump during display on
+    SSD1306_DISPLAY_ON, 0,             // 0xAF / Set Display ON
+};
 /**************************************************************************************************\
 * Private prototypes
 \**************************************************************************************************/
@@ -239,8 +257,10 @@ const uint8_t INIT_SSD1306_ADAFRUIT[] = {
 static QState initial(SSD1306 *const me, void const *const par);
 static QState startup(SSD1306 *const me, QEvt const *const e);
 static QState startup_error(SSD1306 *const me, QEvt const *const e);
+static QState error(SSD1306 *const me, QEvt const *const e);
 
-static QState standby(SSD1306 *const me, QEvt const *const e);
+static QState running(SSD1306 *const me, QEvt const *const e);
+static QState update_screen(SSD1306 *const me, QEvt const *const e);
 static QState update_screen_1(SSD1306 *const me, QEvt const *const e);
 static QState update_screen_2(SSD1306 *const me, QEvt const *const e);
 
@@ -256,17 +276,22 @@ static QState send_command_substate_machine(
 static void I2C_Complete_CB(void *cb_data);
 static void I2C_Error_CB(void *cb_data);
 
-void SSD1306_ClearScreen(void);
-//   uint8_t SSD1306_NormalScreen (uint8_t);
-//   uint8_t SSD1306_InverseScreen (uint8_t);
-uint8_t SSD1306_UpdatePosition(void);
-void SSD1306_SetPosition(uint8_t, uint8_t);
-uint8_t SSD1306_DrawChar(char);
-void SSD1306_DrawString(char *);
-uint8_t SSD1306_DrawPixel(uint8_t, uint8_t);
-uint8_t SSD1306_DrawLine(uint8_t, uint8_t, uint8_t, uint8_t);
-void drawFastHLineInternal(uint8_t, uint8_t, uint8_t, uint8_t);
-void AdafruitDrawPixel(uint16_t x, uint16_t y, uint16_t color);
+// Procedure definitions
+void ssd1306_Init(void);
+void ssd1306_Fill(SSD1306_COLOR color);
+void ssd1306_UpdateScreen(void);
+void ssd1306_DrawPixel(uint8_t x, uint8_t y, SSD1306_COLOR color);
+char ssd1306_WriteChar(char ch, SSD1306_Font_t Font, SSD1306_COLOR color);
+char ssd1306_WriteString(char *str, SSD1306_Font_t Font, SSD1306_COLOR color);
+void ssd1306_SetCursor(uint8_t x, uint8_t y);
+void ssd1306_Line(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2, SSD1306_COLOR color);
+void ssd1306_DrawArc(uint8_t x, uint8_t y, uint8_t radius, uint16_t start_angle, uint16_t sweep, SSD1306_COLOR color);
+void ssd1306_DrawArcWithRadiusLine(uint8_t x, uint8_t y, uint8_t radius, uint16_t start_angle, uint16_t sweep, SSD1306_COLOR color);
+void ssd1306_DrawCircle(uint8_t par_x, uint8_t par_y, uint8_t par_r, SSD1306_COLOR color);
+void ssd1306_FillCircle(uint8_t par_x, uint8_t par_y, uint8_t par_r, SSD1306_COLOR par_color);
+void ssd1306_Polyline(const SSD1306_VERTEX *par_vertex, uint16_t par_size, SSD1306_COLOR color);
+void ssd1306_DrawRectangle(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2, SSD1306_COLOR color);
+void ssd1306_FillRectangle(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2, SSD1306_COLOR color);
 
 /**************************************************************************************************\
 * Public functions
@@ -283,7 +308,7 @@ void SSD1306_ctor(I2C_Write i2c_write_fn, I2C_Read i2c_read_fn)
     me->i2c_write = i2c_write_fn;
     me->i2c_read = i2c_read_fn;
 
-    SSD1306_ClearScreen();
+    ssd1306_Fill(Black);
 
     QActive_ctor(&me->super, Q_STATE_CAST(&initial));
     QTimeEvt_ctorX(&me->wait_evt, &me->super, WAIT_TIMEOUT_SIG, 0U);
@@ -313,11 +338,11 @@ static QState startup(SSD1306 *const me, QEvt const *const e)
     {
     case Q_INIT_SIG:
     {
-        QStateHandler nextState = (QStateHandler) &startup;
+        QStateHandler nextState = (QStateHandler)&startup;
         // If we've transmitted all of the startup commands
         if (me->init_command_num == NUM_INIT_COMMANDS - 1)
         {
-            nextState = (QStateHandler) (&update_screen_1);
+            nextState = (QStateHandler)(&update_screen);
         }
         uint8_t command = me->init_command_ptr[0];
         uint8_t num_args = me->init_command_ptr[1];
@@ -335,7 +360,7 @@ static QState startup(SSD1306 *const me, QEvt const *const e)
     }
     case Q_ENTRY_SIG:
     {
-        me->init_command_ptr = INIT_SSD1306_ADAFRUIT;
+        me->init_command_ptr = INIT_SSD1306_ST;
         me->init_command_num = 0;
 
         status = Q_HANDLED();
@@ -378,7 +403,7 @@ static QState startup_error(SSD1306 *const me, QEvt const *const e)
     return status;
 }
 
-static QState standby(SSD1306 *const me, QEvt const *const e)
+static QState error(SSD1306 *const me, QEvt const *const e)
 {
     QState status;
 
@@ -389,9 +414,72 @@ static QState standby(SSD1306 *const me, QEvt const *const e)
         status = Q_HANDLED();
         break;
     }
+
+    default:
+    {
+        status = Q_SUPER(&running);
+        break;
+    }
+    }
+
+    return status;
+}
+
+static QState running(SSD1306 *const me, QEvt const *const e)
+{
+    QState status;
+
+    switch (e->sig)
+    {
+    case Q_ENTRY_SIG:
+    {
+        status = Q_HANDLED();
+        break;
+    }
+    case I2C_ERROR_SIG:
+    {
+        status = Q_TRAN(&error);
+        break;
+    }
     default:
     {
         status = Q_SUPER(&QHsm_top);
+        break;
+    }
+    }
+
+    return status;
+}
+
+static QState update_screen(SSD1306 *const me, QEvt const *const e)
+{
+    QState status;
+
+    switch (e->sig)
+    {
+    case Q_INIT_SIG:
+    {
+        status = Q_TRAN(&update_screen_1);
+        break;
+    }
+    case Q_ENTRY_SIG:
+    {
+        
+        ssd1306_WriteString("Hello World", Font_7x10, White);
+        ssd1306_SetCursor(0, 12);
+        ssd1306_WriteString("Foo Bar", Font_7x10, White);
+        ssd1306_SetCursor(0, 24);
+        ssd1306_WriteString("xxxxxxxxxx", Font_7x10, White);
+        ssd1306_SetCursor(0, 36);
+        ssd1306_WriteString("yyyyyyyyyyy", Font_7x10, White);
+
+        me->pageNumber = 0;
+        status = Q_HANDLED();
+        break;
+    }
+    default:
+    {
+        status = Q_SUPER(&running);
         break;
     }
     }
@@ -405,63 +493,21 @@ static QState update_screen_1(SSD1306 *const me, QEvt const *const e)
 
     switch (e->sig)
     {
-    case Q_ENTRY_SIG:
+    case Q_INIT_SIG:
     {
-        me->xfer_counter = 0;
-        me->xfer_ptr = me->cacheMemLcd;
-
-        SSD1306_ClearScreen();                // clear screen
-        SSD1306_DrawLine(0, MAX_X, 4, 4);     // draw line
-        SSD1306_DrawLine(0, MAX_X, 0, MAX_Y); // draw line
-        // SSD1306_DrawLine(0, MAX_X, 4, 4); // draw line
-        // AdafruitDrawPixel(10, 10, 1);
-        // AdafruitDrawPixel(15, 15, 1);
-        SSD1306_SetPosition(7, 10); // set position
-        // SSD1306_DrawString("SSD1306 OLED DRIVER"); // draw string
-        SSD1306_DrawString("XXXXXXXXXXX"); // draw string
-
-        memset(me->i2c_data, 0, sizeof(me->i2c_data));
-        me->i2c_data[0] = 0x00; // Begin command
-        me->i2c_data[1] = SSD1306_SET_PAGE_ADDR;
-        me->i2c_data[2] = 0x00; // Start address
-        me->i2c_data[3] = 0xFF; // End  addresss
-        me->i2c_data[4] = SSD1306_SET_COLUMN_ADDR;
-        me->i2c_data[5] = 0x00; // Start address
-        me->i2c_data[6] = 0x7F; // End  addresss
-
-        // me->i2c_data[0] = SSD1306_DATA_STREAM;
-        // memcpy(me->i2c_data + 1, me->cacheMemLcd, CACHE_SIZE_MEM);
-
-        I2C_Return_T retval = me->i2c_write(
-            SSD1306_ADDR,
-            me->i2c_data,
-            7,
-            I2C_Complete_CB,
-            I2C_Error_CB,
-            &ssd1306_inst);
-
-        if (retval != I2C_RTN_SUCCESS)
-        {
-            static QEvt const event = QEVT_INITIALIZER(I2C_ERROR_SIG);
-            QACTIVE_POST(me, &event, me);
-        }
-
-        status = Q_HANDLED();
-        break;
-    }
-    case I2C_COMPLETE_SIG:
-    {
-        status = Q_TRAN(&update_screen_2);
-        break;
-    }
-    case I2C_ERROR_SIG:
-    {
-        status = Q_TRAN(&startup_error);
+        const static uint8_t args[] = {0x00, 0x10};
+        // Set desired RAM page address
+        status = send_command_substate_machine(
+            (QStateHandler)&update_screen_1,
+            (QStateHandler)&update_screen_2,
+            0xB0 + me->pageNumber,
+            2,
+            args);
         break;
     }
     default:
     {
-        status = Q_SUPER(&QHsm_top);
+        status = Q_SUPER(&update_screen);
         break;
     }
     }
@@ -479,14 +525,12 @@ static QState update_screen_2(SSD1306 *const me, QEvt const *const e)
     {
 
         me->i2c_data[0] = SSD1306_DATA_STREAM;
-        memcpy(me->i2c_data + 1, me->xfer_ptr, 256);
-        // memset(me->i2c_data, 0x00, sizeof(me->i2c_data));
-        me->xfer_ptr += 256;
+        memcpy(me->i2c_data + 1, &me->SSD1306_Buffer[SSD1306_WIDTH * me->pageNumber], SSD1306_WIDTH);
 
         I2C_Return_T retval = me->i2c_write(
             SSD1306_ADDR,
             me->i2c_data,
-            257,
+            1 + SSD1306_WIDTH,
             I2C_Complete_CB,
             I2C_Error_CB,
             &ssd1306_inst);
@@ -502,17 +546,16 @@ static QState update_screen_2(SSD1306 *const me, QEvt const *const e)
     }
     case I2C_COMPLETE_SIG:
     {
-        status = Q_TRAN(&update_screen_2);
-        break;
-    }
-    case I2C_ERROR_SIG:
-    {
-        status = Q_TRAN(&startup_error);
+        me->pageNumber++;
+        if (me->pageNumber == SSD1306_HEIGHT / 8)
+            status = Q_TRAN(&running);
+        else
+            status = Q_TRAN(&update_screen_1); // Send the next page of RAM
         break;
     }
     default:
     {
-        status = Q_SUPER(&QHsm_top);
+        status = Q_SUPER(&update_screen);
         break;
     }
     }
@@ -621,259 +664,460 @@ static void I2C_Error_CB(void *cb_data)
     QACTIVE_POST(me, &event, me);
 }
 
-/**
- * @brief   SSD1306 Clear screen
- *
- * @param   void
- *
- * @return  void
- */
-void SSD1306_ClearScreen(void)
+/* Fill the whole screen with the given color */
+void ssd1306_Fill(SSD1306_COLOR color)
 {
     SSD1306 *me = &ssd1306_inst;
-    memset(me->cacheMemLcd, 0x00, CACHE_SIZE_MEM); // null cache memory lcd
+    memset(me->SSD1306_Buffer, (color == Black) ? 0x00 : 0xFF, sizeof(me->SSD1306_Buffer));
 }
 
-/**
- * @brief   SSD1306 Set position
- *
- * @param   uint8_t column -> 0 ... 127
- * @param   uint8_t page -> 0 ... 7 or 3
- *
- * @return  void
+/*
+ * Draw one pixel in the screenbuffer
+ * X => X Coordinate
+ * Y => Y Coordinate
+ * color => Pixel color
  */
-void SSD1306_SetPosition(uint8_t x, uint8_t y)
+void ssd1306_DrawPixel(uint8_t x, uint8_t y, SSD1306_COLOR color)
 {
     SSD1306 *me = &ssd1306_inst;
-    me->_counter = x + (y << 7); // update counter
-}
-
-/**
- * @brief   SSD1306 Update text poisition - this ensure that character will not be divided at the end of row,
- *          the whole character will be depicted on the new row
- *
- * @param   void
- *
- * @return  uint8_t
- */
-uint8_t SSD1306_UpdatePosition(void)
-{
-    SSD1306 *me = &ssd1306_inst;
-    uint8_t y = me->_counter >> 7;             // y / 8
-    uint8_t x = me->_counter - (y << 7);       // y % 8
-    uint8_t x_new = x + CHARS_COLS_LENGTH + 1; // x + character length + 1
-
-    if (x_new > END_COLUMN_ADDR)
-    { // check position
-        if (y > END_PAGE_ADDR)
-        {                         // if more than allowable number of pages
-            return SSD1306_ERROR; // return out of range
-        }
-        else if (y < (END_PAGE_ADDR - 1))
-        {                                // if x reach the end but page in range
-            me->_counter = ((++y) << 7); // update
-        }
-    }
-
-    return SSD1306_SUCCESS;
-}
-
-/**
- * @brief   SSD1306 Draw character
- *
- * @param   char character
- *
- * @return  uint8_t
- */
-uint8_t SSD1306_DrawChar(char character)
-{
-    SSD1306 *me = &ssd1306_inst;
-    uint8_t i = 0;
-
-    if (SSD1306_UpdatePosition() == SSD1306_ERROR)
+    if (x >= SSD1306_WIDTH || y >= SSD1306_HEIGHT)
     {
-        return SSD1306_ERROR;
+        // Don't write outside the buffer
+        return;
     }
-    while (i < CHARS_COLS_LENGTH)
+
+    // Draw in the right color
+    if (color == White)
     {
-        me->cacheMemLcd[me->_counter++] = &FONTS[character - 32][i++];
-    }
-    me->_counter++;
-
-    return SSD1306_SUCCESS;
-}
-
-/**
- * @brief   SSD1306 Draw String
- *
- * @param   char * string
- *
- * @return  void
- */
-void SSD1306_DrawString(char *str)
-{
-    int i = 0;
-    while (str[i] != '\0')
-    {
-        SSD1306_DrawChar(str[i++]);
-    }
-}
-
-/**
- * @brief   Draw pixel
- *
- * @param   uint8_t x -> 0 ... MAX_X
- * @param   uint8_t y -> 0 ... MAX_Y
- *
- * @return  uint8_t
- */
-uint8_t SSD1306_DrawPixel(uint8_t x, uint8_t y)
-{
-    SSD1306 *me = &ssd1306_inst;
-    uint8_t page = 0;
-    uint8_t pixel = 0;
-
-    if ((x > MAX_X) || (y > MAX_Y))
-    {                         // if out of range
-        return SSD1306_ERROR; // out of range
-    }
-    page = y >> 3;                            // find page (y / 8)
-    pixel = 1 << (y - (page << 3));           // which pixel (y % 8)
-    me->_counter = x + (page << 7);           // update counter
-    me->cacheMemLcd[me->_counter++] |= pixel; // save pixel
-
-    return SSD1306_SUCCESS;
-}
-
-void AdafruitDrawPixel(uint16_t x, uint16_t y, uint16_t color)
-{
-    SSD1306 *const me = &ssd1306_inst;
-    switch (color)
-    {
-    case 1:
-        me->cacheMemLcd[x + (y / 8) * WIDTH] |= (1 << (y & 7));
-        break;
-    case 0:
-        me->cacheMemLcd[x + (y / 8) * WIDTH] &= ~(1 << (y & 7));
-        break;
-    case 2:
-        me->cacheMemLcd[x + (y / 8) * WIDTH] ^= (1 << (y & 7));
-        break;
-    }
-}
-
-/**
- * @brief   Draw line by Bresenham algoritm
- *
- * @param   uint8_t x start position / 0 <= cols <= MAX_X-1
- * @param   uint8_t x end position   / 0 <= cols <= MAX_X-1
- * @param   uint8_t y start position / 0 <= rows <= MAX_Y-1
- * @param   uint8_t y end position   / 0 <= rows <= MAX_Y-1
- *
- * @return  uint8_t
- */
-uint8_t SSD1306_DrawLine(uint8_t x1, uint8_t x2, uint8_t y1, uint8_t y2)
-{
-    int16_t D;                        // determinant
-    int16_t delta_x, delta_y;         // deltas
-    int16_t trace_x = 1, trace_y = 1; // steps
-
-    delta_x = x2 - x1; // delta x
-    delta_y = y2 - y1; // delta y
-
-    if (delta_x < 0)
-    {                       // check if x2 > x1
-        delta_x = -delta_x; // negate delta x
-        trace_x = -trace_x; // negate step x
-    }
-
-    if (delta_y < 0)
-    {                       // check if y2 > y1
-        delta_y = -delta_y; // negate detla y
-        trace_y = -trace_y; // negate step y
-    }
-
-    // Bresenham condition for m < 1 (dy < dx)
-    // -------------------------------------------------------------------------------------
-    if (delta_y < delta_x)
-    {
-        D = (delta_y << 1) - delta_x; // calculate determinant
-        SSD1306_DrawPixel(x1, y1);    // draw first pixel
-        while (x1 != x2)
-        {                  // check if x1 equal x2
-            x1 += trace_x; // update x1
-            if (D >= 0)
-            {                     // check if determinant is positive
-                y1 += trace_y;    // update y1
-                D -= 2 * delta_x; // update determinant
-            }
-            D += 2 * delta_y;          // update deteminant
-            SSD1306_DrawPixel(x1, y1); // draw next pixel
-        }
-        // for m > 1 (dy > dx)
-        // -------------------------------------------------------------------------------------
+        me->SSD1306_Buffer[x + (y / 8) * SSD1306_WIDTH] |= 1 << (y % 8);
     }
     else
     {
-        D = delta_y - (delta_x << 1); // calculate determinant
-        SSD1306_DrawPixel(x1, y1);    // draw first pixel
-        while (y1 != y2)
-        {                  // check if y2 equal y1
-            y1 += trace_y; // update y1
-            if (D <= 0)
-            {                     // check if determinant is positive
-                x1 += trace_x;    // update y1
-                D += 2 * delta_y; // update determinant
-            }
-            D -= 2 * delta_x;          // update deteminant
-            SSD1306_DrawPixel(x1, y1); // draw next pixel
-        }
+        me->SSD1306_Buffer[x + (y / 8) * SSD1306_WIDTH] &= ~(1 << (y % 8));
     }
-
-    return SSD1306_SUCCESS;
 }
 
-void drawFastHLineInternal(uint8_t x, uint8_t y, uint8_t w,
-                           uint8_t color)
+/*
+ * Draw 1 char to the screen buffer
+ * ch       => char om weg te schrijven
+ * Font     => Font waarmee we gaan schrijven
+ * color    => Black or White
+ */
+char ssd1306_WriteChar(char ch, SSD1306_Font_t Font, SSD1306_COLOR color)
 {
+    SSD1306 *me = &ssd1306_inst;
+    uint32_t i, b, j;
 
-    SSD1306 *const me = &ssd1306_inst;
-    if ((y >= 0) && (y < HEIGHT))
-    { // Y coord in bounds?
-        if (x < 0)
-        { // Clip left
-            w += x;
-            x = 0;
-        }
-        if ((x + w) > WIDTH)
-        { // Clip right
-            w = (WIDTH - x);
-        }
-        if (w > 0)
-        { // Proceed only if width is positive
-            uint8_t *pBuf = me->cacheMemLcd[(y / 8) * WIDTH + x], mask = 1 << (y & 7);
-            switch (color)
+    // Check if character is valid
+    if (ch < 32 || ch > 126)
+        return 0;
+
+    // Check remaining space on current line
+    if (SSD1306_WIDTH < (me->CurrentX + Font.width) ||
+        SSD1306_HEIGHT < (me->CurrentY + Font.height))
+    {
+        // Not enough space on current line
+        return 0;
+    }
+
+    // Use the font to write
+    for (i = 0; i < Font.height; i++)
+    {
+        b = Font.data[(ch - 32) * Font.height + i];
+        for (j = 0; j < Font.width; j++)
+        {
+            if ((b << j) & 0x8000)
             {
-            case 1:
-                while (w--)
-                {
-                    *pBuf++ |= mask;
-                };
-                break;
-            case 0:
-                mask = ~mask;
-                while (w--)
-                {
-                    *pBuf++ &= mask;
-                };
-                break;
-            case 2:
-                while (w--)
-                {
-                    *pBuf++ ^= mask;
-                };
-                break;
+                ssd1306_DrawPixel(me->CurrentX + j, (me->CurrentY + i), (SSD1306_COLOR)color);
+            }
+            else
+            {
+                ssd1306_DrawPixel(me->CurrentX + j, (me->CurrentY + i), (SSD1306_COLOR)!color);
             }
         }
     }
+
+    // The current space is now taken
+    me->CurrentX += Font.char_width ? Font.char_width[ch - 32] : Font.width;
+
+    // Return written char for validation
+    return ch;
+}
+
+/* Write full string to screenbuffer */
+char ssd1306_WriteString(char *str, SSD1306_Font_t Font, SSD1306_COLOR color)
+{
+    while (*str)
+    {
+        if (ssd1306_WriteChar(*str, Font, color) != *str)
+        {
+            // Char could not be written
+            return *str;
+        }
+        str++;
+    }
+
+    // Everything ok
+    return *str;
+}
+
+/* Position the cursor */
+void ssd1306_SetCursor(uint8_t x, uint8_t y)
+{
+    SSD1306 *me = &ssd1306_inst;
+    me->CurrentX = x;
+    me->CurrentY = y;
+}
+
+/* Draw line by Bresenhem's algorithm */
+void ssd1306_Line(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2, SSD1306_COLOR color)
+{
+    int32_t deltaX = abs(x2 - x1);
+    int32_t deltaY = abs(y2 - y1);
+    int32_t signX = ((x1 < x2) ? 1 : -1);
+    int32_t signY = ((y1 < y2) ? 1 : -1);
+    int32_t error = deltaX - deltaY;
+    int32_t error2;
+
+    ssd1306_DrawPixel(x2, y2, color);
+
+    while ((x1 != x2) || (y1 != y2))
+    {
+        ssd1306_DrawPixel(x1, y1, color);
+        error2 = error * 2;
+        if (error2 > -deltaY)
+        {
+            error -= deltaY;
+            x1 += signX;
+        }
+
+        if (error2 < deltaX)
+        {
+            error += deltaX;
+            y1 += signY;
+        }
+    }
+    return;
+}
+
+/* Draw polyline */
+void ssd1306_Polyline(const SSD1306_VERTEX *par_vertex, uint16_t par_size, SSD1306_COLOR color)
+{
+    uint16_t i;
+    if (par_vertex == NULL)
+    {
+        return;
+    }
+
+    for (i = 1; i < par_size; i++)
+    {
+        ssd1306_Line(par_vertex[i - 1].x, par_vertex[i - 1].y, par_vertex[i].x, par_vertex[i].y, color);
+    }
+
+    return;
+}
+
+/* Convert Degrees to Radians */
+static float ssd1306_DegToRad(float par_deg)
+{
+    return par_deg * (3.14f / 180.0f);
+}
+
+/* Normalize degree to [0;360] */
+static uint16_t ssd1306_NormalizeTo0_360(uint16_t par_deg)
+{
+    uint16_t loc_angle;
+    if (par_deg <= 360)
+    {
+        loc_angle = par_deg;
+    }
+    else
+    {
+        loc_angle = par_deg % 360;
+        loc_angle = (loc_angle ? loc_angle : 360);
+    }
+    return loc_angle;
+}
+
+/*
+ * DrawArc. Draw angle is beginning from 4 quart of trigonometric circle (3pi/2)
+ * start_angle in degree
+ * sweep in degree
+ */
+void ssd1306_DrawArc(uint8_t x, uint8_t y, uint8_t radius, uint16_t start_angle, uint16_t sweep, SSD1306_COLOR color)
+{
+    static const uint8_t CIRCLE_APPROXIMATION_SEGMENTS = 36;
+    float approx_degree;
+    uint32_t approx_segments;
+    uint8_t xp1, xp2;
+    uint8_t yp1, yp2;
+    uint32_t count;
+    uint32_t loc_sweep;
+    float rad;
+
+    loc_sweep = ssd1306_NormalizeTo0_360(sweep);
+
+    count = (ssd1306_NormalizeTo0_360(start_angle) * CIRCLE_APPROXIMATION_SEGMENTS) / 360;
+    approx_segments = (loc_sweep * CIRCLE_APPROXIMATION_SEGMENTS) / 360;
+    approx_degree = loc_sweep / (float)approx_segments;
+    while (count < approx_segments)
+    {
+        rad = ssd1306_DegToRad(count * approx_degree);
+        xp1 = x + (int8_t)(sinf(rad) * radius);
+        yp1 = y + (int8_t)(cosf(rad) * radius);
+        count++;
+        if (count != approx_segments)
+        {
+            rad = ssd1306_DegToRad(count * approx_degree);
+        }
+        else
+        {
+            rad = ssd1306_DegToRad(loc_sweep);
+        }
+        xp2 = x + (int8_t)(sinf(rad) * radius);
+        yp2 = y + (int8_t)(cosf(rad) * radius);
+        ssd1306_Line(xp1, yp1, xp2, yp2, color);
+    }
+
+    return;
+}
+
+/*
+ * Draw arc with radius line
+ * Angle is beginning from 4 quart of trigonometric circle (3pi/2)
+ * start_angle: start angle in degree
+ * sweep: finish angle in degree
+ */
+void ssd1306_DrawArcWithRadiusLine(uint8_t x, uint8_t y, uint8_t radius, uint16_t start_angle, uint16_t sweep, SSD1306_COLOR color)
+{
+    const uint32_t CIRCLE_APPROXIMATION_SEGMENTS = 36;
+    float approx_degree;
+    uint32_t approx_segments;
+    uint8_t xp1;
+    uint8_t xp2 = 0;
+    uint8_t yp1;
+    uint8_t yp2 = 0;
+    uint32_t count;
+    uint32_t loc_sweep;
+    float rad;
+
+    loc_sweep = ssd1306_NormalizeTo0_360(sweep);
+
+    count = (ssd1306_NormalizeTo0_360(start_angle) * CIRCLE_APPROXIMATION_SEGMENTS) / 360;
+    approx_segments = (loc_sweep * CIRCLE_APPROXIMATION_SEGMENTS) / 360;
+    approx_degree = loc_sweep / (float)approx_segments;
+
+    rad = ssd1306_DegToRad(count * approx_degree);
+    uint8_t first_point_x = x + (int8_t)(sinf(rad) * radius);
+    uint8_t first_point_y = y + (int8_t)(cosf(rad) * radius);
+    while (count < approx_segments)
+    {
+        rad = ssd1306_DegToRad(count * approx_degree);
+        xp1 = x + (int8_t)(sinf(rad) * radius);
+        yp1 = y + (int8_t)(cosf(rad) * radius);
+        count++;
+        if (count != approx_segments)
+        {
+            rad = ssd1306_DegToRad(count * approx_degree);
+        }
+        else
+        {
+            rad = ssd1306_DegToRad(loc_sweep);
+        }
+        xp2 = x + (int8_t)(sinf(rad) * radius);
+        yp2 = y + (int8_t)(cosf(rad) * radius);
+        ssd1306_Line(xp1, yp1, xp2, yp2, color);
+    }
+
+    // Radius line
+    ssd1306_Line(x, y, first_point_x, first_point_y, color);
+    ssd1306_Line(x, y, xp2, yp2, color);
+    return;
+}
+
+/* Draw circle by Bresenhem's algorithm */
+void ssd1306_DrawCircle(uint8_t par_x, uint8_t par_y, uint8_t par_r, SSD1306_COLOR par_color)
+{
+    int32_t x = -par_r;
+    int32_t y = 0;
+    int32_t err = 2 - 2 * par_r;
+    int32_t e2;
+
+    if (par_x >= SSD1306_WIDTH || par_y >= SSD1306_HEIGHT)
+    {
+        return;
+    }
+
+    do
+    {
+        ssd1306_DrawPixel(par_x - x, par_y + y, par_color);
+        ssd1306_DrawPixel(par_x + x, par_y + y, par_color);
+        ssd1306_DrawPixel(par_x + x, par_y - y, par_color);
+        ssd1306_DrawPixel(par_x - x, par_y - y, par_color);
+        e2 = err;
+
+        if (e2 <= y)
+        {
+            y++;
+            err = err + (y * 2 + 1);
+            if (-x == y && e2 <= x)
+            {
+                e2 = 0;
+            }
+        }
+
+        if (e2 > x)
+        {
+            x++;
+            err = err + (x * 2 + 1);
+        }
+    } while (x <= 0);
+
+    return;
+}
+
+/* Draw filled circle. Pixel positions calculated using Bresenham's algorithm */
+void ssd1306_FillCircle(uint8_t par_x, uint8_t par_y, uint8_t par_r, SSD1306_COLOR par_color)
+{
+    int32_t x = -par_r;
+    int32_t y = 0;
+    int32_t err = 2 - 2 * par_r;
+    int32_t e2;
+
+    if (par_x >= SSD1306_WIDTH || par_y >= SSD1306_HEIGHT)
+    {
+        return;
+    }
+
+    do
+    {
+        for (uint8_t _y = (par_y + y); _y >= (par_y - y); _y--)
+        {
+            for (uint8_t _x = (par_x - x); _x >= (par_x + x); _x--)
+            {
+                ssd1306_DrawPixel(_x, _y, par_color);
+            }
+        }
+
+        e2 = err;
+        if (e2 <= y)
+        {
+            y++;
+            err = err + (y * 2 + 1);
+            if (-x == y && e2 <= x)
+            {
+                e2 = 0;
+            }
+        }
+
+        if (e2 > x)
+        {
+            x++;
+            err = err + (x * 2 + 1);
+        }
+    } while (x <= 0);
+
+    return;
+}
+
+/* Draw a rectangle */
+void ssd1306_DrawRectangle(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2, SSD1306_COLOR color)
+{
+    ssd1306_Line(x1, y1, x2, y1, color);
+    ssd1306_Line(x2, y1, x2, y2, color);
+    ssd1306_Line(x2, y2, x1, y2, color);
+    ssd1306_Line(x1, y2, x1, y1, color);
+
+    return;
+}
+
+/* Draw a filled rectangle */
+void ssd1306_FillRectangle(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2, SSD1306_COLOR color)
+{
+    uint8_t x_start = ((x1 <= x2) ? x1 : x2);
+    uint8_t x_end = ((x1 <= x2) ? x2 : x1);
+    uint8_t y_start = ((y1 <= y2) ? y1 : y2);
+    uint8_t y_end = ((y1 <= y2) ? y2 : y1);
+
+    for (uint8_t y = y_start; (y <= y_end) && (y < SSD1306_HEIGHT); y++)
+    {
+        for (uint8_t x = x_start; (x <= x_end) && (x < SSD1306_WIDTH); x++)
+        {
+            ssd1306_DrawPixel(x, y, color);
+        }
+    }
+    return;
+}
+
+SSD1306_Error_t ssd1306_InvertRectangle(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2)
+{
+    SSD1306 *const me = &ssd1306_inst;
+    if ((x2 >= SSD1306_WIDTH) || (y2 >= SSD1306_HEIGHT))
+    {
+        return SSD1306_ERR;
+    }
+    if ((x1 > x2) || (y1 > y2))
+    {
+        return SSD1306_ERR;
+    }
+    uint32_t i;
+    if ((y1 / 8) != (y2 / 8))
+    {
+        /* if rectangle doesn't lie on one 8px row */
+        for (uint32_t x = x1; x <= x2; x++)
+        {
+            i = x + (y1 / 8) * SSD1306_WIDTH;
+            me->SSD1306_Buffer[i] ^= 0xFF << (y1 % 8);
+            i += SSD1306_WIDTH;
+            for (; i < x + (y2 / 8) * SSD1306_WIDTH; i += SSD1306_WIDTH)
+            {
+                me->SSD1306_Buffer[i] ^= 0xFF;
+            }
+            me->SSD1306_Buffer[i] ^= 0xFF >> (7 - (y2 % 8));
+        }
+    }
+    else
+    {
+        /* if rectangle lies on one 8px row */
+        const uint8_t mask = (0xFF << (y1 % 8)) & (0xFF >> (7 - (y2 % 8)));
+        for (i = x1 + (y1 / 8) * SSD1306_WIDTH;
+             i <= (uint32_t)x2 + (y2 / 8) * SSD1306_WIDTH; i++)
+        {
+            me->SSD1306_Buffer[i] ^= mask;
+        }
+    }
+    return SSD1306_OK;
+}
+
+/* Draw a bitmap */
+void ssd1306_DrawBitmap(uint8_t x, uint8_t y, const unsigned char *bitmap, uint8_t w, uint8_t h, SSD1306_COLOR color)
+{
+    int16_t byteWidth = (w + 7) / 8; // Bitmap scanline pad = whole byte
+    uint8_t byte = 0;
+
+    if (x >= SSD1306_WIDTH || y >= SSD1306_HEIGHT)
+    {
+        return;
+    }
+
+    for (uint8_t j = 0; j < h; j++, y++)
+    {
+        for (uint8_t i = 0; i < w; i++)
+        {
+            if (i & 7)
+            {
+                byte <<= 1;
+            }
+            else
+            {
+                byte = (*(const unsigned char *)(&bitmap[j * byteWidth + i / 8]));
+            }
+
+            if (byte & 0x80)
+            {
+                ssd1306_DrawPixel(x + i, y, color);
+            }
+        }
+    }
+    return;
 }

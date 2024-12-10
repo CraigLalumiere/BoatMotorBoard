@@ -61,6 +61,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     ./Core/services/app_cli/app_cli_manual_commands.c
     ./Core/bsp/drivers/i2c_bus.c
     ./Core/bsp/drivers/i2c_bus_stm32.c
+    ./Core/Src/ssd1306_fonts.c
 
     # Explicitly list required TinyUSB sources
     #   It might be preferable to do this with tinyusb/src/CMakeLists.txt, but this works 

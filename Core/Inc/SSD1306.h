@@ -7,6 +7,23 @@
 extern "C" {
 #endif
 
+
+#include <stddef.h>
+
+
+#define SSD1306_INCLUDE_FONT_7x10
+
+
+
+/** Font */
+typedef struct
+{
+    const uint8_t width;             /**< Font width in pixels */
+    const uint8_t height;            /**< Font height in pixels */
+    const uint16_t *const data;      /**< Pointer to font data array */
+    const uint8_t *const char_width; /**< Proportional character width in pixels (NULL for monospaced) */
+} SSD1306_Font_t;
+
 /**************************************************************************************************\
 * Public memory declarations
 \**************************************************************************************************/
