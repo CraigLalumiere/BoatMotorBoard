@@ -119,14 +119,22 @@ typedef struct
     I2C_Read i2c_read;
     uint8_t i2c_data[N_BYTES_I2C_DATA];
 
-    uint8_t init_command_num; // Keeps track of which command we're on
-
     uint8_t _counter;
 
     uint16_t xfer_counter;
-    char* xfer_ptr;
+    char *xfer_ptr;
 
     char cacheMemLcd[CACHE_SIZE_MEM + 1];
+
+    // submachine state memory
+    QStateHandler substate_next_state;
+    QStateHandler substate_super_state;
+    uint8_t command;
+    uint8_t num_args;
+    uint8_t *args;
+
+    uint8_t init_command_num;
+    uint8_t *init_command_ptr;
 
 } SSD1306;
 
@@ -196,6 +204,33 @@ const uint8_t INIT_SEQUENCE[] = {
     SSD1306_DISPLAY_ON,
 };
 
+#define NUM_INIT_COMMANDS 17
+const uint8_t INIT_SSD1306_ADAFRUIT[] = {
+    SSD1306_DISPLAY_OFF, 0,            // 0xAE / Set Display OFF
+    SSD1306_SET_OSC_FREQ, 1, 0x80,     // 0xD5 / 0x80 => D=1; DCLK = Fosc / D <=> DCLK = Fosc
+    SSD1306_SET_MUX_RATIO, 1, 0x3F,    // 0xA8 / 0x3F (64MUX) for 128 x 64 version
+                                       //      / 0x1F (32MUX) for 128 x 32 version
+    SSD1306_DISPLAY_OFFSET, 1, 0x00,   // 0xD3
+    SSD1306_SET_START_LINE, 0,         // 0x40
+    SSD1306_SET_CHAR_REG, 1, 0x14,     // 0x8D / Enable charge pump during display on
+    SSD1306_MEMORY_ADDR_MODE, 1, 0x00, // 0x20 / Set Memory Addressing Mode
+                                       // 0x00 / Horizontal Addressing Mode
+                                       // 0x01 / Vertical Addressing Mode
+                                       // 0x02 /  Page Addressing Mode (RESET)
+    SSD1306_SEG_REMAP_OP, 0,           // 0xA0 / remap 0xA1
+    SSD1306_COM_SCAN_DIR_OP, 0,        // 0xC8
+    SSD1306_COM_PIN_CONF, 1, 0x12,     // 0xDA / 0x12 - Disable COM Left/Right remap, Alternative COM pin configuration
+                                       //        0x12 - for 128 x 64 version
+                                       //        0x02 - for 128 x 32 version
+    SSD1306_SET_CONTRAST, 1, 0xCF,     // 0x81 / 0x8F - reset value (max 0xFF)
+    SSD1306_SET_PRECHARGE, 1, 0xF1,    // 0xD9 / higher value less blinking
+                                       //        0xC2, 1st phase = 2 DCLK,  2nd phase = 13 DCLK
+    SSD1306_VCOM_DESELECT, 1, 0x40,    // 0xDB / Set V COMH Deselect, reset value 0x22 = 0,77xUcc
+    SSD1306_DIS_ENT_DISP_ON, 0,        // 0xA4
+    SSD1306_DIS_NORMAL, 0,             // 0xA6
+    SSD1306_DEACT_SCROLL, 0,           // 0x2E
+    SSD1306_DISPLAY_ON, 0              // 0xAF / Set Display ON
+};
 /**************************************************************************************************\
 * Private prototypes
 \**************************************************************************************************/
@@ -208,6 +243,15 @@ static QState startup_error(SSD1306 *const me, QEvt const *const e);
 static QState standby(SSD1306 *const me, QEvt const *const e);
 static QState update_screen_1(SSD1306 *const me, QEvt const *const e);
 static QState update_screen_2(SSD1306 *const me, QEvt const *const e);
+
+static QState substate_send_command(SSD1306 *const me, QEvt const *const e);
+
+static QState send_command_substate_machine(
+    QStateHandler super_state,
+    QStateHandler next_state,
+    uint8_t command,
+    uint8_t numArgs,
+    uint8_t *args);
 
 static void I2C_Complete_CB(void *cb_data);
 static void I2C_Error_CB(void *cb_data);
@@ -267,31 +311,34 @@ static QState startup(SSD1306 *const me, QEvt const *const e)
 
     switch (e->sig)
     {
-    case Q_ENTRY_SIG:
+    case Q_INIT_SIG:
     {
-
-        memcpy(me->i2c_data, INIT_SEQUENCE, sizeof(INIT_SEQUENCE));
-
-        I2C_Return_T retval = me->i2c_write(
-            SSD1306_ADDR,
-            me->i2c_data,
-            NUM_BYTES_INIT,
-            I2C_Complete_CB,
-            I2C_Error_CB,
-            &ssd1306_inst);
-
-        if (retval != I2C_RTN_SUCCESS)
+        QStateHandler nextState = (QStateHandler) &startup;
+        // If we've transmitted all of the startup commands
+        if (me->init_command_num == NUM_INIT_COMMANDS - 1)
         {
-            static QEvt const event = QEVT_INITIALIZER(I2C_ERROR_SIG);
-            QACTIVE_POST(me, &event, me);
+            nextState = (QStateHandler) (&update_screen_1);
         }
-
-        status = Q_HANDLED();
+        uint8_t command = me->init_command_ptr[0];
+        uint8_t num_args = me->init_command_ptr[1];
+        uint8_t *args = me->init_command_ptr + 2;
+        // Move into substate machine
+        status = send_command_substate_machine(
+            (QStateHandler)&startup,
+            nextState,
+            command,
+            num_args,
+            args);
+        me->init_command_ptr += 2 + num_args;
+        me->init_command_num++;
         break;
     }
-    case I2C_COMPLETE_SIG:
+    case Q_ENTRY_SIG:
     {
-        status = Q_TRAN(&update_screen_1);
+        me->init_command_ptr = INIT_SSD1306_ADAFRUIT;
+        me->init_command_num = 0;
+
+        status = Q_HANDLED();
         break;
     }
     case I2C_ERROR_SIG:
@@ -363,13 +410,13 @@ static QState update_screen_1(SSD1306 *const me, QEvt const *const e)
         me->xfer_counter = 0;
         me->xfer_ptr = me->cacheMemLcd;
 
-        SSD1306_ClearScreen(); // clear screen
-        SSD1306_DrawLine(0, MAX_X, 4, 4); // draw line
+        SSD1306_ClearScreen();                // clear screen
+        SSD1306_DrawLine(0, MAX_X, 4, 4);     // draw line
         SSD1306_DrawLine(0, MAX_X, 0, MAX_Y); // draw line
         // SSD1306_DrawLine(0, MAX_X, 4, 4); // draw line
         // AdafruitDrawPixel(10, 10, 1);
         // AdafruitDrawPixel(15, 15, 1);
-        SSD1306_SetPosition(7, 10);                 // set position
+        SSD1306_SetPosition(7, 10); // set position
         // SSD1306_DrawString("SSD1306 OLED DRIVER"); // draw string
         SSD1306_DrawString("XXXXXXXXXXX"); // draw string
 
@@ -466,6 +513,79 @@ static QState update_screen_2(SSD1306 *const me, QEvt const *const e)
     default:
     {
         status = Q_SUPER(&QHsm_top);
+        break;
+    }
+    }
+
+    return status;
+}
+
+/**
+ ***************************************************************************************************
+ * @brief   Helper function to initiate substate machine
+ **************************************************************************************************/
+static QState send_command_substate_machine(
+    QStateHandler super_state,
+    QStateHandler next_state,
+    uint8_t command,
+    uint8_t numArgs,
+    uint8_t *args)
+{
+    SSD1306 *me = &ssd1306_inst;
+
+    me->substate_super_state = super_state;
+    me->substate_next_state = next_state;
+    me->num_args = numArgs;
+    me->command = command;
+    me->args = args;
+
+    return Q_TRAN(&substate_send_command);
+}
+
+/**
+ ***************************************************************************************************
+ * @brief   Third state of 'write' substate: Get the response to the 'read register' command, wait
+ *for callback
+ **************************************************************************************************/
+
+static QState substate_send_command(SSD1306 *const me, QEvt const *const e)
+{
+    QState status;
+
+    switch (e->sig)
+    {
+    case Q_ENTRY_SIG:
+    {
+        me->i2c_data[0] = SSD1306_COMMAND_STREAM;
+        me->i2c_data[1] = me->command;
+        memcpy(me->i2c_data + 2, me->args, me->num_args);
+
+        I2C_Return_T retval = me->i2c_write(
+            SSD1306_ADDR,
+            me->i2c_data,
+            2 + me->num_args,
+            I2C_Complete_CB,
+            I2C_Error_CB,
+            &ssd1306_inst);
+
+        if (retval != I2C_RTN_SUCCESS)
+        {
+            static QEvt const event = QEVT_INITIALIZER(I2C_ERROR_SIG);
+            QACTIVE_POST(me, &event, me);
+        }
+
+        status = Q_HANDLED();
+        break;
+    }
+    case I2C_COMPLETE_SIG:
+    {
+        status = Q_TRAN(me->substate_next_state);
+        break;
+    }
+
+    default:
+    {
+        status = Q_SUPER(me->substate_super_state);
         break;
     }
     }
