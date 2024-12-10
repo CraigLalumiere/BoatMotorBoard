@@ -53,6 +53,8 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     ./Core/bsp/drivers/bsp_manual.c
     ./Core/Src/blinky.c
     ./Core/Src/SSD1306.c
+    ./Core/Src/ssd1306_fonts.c
+    ./Core/Src/LMT01.c
     ./Core/bsp/drivers/usb_board_api.c
     ./Core/bsp/drivers/usb_descriptors.c
     ./Core/bsp/drivers/usb.c
@@ -61,7 +63,6 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     ./Core/services/app_cli/app_cli_manual_commands.c
     ./Core/bsp/drivers/i2c_bus.c
     ./Core/bsp/drivers/i2c_bus_stm32.c
-    ./Core/Src/ssd1306_fonts.c
 
     # Explicitly list required TinyUSB sources
     #   It might be preferable to do this with tinyusb/src/CMakeLists.txt, but this works 

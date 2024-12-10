@@ -1,5 +1,5 @@
 // Based on this library:
-//https://github.com/afiskon/stm32-ssd1306/tree/master
+// https://github.com/afiskon/stm32-ssd1306/tree/master
 
 // Datasheet for OLED control IC:
 // https://cdn-shop.adafruit.com/datasheets/SSD1306.pdf
@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "ssd1306_fonts.h"
+#include "LMT01.h"
 
 Q_DEFINE_THIS_MODULE("SSD1306")
 
@@ -18,6 +19,7 @@ Q_DEFINE_THIS_MODULE("SSD1306")
 * Private macros
 \**************************************************************************************************/
 
+#define OLED_FPS 30
 
 // Address definition
 // ------------------------------------------------------------------------------------
@@ -109,7 +111,7 @@ typedef enum
 typedef struct
 {
     QActive super;     // inherit QActive
-    QTimeEvt wait_evt; // timer to wait for voltage to settle
+    QTimeEvt screen_update_evt; // timer to wait for voltage to settle
     I2C_Write i2c_write;
     I2C_Read i2c_read;
     uint8_t i2c_data[N_BYTES_I2C_DATA];
@@ -141,93 +143,6 @@ typedef struct
 \**************************************************************************************************/
 static SSD1306 ssd1306_inst;
 QActive *const AO_SSD1306 = &ssd1306_inst.super;
-
-// Matiasus sequence https://github.com/Matiasus/SSD1306/tree/master
-// const uint8_t INIT_SEQUENCE[] = {
-//     SSD1306_COMMAND_STREAM,
-//     SSD1306_DISPLAY_OFF,
-//     SSD1306_SET_MUX_RATIO, 0x3F,    // 0xA8 - 0x3F for 128 x 64 version (64MUX)
-//                                     //      - 0x1F for 128 x 32 version (32MUX)
-//     SSD1306_MEMORY_ADDR_MODE, 0x00, // 0x20 = Set Memory Addressing Mode
-//                                     // 0x00 - Horizontal Addressing Mode
-//                                     // 0x01 - Vertical Addressing Mode
-//                                     // 0x02 - Page Addressing Mode (RESET)
-//     SSD1306_SET_START_LINE,
-//     SSD1306_DISPLAY_OFFSET, 0x00,
-//     SSD1306_SEG_REMAP_OP,       // 0xA0 / remap 0xA1
-//     SSD1306_COM_SCAN_DIR_OP,    // 0xC0 / remap 0xC8
-//     SSD1306_COM_PIN_CONF, 0x12, // 0xDA, 0x12 - Disable COM Left/Right remap, Alternative COM pin configuration
-//                                 //       0x12 - for 128 x 64 version
-//                                 //       0x02 - for 128 x 32 version
-//     SSD1306_SET_CONTRAST, 0x7F, // 0x81, 0x7F - reset value (max 0xFF)
-//     SSD1306_DIS_ENT_DISP_ON,
-//     SSD1306_DIS_NORMAL,
-//     SSD1306_SET_OSC_FREQ, 0x80,  // 0xD5, 0x80 => D=1; DCLK = Fosc / D <=> DCLK = Fosc
-//     SSD1306_SET_PRECHARGE, 0xc2, // 0xD9, higher value less blinking
-//                                  // 0xC2, 1st phase = 2 DCLK,  2nd phase = 13 DCLK
-//     SSD1306_VCOM_DESELECT, 0x20, // Set V COMH Deselect, reset value 0x22 = 0,77xUcc
-//     SSD1306_SET_CHAR_REG, 0x14,  // 0x8D, Enable charge pump during display on
-//     SSD1306_DEACT_SCROLL,
-//     SSD1306_DISPLAY_ON, // 0xAF = Set Display ON
-// };
-
-// Adafruit sequence
-const uint8_t INIT_SEQUENCE[] = {
-    SSD1306_COMMAND_STREAM,
-    SSD1306_DISPLAY_OFF,
-    SSD1306_SET_OSC_FREQ,
-    0x80,
-    SSD1306_SET_MUX_RATIO,
-    0x3F,
-    SSD1306_DISPLAY_OFFSET,
-    0x00,
-    SSD1306_SET_START_LINE,
-    SSD1306_SET_CHAR_REG,
-    0x14,
-    SSD1306_MEMORY_ADDR_MODE,
-    0,
-    SSD1306_SEG_REMAP_OP,
-    SSD1306_COM_SCAN_DIR_OP,
-    SSD1306_COM_PIN_CONF,
-    0x12,
-    SSD1306_SET_CONTRAST,
-    0xCF,
-    SSD1306_SET_PRECHARGE,
-    0xF1,
-    SSD1306_VCOM_DESELECT,
-    0x40,
-    SSD1306_DIS_ENT_DISP_ON,
-    SSD1306_DIS_NORMAL,
-    SSD1306_DEACT_SCROLL,
-    SSD1306_DISPLAY_ON,
-};
-
-const uint8_t INIT_SSD1306_ADAFRUIT[] = {
-    SSD1306_DISPLAY_OFF, 0,            // 0xAE / Set Display OFF
-    SSD1306_SET_OSC_FREQ, 1, 0x80,     // 0xD5 / 0x80 => D=1; DCLK = Fosc / D <=> DCLK = Fosc
-    SSD1306_SET_MUX_RATIO, 1, 0x3F,    // 0xA8 / 0x3F (64MUX) for 128 x 64 version
-                                       //      / 0x1F (32MUX) for 128 x 32 version
-    SSD1306_DISPLAY_OFFSET, 1, 0x00,   // 0xD3
-    SSD1306_SET_START_LINE, 0,         // 0x40
-    SSD1306_SET_CHAR_REG, 1, 0x14,     // 0x8D / Enable charge pump during display on
-    SSD1306_MEMORY_ADDR_MODE, 1, 0x00, // 0x20 / Set Memory Addressing Mode
-                                       // 0x00 / Horizontal Addressing Mode
-                                       // 0x01 / Vertical Addressing Mode
-                                       // 0x02 /  Page Addressing Mode (RESET)
-    SSD1306_SEG_REMAP_OP, 0,           // 0xA0 / remap 0xA1
-    SSD1306_COM_SCAN_DIR_OP, 0,        // 0xC8
-    SSD1306_COM_PIN_CONF, 1, 0x12,     // 0xDA / 0x12 - Disable COM Left/Right remap, Alternative COM pin configuration
-                                       //        0x12 - for 128 x 64 version
-                                       //        0x02 - for 128 x 32 version
-    SSD1306_SET_CONTRAST, 1, 0xCF,     // 0x81 / 0x8F - reset value (max 0xFF)
-    SSD1306_SET_PRECHARGE, 1, 0xF1,    // 0xD9 / higher value less blinking
-                                       //        0xC2, 1st phase = 2 DCLK,  2nd phase = 13 DCLK
-    SSD1306_VCOM_DESELECT, 1, 0x40,    // 0xDB / Set V COMH Deselect, reset value 0x22 = 0,77xUcc
-    SSD1306_DIS_ENT_DISP_ON, 0,        // 0xA4
-    SSD1306_DIS_NORMAL, 0,             // 0xA6
-    SSD1306_DEACT_SCROLL, 0,           // 0x2E
-    SSD1306_DISPLAY_ON, 0              // 0xAF / Set Display ON
-};
 
 #define NUM_INIT_COMMANDS 19
 const uint8_t INIT_SSD1306_ST[] = {
@@ -265,7 +180,8 @@ static QState startup(SSD1306 *const me, QEvt const *const e);
 static QState startup_error(SSD1306 *const me, QEvt const *const e);
 static QState error(SSD1306 *const me, QEvt const *const e);
 
-static QState running(SSD1306 *const me, QEvt const *const e);
+static QState top(SSD1306 *const me, QEvt const *const e);
+static QState waiting(SSD1306 *const me, QEvt const *const e);
 static QState update_screen(SSD1306 *const me, QEvt const *const e);
 static QState update_screen_1(SSD1306 *const me, QEvt const *const e);
 static QState update_screen_2(SSD1306 *const me, QEvt const *const e);
@@ -317,7 +233,7 @@ void SSD1306_ctor(I2C_Write i2c_write_fn, I2C_Read i2c_read_fn)
     ssd1306_Fill(Black);
 
     QActive_ctor(&me->super, Q_STATE_CAST(&initial));
-    QTimeEvt_ctorX(&me->wait_evt, &me->super, WAIT_TIMEOUT_SIG, 0U);
+    QTimeEvt_ctorX(&me->screen_update_evt, &me->super, WAIT_TIMEOUT_SIG, 0U);
 }
 
 /**************************************************************************************************\
@@ -345,10 +261,10 @@ static QState startup(SSD1306 *const me, QEvt const *const e)
     case Q_INIT_SIG:
     {
         QStateHandler nextState = (QStateHandler)&startup;
-        // If we've transmitted all of the startup commands
+        // If we're on the last command, then move to 'running' afterwards
         if (me->init_command_num == NUM_INIT_COMMANDS - 1)
         {
-            nextState = (QStateHandler)(&update_screen);
+            nextState = (QStateHandler)(&waiting);
         }
         uint8_t command = me->init_command_ptr[0];
         uint8_t num_args = me->init_command_ptr[1];
@@ -366,6 +282,12 @@ static QState startup(SSD1306 *const me, QEvt const *const e)
     }
     case Q_ENTRY_SIG:
     {
+
+        QTimeEvt_armX(
+            &me->screen_update_evt,
+            BSP_TICKS_PER_SEC / OLED_FPS,
+            BSP_TICKS_PER_SEC / OLED_FPS);
+
         me->init_command_ptr = INIT_SSD1306_ST;
         me->init_command_num = 0;
 
@@ -423,7 +345,7 @@ static QState error(SSD1306 *const me, QEvt const *const e)
 
     default:
     {
-        status = Q_SUPER(&running);
+        status = Q_SUPER(&top);
         break;
     }
     }
@@ -431,7 +353,7 @@ static QState error(SSD1306 *const me, QEvt const *const e)
     return status;
 }
 
-static QState running(SSD1306 *const me, QEvt const *const e)
+static QState top(SSD1306 *const me, QEvt const *const e)
 {
     QState status;
 
@@ -457,6 +379,36 @@ static QState running(SSD1306 *const me, QEvt const *const e)
     return status;
 }
 
+static QState waiting(SSD1306 *const me, QEvt const *const e)
+{
+    QState status;
+
+    switch (e->sig)
+    {
+    case Q_ENTRY_SIG:
+    {
+        status = Q_HANDLED();
+        break;
+    }
+    case WAIT_TIMEOUT_SIG: {
+        status = Q_TRAN(&update_screen);
+        break;
+    }
+    case I2C_ERROR_SIG:
+    {
+        status = Q_TRAN(&error);
+        break;
+    }
+    default:
+    {
+        status = Q_SUPER(&top);
+        break;
+    }
+    }
+
+    return status;
+}
+
 static QState update_screen(SSD1306 *const me, QEvt const *const e)
 {
     QState status;
@@ -470,14 +422,17 @@ static QState update_screen(SSD1306 *const me, QEvt const *const e)
     }
     case Q_ENTRY_SIG:
     {
-        
+
+        char print_buffer[32] = {0};
+        ssd1306_SetCursor(0, 0);
         ssd1306_WriteString("Hello World", Font_7x10, White);
         ssd1306_SetCursor(0, 12);
-        ssd1306_WriteString("Foo Bar", Font_7x10, White);
-        ssd1306_SetCursor(0, 24);
-        ssd1306_WriteString("xxxxxxxxxx", Font_7x10, White);
-        ssd1306_SetCursor(0, 36);
-        ssd1306_WriteString("yyyyyyyyyyy", Font_7x10, White);
+        snprintf(
+            print_buffer,
+            sizeof(print_buffer),
+            "Counter = %d",
+            LMT01_Get_Temp());
+        ssd1306_WriteString(print_buffer, Font_7x10, White);
 
         me->pageNumber = 0;
         status = Q_HANDLED();
@@ -485,7 +440,7 @@ static QState update_screen(SSD1306 *const me, QEvt const *const e)
     }
     default:
     {
-        status = Q_SUPER(&running);
+        status = Q_SUPER(&top);
         break;
     }
     }
@@ -554,7 +509,7 @@ static QState update_screen_2(SSD1306 *const me, QEvt const *const e)
     {
         me->pageNumber++;
         if (me->pageNumber == SSD1306_HEIGHT / 8)
-            status = Q_TRAN(&running);
+            status = Q_TRAN(&waiting);
         else
             status = Q_TRAN(&update_screen_1); // Send the next page of RAM
         break;

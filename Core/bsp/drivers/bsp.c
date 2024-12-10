@@ -36,6 +36,7 @@
 #include "pubsub_signals.h"
 #include "tusb.h"
 #include "i2c_bus.h"
+#include "pinout.h"
 
 #include "stm32g4xx_hal.h"
 #include <stdio.h>
@@ -64,6 +65,8 @@ static void USB0_RegisterDataReadyCB(Serial_IO_Data_Ready_Callback cb, void *cb_
 static uint16_t USB1_TransmitData(const uint8_t *data_ptr, const uint16_t data_len);
 static uint16_t USB1_ReceiveData(uint8_t *data_ptr, const uint16_t max_data_len);
 static void USB1_RegisterDataReadyCB(Serial_IO_Data_Ready_Callback cb, void *cb_data);
+
+static void LMT01_ISR();
 
 
 static I2C_Return_T BSP_I2C_Write_SSD1306(
@@ -295,12 +298,12 @@ void BSP_Init(void) {
 //............................................................................
 void BSP_ledOn() {
   printf("LED on\n\r");
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, 1);
+  HAL_GPIO_WritePin(FW_LED_Port, FW_LED_Pin, 1);
 }
 //............................................................................
 void BSP_ledOff() {
   printf("LED off\n\r");
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, 0);
+  HAL_GPIO_WritePin(FW_LED_Port, FW_LED_Pin, 0);
 }
 //............................................................................
 void BSP_terminate(int16_t result) {
@@ -416,4 +419,19 @@ PUTCHAR_PROTOTYPE
     tud_cdc_n_write_flush(USB_INTERFACE_PC_COM);
 
   return ch;
+}
+
+/**
+ ***************************************************************************************************
+ * @brief   EXTI callback, called by HAL IRQ handler
+ **************************************************************************************************/
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+  /* Prevent unused argument(s) compilation warning */
+  switch (GPIO_Pin){
+    case LMTO1_Pin: {
+        LMT01_ISR();
+        break;
+    }
+  }
 }
