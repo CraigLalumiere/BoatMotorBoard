@@ -1,3 +1,9 @@
+// Based on this library:
+//https://github.com/afiskon/stm32-ssd1306/tree/master
+
+// Datasheet for OLED control IC:
+// https://cdn-shop.adafruit.com/datasheets/SSD1306.pdf
+
 #include "SSD1306.h"
 #include "bsp.h"
 #include "private_signal_ranges.h"
