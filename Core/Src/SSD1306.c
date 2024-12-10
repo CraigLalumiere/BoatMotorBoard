@@ -123,6 +123,9 @@ typedef struct
 
     uint8_t _counter;
 
+    uint16_t xfer_counter;
+    char* xfer_ptr;
+
     char cacheMemLcd[CACHE_SIZE_MEM + 1];
 
 } SSD1306;
@@ -357,11 +360,18 @@ static QState update_screen_1(SSD1306 *const me, QEvt const *const e)
     {
     case Q_ENTRY_SIG:
     {
+        me->xfer_counter = 0;
+        me->xfer_ptr = me->cacheMemLcd;
+
         SSD1306_ClearScreen(); // clear screen
-        drawFastHLineInternal(5, 5, 5, 1);
+        SSD1306_DrawLine(0, MAX_X, 4, 4); // draw line
+        SSD1306_DrawLine(0, MAX_X, 0, MAX_Y); // draw line
         // SSD1306_DrawLine(0, MAX_X, 4, 4); // draw line
-        // SSD1306_SetPosition(7, 1);                 // set position
+        // AdafruitDrawPixel(10, 10, 1);
+        // AdafruitDrawPixel(15, 15, 1);
+        SSD1306_SetPosition(7, 10);                 // set position
         // SSD1306_DrawString("SSD1306 OLED DRIVER"); // draw string
+        SSD1306_DrawString("XXXXXXXXXXX"); // draw string
 
         memset(me->i2c_data, 0, sizeof(me->i2c_data));
         me->i2c_data[0] = 0x00; // Begin command
@@ -420,24 +430,16 @@ static QState update_screen_2(SSD1306 *const me, QEvt const *const e)
     {
     case Q_ENTRY_SIG:
     {
-        SSD1306_ClearScreen(); // clear screen
-        SSD1306_DrawLine(0, MAX_X, 4, 4); // draw line
-        SSD1306_DrawLine(0, MAX_X, 0, MAX_Y); // draw line
-
-        // AdafruitDrawPixel(10, 10, 1);
-        // AdafruitDrawPixel(15, 15, 1);
-        // SSD1306_SetPosition(7, 1);                 // set position
-        // SSD1306_DrawString("SSD1306 OLED DRIVER"); // draw string
-
-        memset(me->i2c_data, 0, sizeof(me->i2c_data));
 
         me->i2c_data[0] = SSD1306_DATA_STREAM;
-        memcpy(me->i2c_data + 1, me->cacheMemLcd, CACHE_SIZE_MEM);
+        memcpy(me->i2c_data + 1, me->xfer_ptr, 256);
+        // memset(me->i2c_data, 0x00, sizeof(me->i2c_data));
+        me->xfer_ptr += 256;
 
         I2C_Return_T retval = me->i2c_write(
             SSD1306_ADDR,
             me->i2c_data,
-            CACHE_SIZE_MEM,
+            257,
             I2C_Complete_CB,
             I2C_Error_CB,
             &ssd1306_inst);
@@ -453,7 +455,7 @@ static QState update_screen_2(SSD1306 *const me, QEvt const *const e)
     }
     case I2C_COMPLETE_SIG:
     {
-        status = Q_TRAN(&standby);
+        status = Q_TRAN(&update_screen_2);
         break;
     }
     case I2C_ERROR_SIG:
