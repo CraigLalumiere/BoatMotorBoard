@@ -52,7 +52,6 @@ Q_DEFINE_THIS_MODULE("bsp.c")
 #define USB_INTERFACE_PC_COM 1
 #define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
 
-
 // Static Data
 static I2C_Bus_T s_i2c_bus2;
 
@@ -305,6 +304,16 @@ void BSP_ledOff() {
   printf("LED off\n\r");
   HAL_GPIO_WritePin(FW_LED_Port, FW_LED_Pin, 0);
 }
+//............................................................................
+void BSP_debug_gpio_on() {
+  HAL_GPIO_WritePin(DEBUG_GPIO_Port, DEBUG_GPIO_Pin, 1);
+}
+//............................................................................
+void BSP_debug_gpio_off() {
+  HAL_GPIO_WritePin(DEBUG_GPIO_Port, DEBUG_GPIO_Pin, 0);
+}
+
+
 //............................................................................
 void BSP_terminate(int16_t result) {
     Q_UNUSED_PAR(result);

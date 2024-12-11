@@ -16,7 +16,7 @@ extern "C" {
 * Public prototypes
 \**************************************************************************************************/
 void LMT01_ISR(void);
-uint16_t LMT01_Get_Temp(void);
+int8_t LMT01_Get_Temp(void);
 
 #ifdef __cplusplus
 }

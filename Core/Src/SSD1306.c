@@ -424,14 +424,16 @@ static QState update_screen(SSD1306 *const me, QEvt const *const e)
     {
 
         char print_buffer[32] = {0};
-        ssd1306_SetCursor(0, 0);
-        ssd1306_WriteString("Hello World", Font_7x10, White);
-        ssd1306_SetCursor(0, 12);
         snprintf(
             print_buffer,
             sizeof(print_buffer),
-            "Counter = %d",
+            "Temperature: %d",
             LMT01_Get_Temp());
+            
+        ssd1306_Fill(Black);
+        ssd1306_SetCursor(0, 0);
+        ssd1306_WriteString("Hello World", Font_7x10, White);
+        ssd1306_SetCursor(0, 12);
         ssd1306_WriteString(print_buffer, Font_7x10, White);
 
         me->pageNumber = 0;

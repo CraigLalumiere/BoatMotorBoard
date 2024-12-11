@@ -52,6 +52,8 @@ uint32_t BSP_random(void);          // pseudo-random generator
  **************************************************************************************************/
 void BSP_ledOn(void);
 void BSP_ledOff(void);
+void BSP_debug_gpio_on(void);
+void BSP_debug_gpio_off(void);
 
 /**
  ***************************************************************************************************

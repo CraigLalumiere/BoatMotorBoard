@@ -59,6 +59,7 @@ void USB_LP_IRQHandler(void);
 void EXTI9_5_IRQHandler(void);
 void I2C2_EV_IRQHandler(void);
 void I2C2_ER_IRQHandler(void);
+void TIM6_DAC_IRQHandler(void);
 /* USER CODE BEGIN EFP */
 
 void USBWakeUp_IRQHandler(void);
