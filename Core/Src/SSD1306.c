@@ -448,13 +448,13 @@ static QState update_screen(SSD1306 *const me, QEvt const *const e)
         ssd1306_SetCursor(0, 12);
         ssd1306_WriteString(print_buffer, Font_7x10, White);
 
-        snprintf(
-            print_buffer,
-            sizeof(print_buffer),
-            "Pressure: %.2f",
-            me->pressure);
-        ssd1306_SetCursor(0, 24);
-        ssd1306_WriteString(print_buffer, Font_7x10, White);
+        // snprintf(
+        //     print_buffer,
+        //     sizeof(print_buffer),
+        //     "Pressure: %.2f",
+        //     me->pressure);
+        // ssd1306_SetCursor(0, 24);
+        // ssd1306_WriteString(print_buffer, Font_7x10, White);
 
         me->pageNumber = 0;
         status = Q_HANDLED();

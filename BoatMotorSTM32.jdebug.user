@@ -3,27 +3,28 @@
 
 Breakpoint=C:/Data/Jobs/Personal/BoatMotorSTM32/Core/Src/SSD1306.c:309:12, State=BP_STATE_DISABLED
 Breakpoint=C:/Data/Jobs/Personal/BoatMotorSTM32/Core/Src/SSD1306.c:326:1, State=BP_STATE_DISABLED
-Breakpoint=C:/Data/Jobs/Personal/BoatMotorSTM32/Core/Src/SSD1306.c:473:18, State=BP_STATE_DISABLED
-Breakpoint=C:/Data/Jobs/Personal/BoatMotorSTM32/Core/Src/SSD1306.c:490:25, State=BP_STATE_DISABLED
+Breakpoint=C:/Data/Jobs/Personal/BoatMotorSTM32/Core/Src/SSD1306.c:493:18, State=BP_STATE_DISABLED
+Breakpoint=C:/Data/Jobs/Personal/BoatMotorSTM32/Core/Src/SSD1306.c:534, State=BP_STATE_ON
+Breakpoint=C:/Data/Jobs/Personal/BoatMotorSTM32/Core/Src/SSD1306.c:536, State=BP_STATE_ON
 Breakpoint=C:/Data/Jobs/Personal/BoatMotorSTM32/Core/Src/LMT01.c:59, State=BP_STATE_DISABLED
-Breakpoint=C:/Data/Jobs/Personal/BoatMotorSTM32/Core/Src/main.c:181:3, State=BP_STATE_DISABLED
+Breakpoint=C:/Data/Jobs/Personal/BoatMotorSTM32/Core/Src/main.c:196:3, State=BP_STATE_DISABLED
+OpenDocument="pressure_sensor.c", FilePath="C:/Data/Jobs/Personal/BoatMotorSTM32/Core/Src/pressure_sensor.c", Line=367
+OpenDocument="qf_dyn.c", FilePath="C:/Data/Jobs/Personal/BoatMotorSTM32/Middlewares/Third_Party/QuantumLeaps_RTEF_qpc/src/qf/qf_dyn.c", Line=124
+OpenDocument="main.c", FilePath="C:/Data/Jobs/Personal/BoatMotorSTM32/Core/Src/main.c", Line=103
 OpenDocument="usbd.c", FilePath="C:/Data/Jobs/Personal/BoatMotorSTM32/library/tinyusb/src/device/usbd.c", Line=1229
-OpenDocument="stm32g4xx_it.c", FilePath="C:/Data/Jobs/Personal/BoatMotorSTM32/Core/Src/stm32g4xx_it.c", Line=78
-OpenDocument="LMT01.c", FilePath="C:/Data/Jobs/Personal/BoatMotorSTM32/Core/Src/LMT01.c", Line=33
+OpenDocument="stm32g4xx_it.c", FilePath="C:/Data/Jobs/Personal/BoatMotorSTM32/Core/Src/stm32g4xx_it.c", Line=71
+OpenDocument="LMT01.c", FilePath="C:/Data/Jobs/Personal/BoatMotorSTM32/Core/Src/LMT01.c", Line=7
 OpenDocument="qp.h", FilePath="C:/Data/Jobs/Personal/BoatMotorSTM32/Middlewares/Third_Party/QuantumLeaps_RTEF_qpc/include/qp.h", Line=680
 OpenDocument="qv.c", FilePath="C:/Data/Jobs/Personal/BoatMotorSTM32/Middlewares/Third_Party/QuantumLeaps_RTEF_qpc/src/qv/qv.c", Line=190
-OpenDocument="qv_port.c", FilePath="C:/Data/Jobs/Personal/BoatMotorSTM32/Middlewares/Third_Party/QuantumLeaps_RTEF_qpc/ports/arm-cm/qv/gnu/qv_port.c", Line=92
-OpenDocument="main.c", FilePath="C:/Data/Jobs/Personal/BoatMotorSTM32/Core/Src/main.c", Line=104
-OpenDocument="startup_stm32g474xx.s", FilePath="C:/Data/Jobs/Personal/BoatMotorSTM32/startup_stm32g474xx.s", Line=82
-OpenDocument="bsp.c", FilePath="C:/Data/Jobs/Personal/BoatMotorSTM32/Core/bsp/drivers/bsp.c", Line=179
-OpenDocument="SSD1306.c", FilePath="C:/Data/Jobs/Personal/BoatMotorSTM32/Core/Src/SSD1306.c", Line=674
+OpenDocument="bsp.c", FilePath="C:/Data/Jobs/Personal/BoatMotorSTM32/Core/bsp/drivers/bsp.c", Line=191
+OpenDocument="SSD1306.c", FilePath="C:/Data/Jobs/Personal/BoatMotorSTM32/Core/Src/SSD1306.c", Line=518
 OpenToolbar="Debug", Floating=0, x=0, y=0
 OpenWindow="Call Stack", DockArea=RIGHT, x=0, y=2, w=616, h=223, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
-OpenWindow="Disassembly", DockArea=RIGHT, x=0, y=0, w=616, h=159, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
-OpenWindow="Local Data", DockArea=RIGHT, x=0, y=1, w=616, h=245, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
-OpenWindow="Console", DockArea=BOTTOM, x=0, y=0, w=1920, h=321, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Disassembly", DockArea=RIGHT, x=0, y=0, w=616, h=407, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Local Data", DockArea=RIGHT, x=0, y=1, w=616, h=357, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Console", DockArea=BOTTOM, x=0, y=0, w=2560, h=321, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
 SmartViewPlugin="", Page="", Toolbar="Hidden", Window="SmartView 1"
-TableHeader="Local Data", SortCol="Name", SortOrder="ASCENDING", VisibleCols=["Name";"Value";"Location";"Size";"Type";"Scope"], ColWidths=[168;212;100;100;238;100]
+TableHeader="Local Data", SortCol="Name", SortOrder="ASCENDING", VisibleCols=["Name";"Value";"Location";"Size";"Type";"Scope"], ColWidths=[168;212;100;100;238;170]
 TableHeader="Call Stack", SortCol="Function", SortOrder="ASCENDING", VisibleCols=["Function";"Stack Frame";"Source";"PC";"Return Address";"Stack Used"], ColWidths=[249;112;100;100;168;100]
 TableHeader="Power Sampling", SortCol="None", SortOrder="ASCENDING", VisibleCols=["Index";"Time";"Ch 0"], ColWidths=[100;100;100]
 TableHeader="RegisterSelectionDialog", SortCol="None", SortOrder="ASCENDING", VisibleCols=[], ColWidths=[]

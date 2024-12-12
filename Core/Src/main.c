@@ -33,6 +33,7 @@
 #include <ctype.h>
 #include "SSD1306.h"
 #include "pressure_sensor.h"
+#include "shared_i2c_events.h"
 
 #ifdef Q_SPY
 Q_DEFINE_THIS_MODULE("main")
@@ -56,8 +57,26 @@ typedef enum
   AO_PRIO_USB,
 } AO_Priority_T;
 
-
 extern const QActive *AO_SharedI2C2;
+
+typedef struct
+{
+    union
+    {
+        QEvt base_event;
+        FloatEvent_T float_event;
+    } small_messages;
+} SmallMessageUnion_T;
+typedef struct
+{
+    union
+    {
+        QEvt base_event;
+        SharedI2CWriteEvent_T i2c_event;
+    } small_messages;
+} MediumMessageUnion_T;
+
+
 
 /* USER CODE END PTD */
 
@@ -150,8 +169,11 @@ int main(void)
   BSP_Init();
 
   // initialize event pools
-  static QF_MPOOL_EL(QEvt) smlPoolSto[10];
+  static QF_MPOOL_EL(SmallMessageUnion_T) smlPoolSto[10];
   QF_poolInit(smlPoolSto, sizeof(smlPoolSto), sizeof(smlPoolSto[0]));
+
+    static QF_MPOOL_EL(MediumMessageUnion_T) mediumPoolSto[10];
+    QF_poolInit(mediumPoolSto, sizeof(mediumPoolSto), sizeof(mediumPoolSto[0]));
 
   // initialize publish-subscribe
   static QSubscrList subscrSto[PUBSUB_MAX_SIG];
@@ -196,16 +218,13 @@ int main(void)
   Pressure_Sensor_ctor(
       BSP_Get_I2C_Write_Pressure(),
       BSP_Get_I2C_Read_Pressure());
-  QACTIVE_START(
-      AO_Pressure,
-      AO_PRIO_PRESSURE,        // QP prio. of the AO
-      PressureQueueSto,        // event queue storage
-      Q_DIM(PressureQueueSto), // queue length [events]
-      (void *)0, 0U,          // no stack storage
-      (void *)0);             // no initialization param
-
-
-
+  // QACTIVE_START(
+  //     AO_Pressure,
+  //     AO_PRIO_PRESSURE,        // QP prio. of the AO
+  //     PressureQueueSto,        // event queue storage
+  //     Q_DIM(PressureQueueSto), // queue length [events]
+  //     (void *)0, 0U,           // no stack storage
+  //     (void *)0);              // no initialization param
 
   static QEvt const *app_cli_QueueSto[10];
   AppCLI_ctor(BSP_Get_Serial_IO_Interface_USB0());
