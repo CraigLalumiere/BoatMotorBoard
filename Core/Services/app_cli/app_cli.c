@@ -14,7 +14,9 @@
 
 #define CLI_BUFFER_SIZE 2048
 
+#ifdef Q_SPY
 Q_DEFINE_THIS_MODULE("app_cli")
+#endif // def Q_SPY
 
 enum AppCLI_Signals
 {
@@ -154,6 +156,7 @@ static void DataReadyCB(void *cb_data)
 
 static void CLI_WriteChar(EmbeddedCli *embeddedCli, char c)
 {
+    (void) embeddedCli;
     AppCLI_inst.serial_io_interface->tx_func((uint8_t *) &c, 1);
 }
 

@@ -9,6 +9,7 @@ extern "C" {
 
 
 #include <stddef.h>
+#include "i2c_interface.h"
 
 
 #define SSD1306_INCLUDE_FONT_7x10
@@ -32,7 +33,7 @@ extern QActive *const AO_SSD1306; // opaque pointer
 /**************************************************************************************************\
 * Public prototypes
 \**************************************************************************************************/
-void SSD1306_ctor();
+void SSD1306_ctor(I2C_Write i2c_write_fn, I2C_Read i2c_read_fn);
 
 #ifdef __cplusplus
 }

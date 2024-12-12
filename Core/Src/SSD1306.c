@@ -9,11 +9,15 @@
 #include "private_signal_ranges.h"
 #include "pubsub_signals.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <math.h>
 #include "ssd1306_fonts.h"
 #include "LMT01.h"
 
+#ifdef Q_SPY
 Q_DEFINE_THIS_MODULE("SSD1306")
+#endif // def Q_SPY
 
 /**************************************************************************************************\
 * Private macros
@@ -110,11 +114,12 @@ typedef enum
 
 typedef struct
 {
-    QActive super;     // inherit QActive
+    QActive super;              // inherit QActive
     QTimeEvt screen_update_evt; // timer to wait for voltage to settle
     I2C_Write i2c_write;
     I2C_Read i2c_read;
     uint8_t i2c_data[N_BYTES_I2C_DATA];
+    float pressure;
 
     char SSD1306_Buffer[SSD1306_BUFFER_SIZE];
 
@@ -247,7 +252,7 @@ void SSD1306_ctor(I2C_Write i2c_write_fn, I2C_Read i2c_read_fn)
 static QState initial(SSD1306 *const me, void const *const par)
 {
     Q_UNUSED_PAR(par);
-    // QActive_subscribe((QActive *) me, PUBSUB_TEST_CARTRIDGE_BEGIN);
+    QActive_subscribe((QActive *)me, PUBSUB_PRESSURE_SIG);
 
     return Q_TRAN(&startup);
 }
@@ -364,6 +369,11 @@ static QState top(SSD1306 *const me, QEvt const *const e)
         status = Q_HANDLED();
         break;
     }
+    case PUBSUB_PRESSURE_SIG:
+    {
+        const FloatEvent_T *event = Q_EVT_CAST(FloatEvent_T);
+        me->pressure = event->num;
+    }
     case I2C_ERROR_SIG:
     {
         status = Q_TRAN(&error);
@@ -390,7 +400,8 @@ static QState waiting(SSD1306 *const me, QEvt const *const e)
         status = Q_HANDLED();
         break;
     }
-    case WAIT_TIMEOUT_SIG: {
+    case WAIT_TIMEOUT_SIG:
+    {
         status = Q_TRAN(&update_screen);
         break;
     }
@@ -423,17 +434,26 @@ static QState update_screen(SSD1306 *const me, QEvt const *const e)
     case Q_ENTRY_SIG:
     {
 
+
+        ssd1306_Fill(Black);
+        ssd1306_SetCursor(0, 0);
+        ssd1306_WriteString("Hello World", Font_7x10, White);
+
         char print_buffer[32] = {0};
         snprintf(
             print_buffer,
             sizeof(print_buffer),
             "Temperature: %d",
             LMT01_Get_Temp());
-            
-        ssd1306_Fill(Black);
-        ssd1306_SetCursor(0, 0);
-        ssd1306_WriteString("Hello World", Font_7x10, White);
         ssd1306_SetCursor(0, 12);
+        ssd1306_WriteString(print_buffer, Font_7x10, White);
+
+        snprintf(
+            print_buffer,
+            sizeof(print_buffer),
+            "Pressure: %.2f",
+            me->pressure);
+        ssd1306_SetCursor(0, 24);
         ssd1306_WriteString(print_buffer, Font_7x10, White);
 
         me->pageNumber = 0;
@@ -458,7 +478,7 @@ static QState update_screen_1(SSD1306 *const me, QEvt const *const e)
     {
     case Q_INIT_SIG:
     {
-        const static uint8_t args[] = {0x00, 0x10};
+        const uint8_t args[] = {0x00, 0x10};
         // Set desired RAM page address
         status = send_command_substate_machine(
             (QStateHandler)&update_screen_1,
@@ -501,7 +521,7 @@ static QState update_screen_2(SSD1306 *const me, QEvt const *const e)
         if (retval != I2C_RTN_SUCCESS)
         {
             static QEvt const event = QEVT_INITIALIZER(I2C_ERROR_SIG);
-            QACTIVE_POST(me, &event, me);
+            QACTIVE_POST((QActive *)me, &event, me);
         }
 
         status = Q_HANDLED();
@@ -577,7 +597,7 @@ static QState substate_send_command(SSD1306 *const me, QEvt const *const e)
         if (retval != I2C_RTN_SUCCESS)
         {
             static QEvt const event = QEVT_INITIALIZER(I2C_ERROR_SIG);
-            QACTIVE_POST(me, &event, me);
+            QACTIVE_POST((QActive *)me, &event, me);
         }
 
         status = Q_HANDLED();

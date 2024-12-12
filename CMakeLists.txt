@@ -51,7 +51,9 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     
     ./Core/bsp/drivers/bsp.c
     ./Core/bsp/drivers/bsp_manual.c
+    ./Core/bsp/drivers/shared_i2c.c
     ./Core/Src/blinky.c
+    ./Core/Src/pressure_sensor.c
     ./Core/Src/SSD1306.c
     ./Core/Src/ssd1306_fonts.c
     ./Core/Src/LMT01.c

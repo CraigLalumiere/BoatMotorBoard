@@ -31,29 +31,35 @@
 // <www.state-machine.com/licensing>
 // <info@state-machine.com>
 //============================================================================
-#include "qpc.h"                 // QP/C real-time embedded framework
-#include "bsp.h"                 // Board Support Package
+#include "qpc.h" // QP/C real-time embedded framework
+#include "bsp.h" // Board Support Package
 #include "pubsub_signals.h"
+#include "shared_i2c.h"
 #include "tusb.h"
 #include "i2c_bus.h"
 #include "pinout.h"
+#include "LMT01.h"
+#include "i2c_bus_stm32.h"
 
 #include "stm32g4xx_hal.h"
 #include <stdio.h>
 
-
 Q_DEFINE_THIS_MODULE("bsp.c")
-
 
 #ifdef Q_SPY
 #error The Simple Blinky Application does not support Spy build configuration
 #endif
-#define USB_INTERFACE_CLI    0
+#define USB_INTERFACE_CLI 0
 #define USB_INTERFACE_PC_COM 1
 #define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
 
 // Static Data
+#define SHARED_I2C_BUS_2_DEFERRED_QUEUE_LEN 3
 static I2C_Bus_T s_i2c_bus2;
+
+static SharedI2C_T SharedI2C_Bus2;
+const QActive *AO_SharedI2C2 = &(SharedI2C_Bus2.super); // externally available
+QEvt const *i2c_bus_2_deferred_queue_storage[SHARED_I2C_BUS_2_DEFERRED_QUEUE_LEN];
 
 // Static Function Declarations
 
@@ -64,9 +70,6 @@ static void USB0_RegisterDataReadyCB(Serial_IO_Data_Ready_Callback cb, void *cb_
 static uint16_t USB1_TransmitData(const uint8_t *data_ptr, const uint16_t data_len);
 static uint16_t USB1_ReceiveData(uint8_t *data_ptr, const uint16_t max_data_len);
 static void USB1_RegisterDataReadyCB(Serial_IO_Data_Ready_Callback cb, void *cb_data);
-
-static void LMT01_ISR();
-
 
 static I2C_Return_T BSP_I2C_Write_SSD1306(
     uint8_t address,
@@ -84,28 +87,39 @@ static I2C_Return_T BSP_I2C_Read_SSD1306(
     I2C_Error_Callback error_cb,
     void *cb_data);
 
+static I2C_Return_T BSP_I2C_Write_Pressure(
+    uint8_t address,
+    uint8_t *tx_buffer,
+    const uint16_t data_len,
+    I2C_Complete_Callback complete_cb,
+    I2C_Error_Callback error_cb,
+    void *cb_data);
 
-
+static I2C_Return_T BSP_I2C_Read_Pressure(
+    uint8_t address,
+    uint8_t *tx_buffer,
+    const uint16_t data_len,
+    I2C_Complete_Callback complete_cb,
+    I2C_Error_Callback error_cb,
+    void *cb_data);
 
 static Serial_IO_Data_Ready_Callback s_usb0_data_ready_cb = 0;
-static void *s_usb0_data_ready_cb_data                    = 0;
+static void *s_usb0_data_ready_cb_data = 0;
 
 static Serial_IO_Data_Ready_Callback s_usb1_data_ready_cb = 0;
-static void *s_usb1_data_ready_cb_data                    = 0;
+static void *s_usb1_data_ready_cb_data = 0;
 
 const Serial_IO_T s_bsp_serial_io_usb0 = {
-    .tx_func          = USB0_TransmitData,
-    .rx_func          = USB0_ReceiveData,
+    .tx_func = USB0_TransmitData,
+    .rx_func = USB0_ReceiveData,
     .register_cb_func = USB0_RegisterDataReadyCB,
 };
 
 static const Serial_IO_T s_bsp_serial_io_usb1 = {
-    .tx_func          = USB1_TransmitData,
-    .rx_func          = USB1_ReceiveData,
+    .tx_func = USB1_TransmitData,
+    .rx_func = USB1_ReceiveData,
     .register_cb_func = USB1_RegisterDataReadyCB,
 };
-
-
 
 /**
  ***************************************************************************************************
@@ -133,7 +147,7 @@ static uint16_t USB0_ReceiveData(uint8_t *data_ptr, const uint16_t max_data_len)
 
 static void USB0_RegisterDataReadyCB(Serial_IO_Data_Ready_Callback cb, void *cb_data)
 {
-    s_usb0_data_ready_cb      = cb;
+    s_usb0_data_ready_cb = cb;
     s_usb0_data_ready_cb_data = cb_data;
 }
 
@@ -158,7 +172,7 @@ static uint16_t USB1_ReceiveData(uint8_t *data_ptr, const uint16_t max_data_len)
 
 static void USB1_RegisterDataReadyCB(Serial_IO_Data_Ready_Callback cb, void *cb_data)
 {
-    s_usb1_data_ready_cb      = cb;
+    s_usb1_data_ready_cb = cb;
     s_usb1_data_ready_cb_data = cb_data;
 }
 
@@ -181,7 +195,8 @@ void tud_cdc_rx_cb(uint8_t itf)
 //============================================================================
 // Error handler and ISRs...
 
-Q_NORETURN Q_onError(char const * const module, int_t const id) {
+Q_NORETURN Q_onError(char const *const module, int_t const id)
+{
     // NOTE: this implementation of the error handler is intended only
     // for debugging and MUST be changed for deployment of the application
     // (assuming that you ship your production code with assertions enabled).
@@ -191,27 +206,27 @@ Q_NORETURN Q_onError(char const * const module, int_t const id) {
 
 #ifndef NDEBUG
     // for debugging, hang on in an endless loop...
-    for (;;) {
+    for (;;)
+    {
     }
 #endif
 
     NVIC_SystemReset();
 }
 //............................................................................
-void assert_failed(char const * const module, int_t const id); // prototype
-void assert_failed(char const * const module, int_t const id) {
+void assert_failed(char const *const module, int_t const id); // prototype
+void assert_failed(char const *const module, int_t const id)
+{
     Q_onError(module, id);
 }
 
 //............................................................................
 void SysTick_Handler(void); // prototype
-void SysTick_Handler(void) {
+void SysTick_Handler(void)
+{
     QTIMEEVT_TICK_X(0U, &l_SysTick_Handler); // time events at rate 0
     QV_ARM_ERRATUM_838869();
 }
-
-
-
 
 I2C_Write BSP_Get_I2C_Write_SSD1306()
 {
@@ -223,6 +238,15 @@ I2C_Read BSP_Get_I2C_Read_SSD1306()
     return BSP_I2C_Read_SSD1306;
 }
 
+I2C_Write BSP_Get_I2C_Write_Pressure()
+{
+    return BSP_I2C_Write_Pressure;
+}
+
+I2C_Read BSP_Get_I2C_Read_Pressure()
+{
+    return BSP_I2C_Read_Pressure;
+}
 
 static I2C_Return_T BSP_I2C_Write_SSD1306(
     uint8_t address,
@@ -232,8 +256,8 @@ static I2C_Return_T BSP_I2C_Write_SSD1306(
     I2C_Error_Callback error_cb,
     void *cb_data)
 {
-    return I2C_Bus_Write(
-        I2C_BUS_ID_2, address, tx_buffer, data_len, complete_cb, error_cb, cb_data);
+    return SharedI2C_Write(
+        &SharedI2C_Bus2, address, tx_buffer, data_len, complete_cb, error_cb, cb_data);
 }
 
 static I2C_Return_T BSP_I2C_Read_SSD1306(
@@ -244,15 +268,44 @@ static I2C_Return_T BSP_I2C_Read_SSD1306(
     I2C_Error_Callback error_cb,
     void *cb_data)
 {
-    return I2C_Bus_Read(
-        I2C_BUS_ID_2, address, rx_buffer, data_len, complete_cb, error_cb, cb_data);
+    // return I2C_Bus_Read(
+    //     I2C_BUS_ID_2, address, rx_buffer, data_len, complete_cb, error_cb, cb_data);
+    return SharedI2C_Read(
+        &SharedI2C_Bus2, address, rx_buffer, data_len, complete_cb, error_cb, cb_data);
+}
+
+static I2C_Return_T BSP_I2C_Write_Pressure(
+    uint8_t address,
+    uint8_t *tx_buffer,
+    const uint16_t data_len,
+    I2C_Complete_Callback complete_cb,
+    I2C_Error_Callback error_cb,
+    void *cb_data)
+{
+    return SharedI2C_Write(
+        &SharedI2C_Bus2, address, tx_buffer, data_len, complete_cb, error_cb, cb_data);
+}
+
+static I2C_Return_T BSP_I2C_Read_Pressure(
+    uint8_t address,
+    uint8_t *rx_buffer,
+    const uint16_t data_len,
+    I2C_Complete_Callback complete_cb,
+    I2C_Error_Callback error_cb,
+    void *cb_data)
+{
+    // return I2C_Bus_Read(
+    //     I2C_BUS_ID_2, address, rx_buffer, data_len, complete_cb, error_cb, cb_data);
+    return SharedI2C_Read(
+        &SharedI2C_Bus2, address, rx_buffer, data_len, complete_cb, error_cb, cb_data);
 }
 
 //============================================================================
 // BSP functions...
 
 //............................................................................
-void BSP_Init_I2C(void) {
+void BSP_Init_I2C(void)
+{
     HAL_StatusTypeDef retval;
 
     /////////////////////////
@@ -262,15 +315,15 @@ void BSP_Init_I2C(void) {
     // I2C Bus 2 Peripheral
     I2C_HandleTypeDef *p_hi2c2 = STM32_GetI2CHandle(I2C_BUS_ID_2);
 
-    p_hi2c2->Instance              = I2C2;
-    p_hi2c2->Init.Timing           = 0x20404768;
-    p_hi2c2->Init.OwnAddress1      = 0;
-    p_hi2c2->Init.AddressingMode   = I2C_ADDRESSINGMODE_7BIT;
-    p_hi2c2->Init.DualAddressMode  = I2C_DUALADDRESS_DISABLE;
-    p_hi2c2->Init.OwnAddress2      = 0;
+    p_hi2c2->Instance = I2C2;
+    p_hi2c2->Init.Timing = 0x20404768;
+    p_hi2c2->Init.OwnAddress1 = 0;
+    p_hi2c2->Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+    p_hi2c2->Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+    p_hi2c2->Init.OwnAddress2 = 0;
     p_hi2c2->Init.OwnAddress2Masks = I2C_OA2_NOMASK;
-    p_hi2c2->Init.GeneralCallMode  = I2C_GENERALCALL_DISABLE;
-    p_hi2c2->Init.NoStretchMode    = I2C_NOSTRETCH_DISABLE;
+    p_hi2c2->Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+    p_hi2c2->Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
 
     retval = HAL_I2C_Init(p_hi2c2);
     Q_ASSERT(retval == HAL_OK);
@@ -280,48 +333,60 @@ void BSP_Init_I2C(void) {
 
     retval = HAL_I2CEx_ConfigDigitalFilter(p_hi2c2, 0);
     Q_ASSERT(retval == HAL_OK);
-    
+
     I2C_Bus_Init(&s_i2c_bus2, I2C_BUS_ID_2);
 }
 
 //............................................................................
-void BSP_Init(void) {
-
+void BSP_Init(void)
+{
 
     // Initialize I2C buses
     BSP_Init_I2C();
+
     
+    SharedI2C_ctor(
+        &SharedI2C_Bus2,
+        I2C_BUS_ID_2,
+        i2c_bus_2_deferred_queue_storage,
+        SHARED_I2C_BUS_2_DEFERRED_QUEUE_LEN);
+
     // initialize TinyUSB device stack on configured roothub port
     tud_init(BOARD_TUD_RHPORT);
 }
 //............................................................................
-void BSP_ledOn() {
-  printf("LED on\n\r");
-  HAL_GPIO_WritePin(FW_LED_Port, FW_LED_Pin, 1);
+void BSP_ledOn()
+{
+    printf("LED on\n\r");
+    HAL_GPIO_WritePin(FW_LED_Port, FW_LED_Pin, 1);
 }
 //............................................................................
-void BSP_ledOff() {
-  printf("LED off\n\r");
-  HAL_GPIO_WritePin(FW_LED_Port, FW_LED_Pin, 0);
+void BSP_ledOff()
+{
+    printf("LED off\n\r");
+    HAL_GPIO_WritePin(FW_LED_Port, FW_LED_Pin, 0);
 }
 //............................................................................
-void BSP_debug_gpio_on() {
-  HAL_GPIO_WritePin(DEBUG_GPIO_Port, DEBUG_GPIO_Pin, 1);
+void BSP_debug_gpio_on()
+{
+    HAL_GPIO_WritePin(DEBUG_GPIO_Port, DEBUG_GPIO_Pin, 1);
 }
 //............................................................................
-void BSP_debug_gpio_off() {
-  HAL_GPIO_WritePin(DEBUG_GPIO_Port, DEBUG_GPIO_Pin, 0);
+void BSP_debug_gpio_off()
+{
+    HAL_GPIO_WritePin(DEBUG_GPIO_Port, DEBUG_GPIO_Pin, 0);
 }
 
-
 //............................................................................
-void BSP_terminate(int16_t result) {
+void BSP_terminate(int16_t result)
+{
     Q_UNUSED_PAR(result);
 }
 
 //============================================================================
 // QF callbacks...
-void QF_onStartup(void) {
+void QF_onStartup(void)
+{
     // set up the SysTick timer to fire at BSP_TICKS_PER_SEC rate
     SysTick_Config(SystemCoreClock / BSP_TICKS_PER_SEC);
 
@@ -329,11 +394,11 @@ void QF_onStartup(void) {
     NVIC_SetPriorityGrouping(0U);
 
     // set priorities of ALL ISRs used in the system, see NOTE1
-    NVIC_SetPriority(USART2_IRQn,    0); // kernel UNAWARE interrupt
-    NVIC_SetPriority(EXTI0_IRQn,   QF_AWARE_ISR_CMSIS_PRI + 0U);
+    NVIC_SetPriority(USART2_IRQn, 0); // kernel UNAWARE interrupt
+    NVIC_SetPriority(EXTI0_IRQn, QF_AWARE_ISR_CMSIS_PRI + 0U);
     NVIC_SetPriority(I2C2_EV_IRQn, QF_AWARE_ISR_CMSIS_PRI + 1U);
     NVIC_SetPriority(I2C2_ER_IRQn, QF_AWARE_ISR_CMSIS_PRI + 1U);
-    NVIC_SetPriority(SysTick_IRQn,   QF_AWARE_ISR_CMSIS_PRI + 2U);
+    NVIC_SetPriority(SysTick_IRQn, QF_AWARE_ISR_CMSIS_PRI + 2U);
     // ...
 
     // enable IRQs...
@@ -344,14 +409,16 @@ void QF_onStartup(void) {
 #endif
 }
 //............................................................................
-void QF_onCleanup(void) {
+void QF_onCleanup(void)
+{
 }
 //............................................................................
-void QV_onIdle(void) { // called with interrupts DISABLED, see NOTE01
+void QV_onIdle(void)
+{ // called with interrupts DISABLED, see NOTE01
 
     // toggle an LED on and then off (not enough LEDs, see NOTE02)
-    //GPIOA->BSRR = (1U << LD4_PIN);         // turn LED[n] on
-    //GPIOA->BSRR = (1U << (LD4_PIN + 16U)); // turn LED[n] off
+    // GPIOA->BSRR = (1U << LD4_PIN);         // turn LED[n] on
+    // GPIOA->BSRR = (1U << (LD4_PIN + 16U)); // turn LED[n] off
 
 #ifdef Q_SPY
 #elif defined NDEBUG
@@ -370,7 +437,7 @@ void QV_onIdle(void) { // called with interrupts DISABLED, see NOTE01
     // The trick with BOOT(0) is it gets the part to run the System Loader
     // instead of your broken code. When done disconnect BOOT0, and start over.
     //
-    //QV_CPU_SLEEP();  // atomically go to sleep and enable interrupts
+    // QV_CPU_SLEEP();  // atomically go to sleep and enable interrupts
     QF_INT_ENABLE(); // for now, just enable interrupts
 #else
     QF_INT_ENABLE(); // just enable interrupts
@@ -404,9 +471,6 @@ void QV_onIdle(void) { // called with interrupts DISABLED, see NOTE01
 // execution time contributes to the brightness of the User LED.
 //
 
-
-
-
 const Serial_IO_T *BSP_Get_Serial_IO_Interface_USB0()
 {
     return &s_bsp_serial_io_usb0;
@@ -417,17 +481,16 @@ const Serial_IO_T *BSP_Get_Serial_IO_Interface_USB1()
     return &s_bsp_serial_io_usb1;
 }
 
-
 PUTCHAR_PROTOTYPE
 {
-  /* Place your implementation of fputc here */
-  /* e.g. write a character to the USART1 and Loop until the end of transmission */
-//  HAL_UART_Transmit(&huart1, (uint8_t *)&ch, 1, 0xFFFF);
+    /* Place your implementation of fputc here */
+    /* e.g. write a character to the USART1 and Loop until the end of transmission */
+    //  HAL_UART_Transmit(&huart1, (uint8_t *)&ch, 1, 0xFFFF);
 
     tud_cdc_n_write(USB_INTERFACE_PC_COM, (uint8_t *)&ch, 1);
     tud_cdc_n_write_flush(USB_INTERFACE_PC_COM);
 
-  return ch;
+    return ch;
 }
 
 /**
@@ -436,11 +499,23 @@ PUTCHAR_PROTOTYPE
  **************************************************************************************************/
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
-  /* Prevent unused argument(s) compilation warning */
-  switch (GPIO_Pin){
-    case LMTO1_Pin: {
+    /* Prevent unused argument(s) compilation warning */
+    switch (GPIO_Pin)
+    {
+    case LMTO1_Pin:
+    {
         LMT01_ISR();
         break;
     }
-  }
+    }
+}
+
+/**
+ ***************************************************************************************************
+ * @brief   Put the Honeywell pressure sensor into or out of reset
+ **************************************************************************************************/
+void BSP_Put_Pressure_Sensor_Into_Reset(bool reset)
+{
+    // Active low signal
+    HAL_GPIO_WritePin(PRESSURE_RST_Port, PRESSURE_RST_Pin, !reset);
 }

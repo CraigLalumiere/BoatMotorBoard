@@ -35,6 +35,7 @@
 #include "serial_io_interface.h"
 #include "i2c_interface.h"
 #include "stdint.h"
+#include <stdbool.h>
 
 #define BSP_TICKS_PER_SEC    100U
 
@@ -69,6 +70,8 @@ const Serial_IO_T *BSP_Get_Serial_IO_Interface_USB1();
  **************************************************************************************************/
 I2C_Write BSP_Get_I2C_Write_SSD1306();
 I2C_Read BSP_Get_I2C_Read_SSD1306();
+I2C_Write BSP_Get_I2C_Write_Pressure();
+I2C_Read BSP_Get_I2C_Read_Pressure();
 
 
 
@@ -77,6 +80,14 @@ I2C_Read BSP_Get_I2C_Read_SSD1306();
  * @brief   LMT01 Functions
  **************************************************************************************************/
 void BSP_LMT01_Timeout_Timer_Enable();
+
+
+
+/**
+ ***************************************************************************************************
+ * @brief   Pressure Sensor Functions
+ **************************************************************************************************/
+void BSP_Put_Pressure_Sensor_Into_Reset(bool reset);
 
 
 #endif // BSP_H_
