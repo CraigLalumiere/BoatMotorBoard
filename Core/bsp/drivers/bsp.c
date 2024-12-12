@@ -256,10 +256,10 @@ static I2C_Return_T BSP_I2C_Write_SSD1306(
     I2C_Error_Callback error_cb,
     void *cb_data)
 {
-    return I2C_Bus_Write(
-        I2C_BUS_ID_2, address, tx_buffer, data_len, complete_cb, error_cb, cb_data);
-    // return SharedI2C_Write(
-    //     &SharedI2C_Bus2, address, tx_buffer, data_len, complete_cb, error_cb, cb_data);
+    // return I2C_Bus_Write(
+    //     I2C_BUS_ID_2, address, tx_buffer, data_len, complete_cb, error_cb, cb_data);
+    return SharedI2C_Write(
+        &SharedI2C_Bus2, address, tx_buffer, data_len, complete_cb, error_cb, cb_data);
 }
 
 static I2C_Return_T BSP_I2C_Read_SSD1306(
@@ -270,10 +270,10 @@ static I2C_Return_T BSP_I2C_Read_SSD1306(
     I2C_Error_Callback error_cb,
     void *cb_data)
 {
-    return I2C_Bus_Read(
-        I2C_BUS_ID_2, address, rx_buffer, data_len, complete_cb, error_cb, cb_data);
-    // return SharedI2C_Read(
-    //     &SharedI2C_Bus2, address, rx_buffer, data_len, complete_cb, error_cb, cb_data);
+    // return I2C_Bus_Read(
+    //     I2C_BUS_ID_2, address, rx_buffer, data_len, complete_cb, error_cb, cb_data);
+    return SharedI2C_Read(
+        &SharedI2C_Bus2, address, rx_buffer, data_len, complete_cb, error_cb, cb_data);
 }
 
 static I2C_Return_T BSP_I2C_Write_Pressure(

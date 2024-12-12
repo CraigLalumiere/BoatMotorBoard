@@ -448,13 +448,13 @@ static QState update_screen(SSD1306 *const me, QEvt const *const e)
         ssd1306_SetCursor(0, 12);
         ssd1306_WriteString(print_buffer, Font_7x10, White);
 
-        // snprintf(
-        //     print_buffer,
-        //     sizeof(print_buffer),
-        //     "Pressure: %.2f",
-        //     me->pressure);
-        // ssd1306_SetCursor(0, 24);
-        // ssd1306_WriteString(print_buffer, Font_7x10, White);
+        snprintf(
+            print_buffer,
+            sizeof(print_buffer),
+            "Pressure: %.2f",
+            me->pressure);
+        ssd1306_SetCursor(0, 24);
+        ssd1306_WriteString(print_buffer, Font_7x10, White);
 
         me->pageNumber = 0;
         status = Q_HANDLED();
@@ -478,7 +478,7 @@ static QState update_screen_1(SSD1306 *const me, QEvt const *const e)
     {
     case Q_INIT_SIG:
     {
-        const uint8_t args[] = {0x00, 0x10};
+        static const uint8_t args[] = {0x00, 0x10};
         // Set desired RAM page address
         status = send_command_substate_machine(
             (QStateHandler)&update_screen_1,
