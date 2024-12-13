@@ -23,8 +23,8 @@ Q_DEFINE_THIS_MODULE("Pressure Sensor")
 // ------------------------------------------------------------------------------------
 #define Sensor_ADDR 0x18
 
-#define OUTPUTMAX 15099494 // output at maximum pressure [counts]
-#define OUTPUTMIN 1677722  // output at minimum pressure [counts]
+#define OUTPUTMAX 15099494ull // output at maximum pressure [counts]
+#define OUTPUTMIN 1677722ull  // output at minimum pressure [counts]
 #define PMAX 30            // maximum value of pressure range [bar, psi, kPa, etc.]
 #define PMIN 0             // minimum value of pressure range [bar, psi, kPa, etc.]
 
@@ -438,15 +438,15 @@ static QState readData(PRESSURE *const me, QEvt const *const e)
 
             uint32_t press_counts = me->i2c_data[3] + (me->i2c_data[2] << 8) + (me->i2c_data[1] << 16);
             // calculation of pressure value according to equation 2 of datasheet
-            int8_t pressure = ((press_counts - OUTPUTMIN) * (PMAX - PMIN)) / (OUTPUTMAX - OUTPUTMIN) + PMIN;
+            int32_t pressure = ((press_counts - OUTPUTMIN) * (PMAX - PMIN))*100 / (OUTPUTMAX - OUTPUTMIN) + PMIN;
 
-            uint32_t temp_counts = me->i2c_data[6] + (me->i2c_data[5] << 8) + (me->i2c_data[4] << 16);
-            int8_t temperature = (temp_counts * 200 / 16777215) - 50;
-            (void)temperature;
+            // uint32_t temp_counts = me->i2c_data[6] + (me->i2c_data[5] << 8) + (me->i2c_data[4] << 16);
+            // int8_t temperature = (temp_counts * 200 / 16777215) - 50;
+            // (void)temperature;
 
-            FloatEvent_T *event = Q_NEW(
-                FloatEvent_T, PUBSUB_PRESSURE_SIG);
-            event->num = pressure;
+            Int16Event_T *event = Q_NEW(
+                Int16Event_T, PUBSUB_PRESSURE_SIG);
+            event->num = (int16_t) pressure;
             QACTIVE_PUBLISH(&event->super, &me->super);
         }
 

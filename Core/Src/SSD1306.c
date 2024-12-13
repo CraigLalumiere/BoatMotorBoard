@@ -121,7 +121,7 @@ typedef struct
     I2C_Write i2c_write;
     I2C_Read i2c_read;
     uint8_t i2c_data[N_BYTES_I2C_DATA];
-    int8_t pressure;
+    int16_t pressure;
 
     uint16_t counter;
 
@@ -381,7 +381,7 @@ static QState top(SSD1306 *const me, QEvt const *const e)
     }
     case PUBSUB_PRESSURE_SIG:
     {
-        const FloatEvent_T *event = Q_EVT_CAST(FloatEvent_T);
+        const Int16Event_T *event = Q_EVT_CAST(Int16Event_T);
         me->pressure = event->num;
         status = Q_HANDLED();
         break;
@@ -458,8 +458,8 @@ static QState update_screen(SSD1306 *const me, QEvt const *const e)
         snprintf(
             print_buffer,
             sizeof(print_buffer),
-            "Pressure: %d",
-            me->pressure);
+            "Pressure: %d.%.2d",
+            me->pressure/100, me->pressure % 100);
         ssd1306_SetCursor(0, 24);
         ssd1306_WriteString(print_buffer, Font_7x10, White);
 

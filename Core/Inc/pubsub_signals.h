@@ -21,6 +21,13 @@ typedef struct
 } FloatEvent_T;
 
 
+typedef struct
+{
+    QEvt super;
+    int16_t num; // size of the buffer 'instructions', which should be >= actual size
+} Int16Event_T;
+
+
 
 typedef struct
 {
