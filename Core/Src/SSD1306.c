@@ -25,6 +25,8 @@ Q_DEFINE_THIS_MODULE("SSD1306")
 
 #define OLED_FPS 30
 
+#define FAULT_STR_LEN 512
+
 // Address definition
 // ------------------------------------------------------------------------------------
 #define SSD1306_ADDR 0x3C
@@ -143,6 +145,9 @@ typedef struct
     uint16_t CurrentX;
     uint16_t CurrentY;
 
+    // Variables used by the fault printing
+    uint16_t fault_str_scroll_offset;
+
 } SSD1306;
 
 /**************************************************************************************************\
@@ -204,10 +209,10 @@ static QState send_command_substate_machine(
 static void I2C_Complete_CB(void *cb_data);
 static void I2C_Error_CB(void *cb_data);
 
+static void drawFaultTextToScreen();
+
 // Procedure definitions
-void ssd1306_Init(void);
 void ssd1306_Fill(SSD1306_COLOR color);
-void ssd1306_UpdateScreen(void);
 void ssd1306_DrawPixel(uint8_t x, uint8_t y, SSD1306_COLOR color);
 char ssd1306_WriteChar(char ch, SSD1306_Font_t Font, SSD1306_COLOR color);
 char ssd1306_WriteString(char *str, SSD1306_Font_t Font, SSD1306_COLOR color);
@@ -236,6 +241,8 @@ void SSD1306_ctor(I2C_Write i2c_write_fn, I2C_Read i2c_read_fn)
     me->i2c_write = i2c_write_fn;
     me->i2c_read = i2c_read_fn;
 
+    me->fault_str_scroll_offset = 0;
+
     ssd1306_Fill(Black);
 
     QActive_ctor(&me->super, Q_STATE_CAST(&initial));
@@ -254,6 +261,7 @@ static QState initial(SSD1306 *const me, void const *const par)
 {
     Q_UNUSED_PAR(par);
     QActive_subscribe((QActive *)me, PUBSUB_PRESSURE_SIG);
+    QActive_subscribe((QActive *)me, PUBSUB_FAULT_GENERATED_SIG);
 
     return Q_TRAN(&startup);
 }
@@ -463,6 +471,8 @@ static QState update_screen(SSD1306 *const me, QEvt const *const e)
         ssd1306_SetCursor(0, 36);
         ssd1306_WriteString(print_buffer, Font_7x10, White);
 
+        drawFaultTextToScreen();
+
         me->pageNumber = 0;
         status = Q_HANDLED();
         break;
@@ -664,6 +674,65 @@ static void I2C_Error_CB(void *cb_data)
 
     QActive *me = (QActive *)cb_data;
     QACTIVE_POST(me, &event, me);
+}
+
+/**
+ ***************************************************************************************************
+ *
+ * @brief   Print the faults (if any) to screen and scroll horizontally
+ *
+ **************************************************************************************************/
+
+static void drawFaultTextToScreen()
+{
+    SSD1306 *me = &ssd1306_inst;
+    char print_buffer[FAULT_STR_LEN] = {0};
+
+    char *str_cur = print_buffer;
+    const char *str_end = print_buffer + sizeof(print_buffer);
+
+    // pad with spaces
+    str_cur += snprintf(str_cur, str_end - str_cur, "                    errors, ");
+
+    Active_Fault_T *active_faults = Fault_Manager_Get_Active_Fault_List();
+    if (active_faults[0].id == FAULT_ID_NONE)
+    {
+        return;
+    }
+
+    uint8_t i;
+    for (i = 0; i < FAULT_MANAGER_BUFFER_LENGTH; i++)
+    {
+        Active_Fault_T this_fault = active_faults[i];
+        if (this_fault.id == FAULT_ID_NONE)
+        {
+            break;
+        }
+
+        str_cur += snprintf(str_cur, str_end - str_cur, "#%d: ", (i + 1));
+
+        str_cur += snprintf(str_cur, str_end - str_cur,
+                            "%s",
+                            Fault_Manager_Get_Description(this_fault.id));
+
+        str_cur += snprintf(str_cur, str_end - str_cur, "/%s, ", this_fault.msg);
+    }
+
+    // Add to the beginning of the string how many errors we found
+    if (i < 10)
+        snprintf(print_buffer + 18, 2, "%d", i);
+    else if (i < 100)
+        snprintf(print_buffer + 17, 3, "%d", i);
+    else
+        snprintf(print_buffer + 16, 4, "%d", i);
+    print_buffer[19] = ' '; // replace the null terminator with a space
+
+    ssd1306_SetCursor(0, 54);
+    ssd1306_WriteString(print_buffer + me->fault_str_scroll_offset, Font_7x10, White);
+    me->fault_str_scroll_offset++;
+
+    if (me->fault_str_scroll_offset >= strlen(print_buffer))
+        me->fault_str_scroll_offset = 0;
 }
 
 /* Fill the whole screen with the given color */

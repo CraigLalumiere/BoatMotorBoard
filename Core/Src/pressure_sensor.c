@@ -250,7 +250,7 @@ static QState error(PRESSURE *const me, QEvt const *const e)
 
     default:
     {
-        status = Q_SUPER(&top);
+        status = Q_SUPER(&QHsm_top);
         break;
     }
     }
@@ -358,9 +358,9 @@ static QState beginConversion(PRESSURE *const me, QEvt const *const e)
             static QEvt const event = QEVT_INITIALIZER(I2C_ERROR_SIG);
             QACTIVE_POST((QActive *)me, &event, me);
             if (retval == I2C_RTN_BUSY)
-                Fault_Manager_Generate_Fault(&me->super, FAULT_ID_PRESSURE_SENSOR_I2C, "Busy upon sending conversion command");
+                Fault_Manager_Generate_Fault(&me->super, FAULT_ID_PRESSURE_SENSOR_I2C, "Busy during command");
             else
-                Fault_Manager_Generate_Fault(&me->super, FAULT_ID_PRESSURE_SENSOR_I2C, "Error upon sending conversion command");
+                Fault_Manager_Generate_Fault(&me->super, FAULT_ID_PRESSURE_SENSOR_I2C, "Error during command");
         }
         status = Q_HANDLED();
         break;
@@ -372,7 +372,7 @@ static QState beginConversion(PRESSURE *const me, QEvt const *const e)
     }
     case I2C_ERROR_SIG:
     {
-        Fault_Manager_Generate_Fault(&me->super, FAULT_ID_PRESSURE_SENSOR_I2C, "Failed upon sending conversion command");
+        Fault_Manager_Generate_Fault(&me->super, FAULT_ID_PRESSURE_SENSOR_I2C, "Failure during command");
         status = Q_TRAN(&error);
         break;
     }
@@ -420,9 +420,9 @@ static QState readData(PRESSURE *const me, QEvt const *const e)
             static QEvt const event = QEVT_INITIALIZER(I2C_ERROR_SIG);
             QACTIVE_POST((QActive *)me, &event, me);
             if (retval == I2C_RTN_BUSY)
-                Fault_Manager_Generate_Fault(&me->super, FAULT_ID_PRESSURE_SENSOR_I2C, "Busy upon reading data");
+                Fault_Manager_Generate_Fault(&me->super, FAULT_ID_PRESSURE_SENSOR_I2C, "Busy upon reading");
             else
-                Fault_Manager_Generate_Fault(&me->super, FAULT_ID_PRESSURE_SENSOR_I2C, "Error upon reading data");
+                Fault_Manager_Generate_Fault(&me->super, FAULT_ID_PRESSURE_SENSOR_I2C, "Error upon reading");
         }
         status = Q_HANDLED();
         break;
@@ -455,7 +455,7 @@ static QState readData(PRESSURE *const me, QEvt const *const e)
     }
     case I2C_ERROR_SIG:
     {
-        Fault_Manager_Generate_Fault(&me->super, FAULT_ID_PRESSURE_SENSOR_I2C, "Failed upon reading data");
+        Fault_Manager_Generate_Fault(&me->super, FAULT_ID_PRESSURE_SENSOR_I2C, "Failed upon reading");
         status = Q_TRAN(&error);
         break;
     }
