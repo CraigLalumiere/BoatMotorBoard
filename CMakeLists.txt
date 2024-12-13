@@ -63,6 +63,8 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     ./Core/services/app_cli/app_cli.c
     ./Core/services/app_cli/app_cli_commands.c
     ./Core/services/app_cli/app_cli_manual_commands.c
+    ./Core/services/fault_manager.c
+    ./Core/services/safe_strncpy.c
     ./Core/bsp/drivers/i2c_bus.c
     ./Core/bsp/drivers/i2c_bus_stm32.c
 
@@ -81,6 +83,7 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined include paths
     ./library/tinyusb/src
     ./library/embedded-cli
+    ./Core/services
     ./Core/services/app_cli
     ./Core/bsp
     ./Core/bsp/interfaces

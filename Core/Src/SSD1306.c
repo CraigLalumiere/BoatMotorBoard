@@ -119,7 +119,7 @@ typedef struct
     I2C_Write i2c_write;
     I2C_Read i2c_read;
     uint8_t i2c_data[N_BYTES_I2C_DATA];
-    float pressure;
+    int8_t pressure;
 
     char SSD1306_Buffer[SSD1306_BUFFER_SIZE];
 
@@ -373,6 +373,8 @@ static QState top(SSD1306 *const me, QEvt const *const e)
     {
         const FloatEvent_T *event = Q_EVT_CAST(FloatEvent_T);
         me->pressure = event->num;
+        status = Q_HANDLED();
+        break;
     }
     case I2C_ERROR_SIG:
     {
@@ -403,11 +405,6 @@ static QState waiting(SSD1306 *const me, QEvt const *const e)
     case WAIT_TIMEOUT_SIG:
     {
         status = Q_TRAN(&update_screen);
-        break;
-    }
-    case I2C_ERROR_SIG:
-    {
-        status = Q_TRAN(&error);
         break;
     }
     default:
@@ -451,7 +448,7 @@ static QState update_screen(SSD1306 *const me, QEvt const *const e)
         snprintf(
             print_buffer,
             sizeof(print_buffer),
-            "Pressure: %.2f",
+            "Pressure: %d",
             me->pressure);
         ssd1306_SetCursor(0, 24);
         ssd1306_WriteString(print_buffer, Font_7x10, White);

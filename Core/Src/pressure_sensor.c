@@ -37,6 +37,7 @@ Q_DEFINE_THIS_MODULE("Pressure Sensor")
 enum PressureSignals
 {
     WAIT_TIMEOUT_SIG = PRIVATE_SIGNAL_SSD1306_START,
+    WATCHDOG_TIMEOUT_SIG,
     I2C_COMPLETE_SIG,
     I2C_ERROR_SIG,
 };
@@ -44,17 +45,14 @@ enum PressureSignals
 typedef struct
 {
     QActive super;      // inherit QActive
-    QTimeEvt timer_evt; // timer to wait for voltage to settle
+    QTimeEvt timer_evt; // timer to set sampling rate
+    QTimeEvt watchdog_timer_evt; // timer to check if sensor has failed
     I2C_Write i2c_write;
     I2C_Read i2c_read;
     uint8_t i2c_data[N_BYTES_I2C_DATA];
 
-    // submachine state memory
-    QStateHandler substate_next_state;
-    QStateHandler substate_super_state;
-    uint8_t command;
-    uint8_t num_args;
-    uint8_t *args;
+    // watchdog keeps track if a valid measurement has taken place
+    bool watchdog_new_reading;
 
 } PRESSURE;
 
@@ -81,7 +79,6 @@ static QState running(PRESSURE *const me, QEvt const *const e);
 static QState beginConversion(PRESSURE *const me, QEvt const *const e);
 static QState readData(PRESSURE *const me, QEvt const *const e);
 
-
 static void I2C_Complete_CB(void *cb_data);
 static void I2C_Error_CB(void *cb_data);
 
@@ -102,6 +99,8 @@ void Pressure_Sensor_ctor(I2C_Write i2c_write_fn, I2C_Read i2c_read_fn)
 
     QActive_ctor(&me->super, Q_STATE_CAST(&initial));
     QTimeEvt_ctorX(&me->timer_evt, &me->super, WAIT_TIMEOUT_SIG, 0U);
+    QTimeEvt_ctorX(&me->watchdog_timer_evt, &me->super, WATCHDOG_TIMEOUT_SIG, 0U);
+    
 }
 
 /**************************************************************************************************\
@@ -267,12 +266,30 @@ static QState top(PRESSURE *const me, QEvt const *const e)
     {
     case Q_ENTRY_SIG:
     {
+        // 1 second timer
+        QTimeEvt_armX(
+            &me->watchdog_timer_evt,
+            BSP_TICKS_PER_SEC,
+            BSP_TICKS_PER_SEC);
         status = Q_HANDLED();
         break;
     }
     case I2C_ERROR_SIG:
     {
+        Fault_Manager_Generate_Fault(&me->super, FAULT_ID_PRESSURE_SENSOR_I2C, "Unknown I2C Error");
         status = Q_TRAN(&error);
+        break;
+    }
+    // If we haven't had any successful readings during this period, then throw a fault
+    case WATCHDOG_TIMEOUT_SIG: {
+        if (!me->watchdog_new_reading) {
+            Fault_Manager_Generate_Fault(&me->super, FAULT_ID_PRESSURE_SENSOR_I2C, "Communication Failure");
+            status = Q_TRAN(&error);
+        }
+        else {
+            me->watchdog_new_reading = false;
+            status = Q_HANDLED();
+        }
         break;
     }
     default:
@@ -340,6 +357,10 @@ static QState beginConversion(PRESSURE *const me, QEvt const *const e)
         {
             static QEvt const event = QEVT_INITIALIZER(I2C_ERROR_SIG);
             QACTIVE_POST((QActive *)me, &event, me);
+            if (retval == I2C_RTN_BUSY)
+                Fault_Manager_Generate_Fault(&me->super, FAULT_ID_PRESSURE_SENSOR_I2C, "Busy upon sending conversion command");
+            else
+                Fault_Manager_Generate_Fault(&me->super, FAULT_ID_PRESSURE_SENSOR_I2C, "Error upon sending conversion command");
         }
         status = Q_HANDLED();
         break;
@@ -347,6 +368,12 @@ static QState beginConversion(PRESSURE *const me, QEvt const *const e)
     case I2C_COMPLETE_SIG:
     {
         status = Q_TRAN(&readData);
+        break;
+    }
+    case I2C_ERROR_SIG:
+    {
+        Fault_Manager_Generate_Fault(&me->super, FAULT_ID_PRESSURE_SENSOR_I2C, "Failed upon sending conversion command");
+        status = Q_TRAN(&error);
         break;
     }
     default:
@@ -392,6 +419,10 @@ static QState readData(PRESSURE *const me, QEvt const *const e)
         {
             static QEvt const event = QEVT_INITIALIZER(I2C_ERROR_SIG);
             QACTIVE_POST((QActive *)me, &event, me);
+            if (retval == I2C_RTN_BUSY)
+                Fault_Manager_Generate_Fault(&me->super, FAULT_ID_PRESSURE_SENSOR_I2C, "Busy upon reading data");
+            else
+                Fault_Manager_Generate_Fault(&me->super, FAULT_ID_PRESSURE_SENSOR_I2C, "Error upon reading data");
         }
         status = Q_HANDLED();
         break;
@@ -399,22 +430,33 @@ static QState readData(PRESSURE *const me, QEvt const *const e)
     case I2C_COMPLETE_SIG:
     {
         uint8_t sensor_status = me->i2c_data[0];
-        bool sensor_busy = sensor_status && 0x20;
-        (void) sensor_busy;
-    uint32_t press_counts = me->i2c_data[3] + (me->i2c_data[2] << 8) + (me->i2c_data[1] << 16);
-        // calculation of pressure value according to equation 2 of datasheet
-        float pressure = ((press_counts - OUTPUTMIN) * (PMAX - PMIN)) / (OUTPUTMAX - OUTPUTMIN) + PMIN;
+        bool sensor_busy = sensor_status & 0x20;
 
-        uint32_t temp_counts = me->i2c_data[6] + (me->i2c_data[5] << 8) + (me->i2c_data[4] << 16);
-        int8_t temperature = (temp_counts * 200 / 16777215) - 50;
-        (void) temperature;
+        if (!sensor_busy)
+        {
+            me->watchdog_new_reading = true;
 
-        FloatEvent_T *event = Q_NEW(
-            FloatEvent_T, PUBSUB_PRESSURE_SIG);
-        event->num = pressure;
-        QACTIVE_PUBLISH(&event->super, &me->super);
+            uint32_t press_counts = me->i2c_data[3] + (me->i2c_data[2] << 8) + (me->i2c_data[1] << 16);
+            // calculation of pressure value according to equation 2 of datasheet
+            int8_t pressure = ((press_counts - OUTPUTMIN) * (PMAX - PMIN)) / (OUTPUTMAX - OUTPUTMIN) + PMIN;
+
+            uint32_t temp_counts = me->i2c_data[6] + (me->i2c_data[5] << 8) + (me->i2c_data[4] << 16);
+            int8_t temperature = (temp_counts * 200 / 16777215) - 50;
+            (void)temperature;
+
+            FloatEvent_T *event = Q_NEW(
+                FloatEvent_T, PUBSUB_PRESSURE_SIG);
+            event->num = pressure;
+            QACTIVE_PUBLISH(&event->super, &me->super);
+        }
 
         status = Q_TRAN(&running);
+        break;
+    }
+    case I2C_ERROR_SIG:
+    {
+        Fault_Manager_Generate_Fault(&me->super, FAULT_ID_PRESSURE_SENSOR_I2C, "Failed upon reading data");
+        status = Q_TRAN(&error);
         break;
     }
     default:

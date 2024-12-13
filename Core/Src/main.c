@@ -61,22 +61,28 @@ extern const QActive *AO_SharedI2C2;
 
 typedef struct
 {
-    union
-    {
-        QEvt base_event;
-        FloatEvent_T float_event;
-    } small_messages;
+  union
+  {
+    QEvt base_event;
+    FloatEvent_T float_event;
+  } small_messages;
 } SmallMessageUnion_T;
 typedef struct
 {
-    union
-    {
-        QEvt base_event;
-        SharedI2CWriteEvent_T i2c_event;
-    } small_messages;
+  union
+  {
+    QEvt base_event;
+    SharedI2CWriteEvent_T i2c_event;
+  } small_messages;
 } MediumMessageUnion_T;
-
-
+typedef struct
+{
+  union
+  {
+    QEvt base_event;
+    FaultGeneratedEvent_T fault_event;
+  } small_messages;
+} LongMessageUnion_T;
 
 /* USER CODE END PTD */
 
@@ -172,8 +178,11 @@ int main(void)
   static QF_MPOOL_EL(SmallMessageUnion_T) smlPoolSto[10];
   QF_poolInit(smlPoolSto, sizeof(smlPoolSto), sizeof(smlPoolSto[0]));
 
-    static QF_MPOOL_EL(MediumMessageUnion_T) mediumPoolSto[10];
-    QF_poolInit(mediumPoolSto, sizeof(mediumPoolSto), sizeof(mediumPoolSto[0]));
+  static QF_MPOOL_EL(MediumMessageUnion_T) mediumPoolSto[10];
+  QF_poolInit(mediumPoolSto, sizeof(mediumPoolSto), sizeof(mediumPoolSto[0]));
+
+  static QF_MPOOL_EL(LongMessageUnion_T) longPoolSto[10];
+  QF_poolInit(longPoolSto, sizeof(longPoolSto), sizeof(longPoolSto[0]));
 
   // initialize publish-subscribe
   static QSubscrList subscrSto[PUBSUB_MAX_SIG];
@@ -202,29 +211,29 @@ int main(void)
       0U,                          // stack size [bytes] (not used in QK)
       (void *)0);                  // no initialization param
 
-  // static QEvt const *SSD1306QueueSto[10];
-  // SSD1306_ctor(
-  //     BSP_Get_I2C_Write_SSD1306(),
-  //     BSP_Get_I2C_Read_SSD1306());
-  // QACTIVE_START(
-  //     AO_SSD1306,
-  //     AO_PRIO_SSD1306,        // QP prio. of the AO
-  //     SSD1306QueueSto,        // event queue storage
-  //     Q_DIM(SSD1306QueueSto), // queue length [events]
-  //     (void *)0, 0U,          // no stack storage
-  //     (void *)0);             // no initialization param
+  static QEvt const *SSD1306QueueSto[10];
+  SSD1306_ctor(
+      BSP_Get_I2C_Write_SSD1306(),
+      BSP_Get_I2C_Read_SSD1306());
+  QACTIVE_START(
+      AO_SSD1306,
+      AO_PRIO_SSD1306,        // QP prio. of the AO
+      SSD1306QueueSto,        // event queue storage
+      Q_DIM(SSD1306QueueSto), // queue length [events]
+      (void *)0, 0U,          // no stack storage
+      (void *)0);             // no initialization param
 
-  // static QEvt const *PressureQueueSto[10];
-  // Pressure_Sensor_ctor(
-  //     BSP_Get_I2C_Write_Pressure(),
-  //     BSP_Get_I2C_Read_Pressure());
-  // QACTIVE_START(
-  //     AO_Pressure,
-  //     AO_PRIO_PRESSURE,        // QP prio. of the AO
-  //     PressureQueueSto,        // event queue storage
-  //     Q_DIM(PressureQueueSto), // queue length [events]
-  //     (void *)0, 0U,           // no stack storage
-  //     (void *)0);              // no initialization param
+  static QEvt const *PressureQueueSto[10];
+  Pressure_Sensor_ctor(
+      BSP_Get_I2C_Write_Pressure(),
+      BSP_Get_I2C_Read_Pressure());
+  QACTIVE_START(
+      AO_Pressure,
+      AO_PRIO_PRESSURE,        // QP prio. of the AO
+      PressureQueueSto,        // event queue storage
+      Q_DIM(PressureQueueSto), // queue length [events]
+      (void *)0, 0U,           // no stack storage
+      (void *)0);              // no initialization param
 
   static QEvt const *app_cli_QueueSto[10];
   AppCLI_ctor(BSP_Get_Serial_IO_Interface_USB0());

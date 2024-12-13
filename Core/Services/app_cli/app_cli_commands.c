@@ -24,6 +24,7 @@ Q_DEFINE_THIS_MODULE("app_cli_commands")
 
 // Command Functions
 static void on_cli_toggle_led(EmbeddedCli *cli, char *args, void *context);
+static void on_fault(EmbeddedCli *cli, char *args, void *context);
 void on_cli_digital_out_set(EmbeddedCli *cli, char *args, void *context);
 void on_cli_digital_in_read(EmbeddedCli *cli, char *args, void *context);
 // void on_cli_spi(EmbeddedCli *cli, char *args, void *context);
@@ -36,6 +37,14 @@ static CliCommandBinding cli_cmd_list[] = {
         false,                      // flag whether to tokenize arguments
         NULL,                       // optional pointer to any application context
         on_cli_toggle_led           // binding function
+    },
+
+    (CliCommandBinding) {
+        "fault",                       // command name (spaces are not allowed)
+        "print the active fault info", // Optional help for a command
+        false,                         // flag whether to tokenize arguments
+        NULL,                          // optional pointer to any application context
+        on_fault                       // binding function
     },
 
     (CliCommandBinding) {
@@ -81,6 +90,47 @@ static void on_cli_toggle_led(EmbeddedCli *cli, char *args, void *context)
 
     // send (post) the event to the Blinky active object
     QACTIVE_POST(AO_Blinky, &ToggleLEDEvent, AO_AppCLI);
+}
+
+
+
+
+static void on_fault(EmbeddedCli *cli, char *args, void *context)
+{
+    char print_buffer[CLI_PRINT_BUFFER_SIZE] = {0};
+
+    Active_Fault_T *active_faults = Fault_Manager_Get_Active_Fault_List();
+    if (active_faults[0].id == FAULT_ID_NONE)
+    {
+        embeddedCliPrint(cli, "No faults recorded");
+        return;
+    }
+
+    for (uint8_t i = 0; i < FAULT_MANAGER_BUFFER_LENGTH; i++)
+    {
+        Active_Fault_T this_fault = active_faults[i];
+        if (this_fault.id == FAULT_ID_NONE)
+        {
+            break;
+        }
+
+        snprintf(print_buffer, sizeof(print_buffer), "ID: %d", (int) this_fault.id);
+        embeddedCliPrint(cli, print_buffer);
+        snprintf(
+            print_buffer,
+            sizeof(print_buffer),
+            "Code: %d",
+            (int) Fault_Manager_Get_Code(this_fault.id));
+        embeddedCliPrint(cli, print_buffer);
+        snprintf(
+            print_buffer,
+            sizeof(print_buffer),
+            "Description: %s",
+            Fault_Manager_Get_Description(this_fault.id));
+        embeddedCliPrint(cli, print_buffer);
+        snprintf(print_buffer, sizeof(print_buffer), "Message: %s\r\n", this_fault.msg);
+        embeddedCliPrint(cli, print_buffer);
+    }
 }
 
 
