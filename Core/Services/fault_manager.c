@@ -30,6 +30,8 @@ static const Fault_ID_Info_T s_fault_info_list[] = {
     {FAULT_ID_NONE, 0, "No Fault", FAULT_TYPE_NONE},
     {FAULT_ID_PRESSURE_SENSOR_GEN, 1000, "Pressure Sensor Generic Fault", FAULT_TYPE_DRIVER},
     {FAULT_ID_PRESSURE_SENSOR_I2C, 1001, "Pressure Sensor I2C Fault", FAULT_TYPE_DRIVER},
+    {FAULT_ID_OLED_GEN, 2000, "OLED Generic Fault", FAULT_TYPE_DRIVER},
+    {FAULT_ID_OLED_I2C, 2001, "OLED I2C Fault", FAULT_TYPE_DRIVER},
 };
 
 static_assert(

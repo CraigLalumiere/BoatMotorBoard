@@ -301,6 +301,7 @@ static QState startup(SSD1306 *const me, QEvt const *const e)
     }
     case I2C_ERROR_SIG:
     {
+        Fault_Manager_Generate_Fault(&me->super, FAULT_ID_OLED_I2C, "Startup Error");
         status = Q_TRAN(&startup_error);
         break;
     }
@@ -378,6 +379,7 @@ static QState top(SSD1306 *const me, QEvt const *const e)
     }
     case I2C_ERROR_SIG:
     {
+        Fault_Manager_Generate_Fault(&me->super, FAULT_ID_OLED_I2C, "Unknown Error");
         status = Q_TRAN(&error);
         break;
     }
@@ -430,7 +432,6 @@ static QState update_screen(SSD1306 *const me, QEvt const *const e)
     }
     case Q_ENTRY_SIG:
     {
-
 
         ssd1306_Fill(Black);
         ssd1306_SetCursor(0, 0);
@@ -485,6 +486,12 @@ static QState update_screen_1(SSD1306 *const me, QEvt const *const e)
             args);
         break;
     }
+    case I2C_ERROR_SIG:
+    {
+        Fault_Manager_Generate_Fault(&me->super, FAULT_ID_OLED_I2C, "Error while updating RAM address");
+        status = Q_TRAN(&error);
+        break;
+    }
     default:
     {
         status = Q_SUPER(&update_screen);
@@ -531,6 +538,12 @@ static QState update_screen_2(SSD1306 *const me, QEvt const *const e)
             status = Q_TRAN(&waiting);
         else
             status = Q_TRAN(&update_screen_1); // Send the next page of RAM
+        break;
+    }
+    case I2C_ERROR_SIG:
+    {
+        Fault_Manager_Generate_Fault(&me->super, FAULT_ID_OLED_I2C, "Error while sending RAM data");
+        status = Q_TRAN(&error);
         break;
     }
     default:
