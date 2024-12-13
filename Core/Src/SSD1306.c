@@ -151,16 +151,15 @@ typedef struct
 static SSD1306 ssd1306_inst;
 QActive *const AO_SSD1306 = &ssd1306_inst.super;
 
-#define NUM_INIT_COMMANDS 19
+#define NUM_INIT_COMMANDS 18
 const uint8_t INIT_SSD1306_ST[] = {
     SSD1306_DISPLAY_OFF, 0,            // 0xAE / Set Display OFF
     SSD1306_MEMORY_ADDR_MODE, 1, 0x00, // 0x20 / Set Memory Addressing Mode
-    0xB0, 0,                           // Set Page Start Address for Page Addressing Mode,0-7
     SSD1306_COM_SCAN_DIR_OP, 0,        // 0xC8
     0x00, 0,                           //---set low column address
     0x10, 0,                           //---set high column address
     0x10, 0,                           //--set start line address - CHECK
-    SSD1306_SET_CONTRAST, 1, 0xFF,     // 0x81 / 0x8F - reset value (max 0xFF)
+    SSD1306_SET_CONTRAST, 1, 0x8F,     // 0x81 / 0x8F - reset value (max 0xFF)
     SSD1306_SEG_REMAP_OP, 0,           // 0xA0 / remap 0xA1
     SSD1306_DIS_NORMAL, 0,             // 0xA6
     SSD1306_SET_MUX_RATIO, 1, 0x3F,    // 0xA8 / 0x3F (64MUX) for 128 x 64 version
@@ -168,7 +167,7 @@ const uint8_t INIT_SSD1306_ST[] = {
     SSD1306_DIS_ENT_DISP_ON, 0,        // 0xA4
     SSD1306_DISPLAY_OFFSET, 1, 0x00,   // 0xD3
     SSD1306_SET_OSC_FREQ, 1, 0xF0,     // 0xD5 / 0x80 => D=1; DCLK = Fosc / D <=> DCLK = Fosc
-    SSD1306_SET_PRECHARGE, 1, 0x22,    // 0xD9 / higher value less blinking
+    SSD1306_SET_PRECHARGE, 1, 0x10,    // 0xD9 / higher value less blinking
                                        //        0xC2, 1st phase = 2 DCLK,  2nd phase = 13 DCLK
     SSD1306_COM_PIN_CONF, 1, 0x12,     // 0xDA / 0x12 - Disable COM Left/Right remap, Alternative COM pin configuration
                                        //        0x12 - for 128 x 64 version
