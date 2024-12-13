@@ -202,29 +202,29 @@ int main(void)
       0U,                          // stack size [bytes] (not used in QK)
       (void *)0);                  // no initialization param
 
-  static QEvt const *SSD1306QueueSto[10];
-  SSD1306_ctor(
-      BSP_Get_I2C_Write_SSD1306(),
-      BSP_Get_I2C_Read_SSD1306());
-  QACTIVE_START(
-      AO_SSD1306,
-      AO_PRIO_SSD1306,        // QP prio. of the AO
-      SSD1306QueueSto,        // event queue storage
-      Q_DIM(SSD1306QueueSto), // queue length [events]
-      (void *)0, 0U,          // no stack storage
-      (void *)0);             // no initialization param
+  // static QEvt const *SSD1306QueueSto[10];
+  // SSD1306_ctor(
+  //     BSP_Get_I2C_Write_SSD1306(),
+  //     BSP_Get_I2C_Read_SSD1306());
+  // QACTIVE_START(
+  //     AO_SSD1306,
+  //     AO_PRIO_SSD1306,        // QP prio. of the AO
+  //     SSD1306QueueSto,        // event queue storage
+  //     Q_DIM(SSD1306QueueSto), // queue length [events]
+  //     (void *)0, 0U,          // no stack storage
+  //     (void *)0);             // no initialization param
 
-  static QEvt const *PressureQueueSto[10];
-  Pressure_Sensor_ctor(
-      BSP_Get_I2C_Write_Pressure(),
-      BSP_Get_I2C_Read_Pressure());
-  QACTIVE_START(
-      AO_Pressure,
-      AO_PRIO_PRESSURE,        // QP prio. of the AO
-      PressureQueueSto,        // event queue storage
-      Q_DIM(PressureQueueSto), // queue length [events]
-      (void *)0, 0U,           // no stack storage
-      (void *)0);              // no initialization param
+  // static QEvt const *PressureQueueSto[10];
+  // Pressure_Sensor_ctor(
+  //     BSP_Get_I2C_Write_Pressure(),
+  //     BSP_Get_I2C_Read_Pressure());
+  // QACTIVE_START(
+  //     AO_Pressure,
+  //     AO_PRIO_PRESSURE,        // QP prio. of the AO
+  //     PressureQueueSto,        // event queue storage
+  //     Q_DIM(PressureQueueSto), // queue length [events]
+  //     (void *)0, 0U,           // no stack storage
+  //     (void *)0);              // no initialization param
 
   static QEvt const *app_cli_QueueSto[10];
   AppCLI_ctor(BSP_Get_Serial_IO_Interface_USB0());
