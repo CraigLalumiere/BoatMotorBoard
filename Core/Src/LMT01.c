@@ -9,7 +9,7 @@
 static volatile uint16_t lmt01_counter;
 static volatile float lmt01_temp = 100;
 
-// extern TIM_HandleTypeDef htim4;
+extern TIM_HandleTypeDef htim4;
 extern TIM_HandleTypeDef htim8;
 
 /**************************************************************************************************\
@@ -19,6 +19,12 @@ extern TIM_HandleTypeDef htim8;
 void LMT01_ctor() {
     // Start the pulse-counter timer
     HAL_TIM_Base_Start_IT(&htim8);
+    
+    TIM4->ARR = 0xFFFF;
+    TIM4->CNT = 0;
+    __HAL_TIM_CLEAR_FLAG(&htim4, TIM_FLAG_UPDATE);
+    HAL_NVIC_EnableIRQ(TIM4_IRQn);
+    HAL_TIM_Base_Start_IT(&htim4);              // timeout timer
 }
 
 /**
@@ -55,14 +61,14 @@ void LMT01_ctor() {
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-    if (htim->Instance != TIM4)
+    if (htim->Instance != TIM4) // tim4 is the timeout timer
     {
         return;
     }
     BSP_debug_gpio_on();
     // HAL_NVIC_DisableIRQ(TIM6_DAC_IRQn);
 
-    // lmt01_counter = __HAL_TIM_GET_COUNTER(&htim8);;
+    lmt01_counter = __HAL_TIM_GET_COUNTER(&htim8); // tim8 is the pulse counter
     lmt01_temp = (lmt01_counter*0.0625)-50;
     // __HAL_TIM_SET_COUNTER(&htim4, 0);
 }
@@ -84,5 +90,6 @@ uint16_t LMT01_Get_Counter(void)
 {
     // HAL_NVIC_DisableIRQ(BSP_Get_Motor_Encoder_A_IRQN());
     return __HAL_TIM_GET_COUNTER(&htim8);
+    // return lmt01_counter;
     // HAL_NVIC_EnableIRQ(BSP_Get_Motor_Encoder_A_IRQN());
 }
