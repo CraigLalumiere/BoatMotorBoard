@@ -122,7 +122,7 @@ typedef struct
     I2C_Read i2c_read;
     uint8_t i2c_data[N_BYTES_I2C_DATA];
     int16_t pressure;
-
+    int16_t temperature;
     uint16_t counter;
 
     char SSD1306_Buffer[SSD1306_BUFFER_SIZE];
@@ -261,6 +261,7 @@ static QState initial(SSD1306 *const me, void const *const par)
 {
     Q_UNUSED_PAR(par);
     QActive_subscribe((QActive *)me, PUBSUB_PRESSURE_SIG);
+    QActive_subscribe((QActive *)me, PUBSUB_TEMPERATURE_SIG);
     QActive_subscribe((QActive *)me, PUBSUB_FAULT_GENERATED_SIG);
 
     return Q_TRAN(&startup);
@@ -386,6 +387,13 @@ static QState top(SSD1306 *const me, QEvt const *const e)
         status = Q_HANDLED();
         break;
     }
+    case PUBSUB_TEMPERATURE_SIG:
+    {
+        const Int16Event_T *event = Q_EVT_CAST(Int16Event_T);
+        me->temperature = event->num;
+        status = Q_HANDLED();
+        break;
+    }
     case I2C_ERROR_SIG:
     {
         Fault_Manager_Generate_Fault(&me->super, FAULT_ID_OLED_I2C, "Unknown Error");
@@ -450,8 +458,8 @@ static QState update_screen(SSD1306 *const me, QEvt const *const e)
         snprintf(
             print_buffer,
             sizeof(print_buffer),
-            "Temperature: %d",
-            LMT01_Get_Counter());
+            "Temperature: %d.%.2d",
+            me->temperature/100, me->temperature % 100);
         ssd1306_SetCursor(0, 12);
         ssd1306_WriteString(print_buffer, Font_7x10, White);
 

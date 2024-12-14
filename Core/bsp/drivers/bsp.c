@@ -354,8 +354,6 @@ void BSP_Init(void)
         i2c_bus_2_deferred_queue_storage,
         SHARED_I2C_BUS_2_DEFERRED_QUEUE_LEN);
 
-    LMT01_ctor();
-
     // initialize TinyUSB device stack on configured roothub port
     tud_init(BOARD_TUD_RHPORT);
 }
@@ -505,15 +503,15 @@ PUTCHAR_PROTOTYPE
  **************************************************************************************************/
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
+    (void) GPIO_Pin;
     /* Prevent unused argument(s) compilation warning */
-    switch (GPIO_Pin)
-    {
-    case LMT01_Pin:
-    {
-        void ;
-        break;
-    }
-    }
+    // switch (GPIO_Pin)
+    // {
+    // case LMT01_Pin:
+    // {
+    //     break;
+    // }
+    // }
 }
 
 /**

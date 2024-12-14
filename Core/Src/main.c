@@ -33,6 +33,7 @@
 #include <ctype.h>
 #include "SSD1306.h"
 #include "pressure_sensor.h"
+#include "lmt01.h"
 #include "shared_i2c_events.h"
 
 #ifdef Q_SPY
@@ -52,6 +53,7 @@ typedef enum
   AO_PRIO_BLINKY,
   AO_PRIO_APP_CLI,
   AO_PRIO_SSD1306,
+  AO_PRIO_LMT01,
   AO_PRIO_PRESSURE,
   AO_PRIO_SHARED_I2C2,
   AO_PRIO_USB,
@@ -232,6 +234,16 @@ int main(void)
       AO_PRIO_PRESSURE,        // QP prio. of the AO
       PressureQueueSto,        // event queue storage
       Q_DIM(PressureQueueSto), // queue length [events]
+      (void *)0, 0U,           // no stack storage
+      (void *)0);              // no initialization param
+
+  static QEvt const *LMT01QueueSto[10];
+  LMT01_ctor();
+  QACTIVE_START(
+      AO_LMT01,
+      AO_PRIO_LMT01,        // QP prio. of the AO
+      LMT01QueueSto,        // event queue storage
+      Q_DIM(LMT01QueueSto), // queue length [events]
       (void *)0, 0U,           // no stack storage
       (void *)0);              // no initialization param
 
