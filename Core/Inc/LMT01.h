@@ -16,7 +16,7 @@ extern "C" {
 * Public prototypes
 \**************************************************************************************************/
 void LMT01_ctor();
-void LMT01_ISR(void);
+// void LMT01_ISR(void);
 int8_t LMT01_Get_Temp(void);
 uint16_t LMT01_Get_Counter(void);
 

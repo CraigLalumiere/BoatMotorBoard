@@ -9,7 +9,7 @@
 static volatile uint16_t lmt01_counter;
 static volatile float lmt01_temp = 100;
 
-extern TIM_HandleTypeDef htim6;
+// extern TIM_HandleTypeDef htim4;
 extern TIM_HandleTypeDef htim8;
 
 /**************************************************************************************************\
@@ -17,6 +17,7 @@ extern TIM_HandleTypeDef htim8;
 \**************************************************************************************************/
 
 void LMT01_ctor() {
+    // Start the pulse-counter timer
     HAL_TIM_Base_Start_IT(&htim8);
 }
 
@@ -24,13 +25,13 @@ void LMT01_ctor() {
  ***************************************************************************************************
  * @brief   LMT01 ISR
  **************************************************************************************************/
-void LMT01_ISR(void)
-{
-    lmt01_counter++;
-    BSP_debug_gpio_off();
+// void LMT01_ISR(void)
+// {
+//     lmt01_counter++;
+//     BSP_debug_gpio_off();
     
-    BSP_LMT01_Timeout_Timer_Enable();
-}
+//     // BSP_LMT01_Timeout_Timer_Enable();
+// }
 
 
 
@@ -38,12 +39,12 @@ void LMT01_ISR(void)
  ***************************************************************************************************
  * @brief   LMT01 Timeout Timer Enable/Reset
  **************************************************************************************************/
-void BSP_LMT01_Timeout_Timer_Enable() {
-    TIM6->CNT = 0;
-    __HAL_TIM_CLEAR_FLAG(&htim6, TIM_FLAG_UPDATE);
-    HAL_NVIC_EnableIRQ(TIM6_DAC_IRQn);
-    HAL_TIM_Base_Start_IT(&htim6);              // timeout timer
-}
+// void BSP_LMT01_Timeout_Timer_Enable() {
+//     TIM6->CNT = 0;
+//     __HAL_TIM_CLEAR_FLAG(&htim6, TIM_FLAG_UPDATE);
+//     HAL_NVIC_EnableIRQ(TIM6_DAC_IRQn);
+//     HAL_TIM_Base_Start_IT(&htim6);              // timeout timer
+// }
 
 
 
@@ -54,15 +55,16 @@ void BSP_LMT01_Timeout_Timer_Enable() {
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-    if (htim->Instance != TIM6)
+    if (htim->Instance != TIM4)
     {
         return;
     }
     BSP_debug_gpio_on();
-    HAL_NVIC_DisableIRQ(TIM6_DAC_IRQn);
+    // HAL_NVIC_DisableIRQ(TIM6_DAC_IRQn);
 
+    // lmt01_counter = __HAL_TIM_GET_COUNTER(&htim8);;
     lmt01_temp = (lmt01_counter*0.0625)-50;
-    lmt01_counter = 0;
+    // __HAL_TIM_SET_COUNTER(&htim4, 0);
 }
 
 /**

@@ -99,7 +99,6 @@ typedef struct
 /* Private variables ---------------------------------------------------------*/
 I2C_HandleTypeDef hi2c2;
 
-TIM_HandleTypeDef htim6;
 TIM_HandleTypeDef htim8;
 
 UART_HandleTypeDef huart2;
@@ -116,7 +115,6 @@ static void MX_GPIO_Init(void);
 static void MX_USB_PCD_Init(void);
 static void MX_I2C2_Init(void);
 static void MX_USART2_UART_Init(void);
-static void MX_TIM6_Init(void);
 static void MX_TIM8_Init(void);
 /* USER CODE BEGIN PFP */
 /* USER CODE END PFP */
@@ -170,7 +168,6 @@ int main(void)
   MX_USB_PCD_Init();
   MX_I2C2_Init();
   MX_USART2_UART_Init();
-  MX_TIM6_Init();
   MX_TIM8_Init();
   /* USER CODE BEGIN 2 */
 
@@ -376,44 +373,6 @@ static void MX_I2C2_Init(void)
 }
 
 /**
-  * @brief TIM6 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_TIM6_Init(void)
-{
-
-  /* USER CODE BEGIN TIM6_Init 0 */
-
-  /* USER CODE END TIM6_Init 0 */
-
-  TIM_MasterConfigTypeDef sMasterConfig = {0};
-
-  /* USER CODE BEGIN TIM6_Init 1 */
-
-  /* USER CODE END TIM6_Init 1 */
-  htim6.Instance = TIM6;
-  htim6.Init.Prescaler = 15;
-  htim6.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim6.Init.Period = 65535;
-  htim6.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  if (HAL_TIM_Base_Init(&htim6) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  if (HAL_TIMEx_MasterConfigSynchronization(&htim6, &sMasterConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN TIM6_Init 2 */
-
-  /* USER CODE END TIM6_Init 2 */
-
-}
-
-/**
   * @brief TIM8 Initialization Function
   * @param None
   * @retval None
@@ -425,7 +384,7 @@ static void MX_TIM8_Init(void)
 
   /* USER CODE END TIM8_Init 0 */
 
-  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_SlaveConfigTypeDef sSlaveConfig = {0};
   TIM_MasterConfigTypeDef sMasterConfig = {0};
 
   /* USER CODE BEGIN TIM8_Init 1 */
@@ -442,11 +401,12 @@ static void MX_TIM8_Init(void)
   {
     Error_Handler();
   }
-  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_ETRMODE2;
-  sClockSourceConfig.ClockPolarity = TIM_CLOCKPOLARITY_NONINVERTED;
-  sClockSourceConfig.ClockPrescaler = TIM_CLOCKPRESCALER_DIV1;
-  sClockSourceConfig.ClockFilter = 0;
-  if (HAL_TIM_ConfigClockSource(&htim8, &sClockSourceConfig) != HAL_OK)
+  sSlaveConfig.SlaveMode = TIM_SLAVEMODE_EXTERNAL1;
+  sSlaveConfig.InputTrigger = TIM_TS_ETRF;
+  sSlaveConfig.TriggerPolarity = TIM_TRIGGERPOLARITY_NONINVERTED;
+  sSlaveConfig.TriggerPrescaler = TIM_TRIGGERPRESCALER_DIV1;
+  sSlaveConfig.TriggerFilter = 0;
+  if (HAL_TIM_SlaveConfigSynchro(&htim8, &sSlaveConfig) != HAL_OK)
   {
     Error_Handler();
   }
