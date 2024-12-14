@@ -451,7 +451,7 @@ static QState update_screen(SSD1306 *const me, QEvt const *const e)
             print_buffer,
             sizeof(print_buffer),
             "Temperature: %d",
-            LMT01_Get_Temp());
+            LMT01_Get_Counter());
         ssd1306_SetCursor(0, 12);
         ssd1306_WriteString(print_buffer, Font_7x10, White);
 

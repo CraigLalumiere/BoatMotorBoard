@@ -37,9 +37,9 @@
 #include "shared_i2c.h"
 #include "tusb.h"
 #include "i2c_bus.h"
-#include "pinout.h"
 #include "LMT01.h"
 #include "i2c_bus_stm32.h"
+#include "main.h"
 
 #include "stm32g4xx_hal.h"
 #include <stdio.h>
@@ -320,7 +320,7 @@ void BSP_Init_I2C(void)
     I2C_HandleTypeDef *p_hi2c2 = STM32_GetI2CHandle(I2C_BUS_ID_2);
 
     p_hi2c2->Instance = I2C2;
-    p_hi2c2->Init.Timing = 0x00503D58; 
+    p_hi2c2->Init.Timing = 0x00503D58;
     p_hi2c2->Init.OwnAddress1 = 0;
     p_hi2c2->Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
     p_hi2c2->Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
@@ -348,12 +348,13 @@ void BSP_Init(void)
     // Initialize I2C buses
     BSP_Init_I2C();
 
-    
     SharedI2C_ctor(
         &SharedI2C_Bus2,
         I2C_BUS_ID_2,
         i2c_bus_2_deferred_queue_storage,
         SHARED_I2C_BUS_2_DEFERRED_QUEUE_LEN);
+
+    LMT01_ctor();
 
     // initialize TinyUSB device stack on configured roothub port
     tud_init(BOARD_TUD_RHPORT);
@@ -362,23 +363,23 @@ void BSP_Init(void)
 void BSP_ledOn()
 {
     printf("LED on\n\r");
-    HAL_GPIO_WritePin(FW_LED_Port, FW_LED_Pin, 1);
+    HAL_GPIO_WritePin(FW_LED_GPIO_Port, FW_LED_Pin, 1);
 }
 //............................................................................
 void BSP_ledOff()
 {
     printf("LED off\n\r");
-    HAL_GPIO_WritePin(FW_LED_Port, FW_LED_Pin, 0);
+    HAL_GPIO_WritePin(FW_LED_GPIO_Port, FW_LED_Pin, 0);
 }
 //............................................................................
 void BSP_debug_gpio_on()
 {
-    HAL_GPIO_WritePin(DEBUG_GPIO_Port, DEBUG_GPIO_Pin, 1);
+    HAL_GPIO_WritePin(DEBUG_GPIO_GPIO_Port, DEBUG_GPIO_Pin, 1);
 }
 //............................................................................
 void BSP_debug_gpio_off()
 {
-    HAL_GPIO_WritePin(DEBUG_GPIO_Port, DEBUG_GPIO_Pin, 0);
+    HAL_GPIO_WritePin(DEBUG_GPIO_GPIO_Port, DEBUG_GPIO_Pin, 0);
 }
 
 //............................................................................
@@ -426,7 +427,7 @@ void QV_onIdle(void)
 
 #ifdef Q_SPY
 #elif defined NDEBUG
-    // Put the CPU and peripherals to the low-power mode.
+  // Put the CPU and peripherals to the low-power mode.
     // you might need to customize the clock management for your application,
     // see the datasheet for your particular Cortex-M MCU.
     //
@@ -506,7 +507,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
     /* Prevent unused argument(s) compilation warning */
     switch (GPIO_Pin)
     {
-    case LMTO1_Pin:
+    case LMT01_Pin:
     {
         LMT01_ISR();
         break;
@@ -521,5 +522,5 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 void BSP_Put_Pressure_Sensor_Into_Reset(bool reset)
 {
     // Active low signal
-    HAL_GPIO_WritePin(PRESSURE_RST_Port, PRESSURE_RST_Pin, !reset);
+    HAL_GPIO_WritePin(PRESSURE_RST_GPIO_Port, PRESSURE_RST_Pin, !reset);
 }

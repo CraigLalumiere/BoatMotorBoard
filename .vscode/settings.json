@@ -16,7 +16,6 @@
         "ssd1306.h": "c",
         "string.h": "c",
         "stdio.h": "c",
-        "pinout.h": "c",
         "shared_i2c_events.h": "c",
         "array": "c",
         "deque": "c",

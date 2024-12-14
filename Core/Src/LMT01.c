@@ -10,10 +10,15 @@ static volatile uint16_t lmt01_counter;
 static volatile float lmt01_temp = 100;
 
 extern TIM_HandleTypeDef htim6;
+extern TIM_HandleTypeDef htim8;
 
 /**************************************************************************************************\
 * Public functions
 \**************************************************************************************************/
+
+void LMT01_ctor() {
+    HAL_TIM_Base_Start_IT(&htim8);
+}
 
 /**
  ***************************************************************************************************
@@ -70,5 +75,12 @@ int8_t LMT01_Get_Temp(void)
 {
     // HAL_NVIC_DisableIRQ(BSP_Get_Motor_Encoder_A_IRQN());
     return lmt01_temp;
+    // HAL_NVIC_EnableIRQ(BSP_Get_Motor_Encoder_A_IRQN());
+}
+
+uint16_t LMT01_Get_Counter(void)
+{
+    // HAL_NVIC_DisableIRQ(BSP_Get_Motor_Encoder_A_IRQN());
+    return __HAL_TIM_GET_COUNTER(&htim8);
     // HAL_NVIC_EnableIRQ(BSP_Get_Motor_Encoder_A_IRQN());
 }
