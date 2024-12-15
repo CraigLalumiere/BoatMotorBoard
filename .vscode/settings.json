@@ -24,6 +24,7 @@
         "vector": "c",
         "string_view": "c",
         "initializer_list": "c",
-        "pressure_sensor.h": "c"
+        "pressure_sensor.h": "c",
+        "lmt01.h": "c"
     }
 }

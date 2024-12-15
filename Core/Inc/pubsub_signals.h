@@ -11,6 +11,7 @@ enum PubSubSignals
     PUBSUB_FAULT_GENERATED_SIG,
     PUBSUB_PRESSURE_SIG,
     PUBSUB_TEMPERATURE_SIG,
+    PUBSUB_MOTOR_DATA_SIG,
     PUBSUB_MAX_SIG
 };
 
@@ -27,6 +28,20 @@ typedef struct
     QEvt super;
     int16_t num; // size of the buffer 'instructions', which should be >= actual size
 } Int16Event_T;
+
+
+typedef struct
+{
+    QEvt super;
+    int16_t temperature;
+    int16_t pressure;
+    int16_t vbat;
+    bool start;
+    bool neutral;
+    bool buzzer;
+    uint8_t red;
+    uint8_t orange;
+} MotorDataEvent_T;
 
 
 

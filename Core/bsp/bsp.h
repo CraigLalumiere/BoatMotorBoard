@@ -75,6 +75,14 @@ I2C_Read BSP_Get_I2C_Read_Pressure();
 
 
 
+
+/**
+ ***************************************************************************************************
+ * @brief   Tachometer Functions
+ **************************************************************************************************/
+
+void BSP_Tach_Capture_Timer_Enable();
+
 /**
  ***************************************************************************************************
  * @brief   LMT01 Functions
@@ -88,6 +96,18 @@ void BSP_LMT01_Timeout_Timer_Enable();
  * @brief   Pressure Sensor Functions
  **************************************************************************************************/
 void BSP_Put_Pressure_Sensor_Into_Reset(bool reset);
+
+
+/**
+ ***************************************************************************************************
+ * @brief   GPIO motor ECU Functions
+ **************************************************************************************************/
+bool BSP_Get_Neutral();
+bool BSP_Get_Start();
+uint8_t BSP_Get_Red();
+uint8_t BSP_Get_Orange();
+bool BSP_Get_Buzzer();
+uint16_t BSP_ADC_Read_VBAT(void);
 
 
 #endif // BSP_H_

@@ -57,6 +57,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     ./Core/Src/SSD1306.c
     ./Core/Src/ssd1306_fonts.c
     ./Core/Src/LMT01.c
+    ./Core/Src/data_manager.c
     ./Core/bsp/drivers/usb_board_api.c
     ./Core/bsp/drivers/usb_descriptors.c
     ./Core/bsp/drivers/usb.c

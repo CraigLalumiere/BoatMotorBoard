@@ -34,6 +34,7 @@
 #include "SSD1306.h"
 #include "pressure_sensor.h"
 #include "lmt01.h"
+#include "data_manager.h"
 #include "shared_i2c_events.h"
 
 #ifdef Q_SPY
@@ -53,6 +54,7 @@ typedef enum
   AO_PRIO_BLINKY,
   AO_PRIO_APP_CLI,
   AO_PRIO_SSD1306,
+  AO_PRIO_DATA_MANAGER,
   AO_PRIO_LMT01,
   AO_PRIO_PRESSURE,
   AO_PRIO_SHARED_I2C2,
@@ -83,6 +85,7 @@ typedef struct
   {
     QEvt base_event;
     FaultGeneratedEvent_T fault_event;
+    MotorDataEvent_T data_event;
   } small_messages;
 } LongMessageUnion_T;
 
@@ -99,9 +102,12 @@ typedef struct
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+ADC_HandleTypeDef hadc2;
+
 I2C_HandleTypeDef hi2c2;
 
 TIM_HandleTypeDef htim8;
+TIM_HandleTypeDef htim15;
 
 UART_HandleTypeDef huart2;
 
@@ -118,6 +124,8 @@ static void MX_USB_PCD_Init(void);
 static void MX_I2C2_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_TIM8_Init(void);
+static void MX_ADC2_Init(void);
+static void MX_TIM15_Init(void);
 /* USER CODE BEGIN PFP */
 /* USER CODE END PFP */
 
@@ -171,6 +179,8 @@ int main(void)
   MX_I2C2_Init();
   MX_USART2_UART_Init();
   MX_TIM8_Init();
+  MX_ADC2_Init();
+  MX_TIM15_Init();
   /* USER CODE BEGIN 2 */
 
   QF_init(); // initialize the framework and the underlying RT kernel
@@ -244,6 +254,16 @@ int main(void)
       AO_PRIO_LMT01,        // QP prio. of the AO
       LMT01QueueSto,        // event queue storage
       Q_DIM(LMT01QueueSto), // queue length [events]
+      (void *)0, 0U,           // no stack storage
+      (void *)0);              // no initialization param
+
+  static QEvt const *DataManagerQueueSto[10];
+  Data_Manager_ctor();
+  QACTIVE_START(
+      AO_Data_Manager,
+      AO_PRIO_DATA_MANAGER,        // QP prio. of the AO
+      DataManagerQueueSto,        // event queue storage
+      Q_DIM(DataManagerQueueSto), // queue length [events]
       (void *)0, 0U,           // no stack storage
       (void *)0);              // no initialization param
 
@@ -334,6 +354,65 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+}
+
+/**
+  * @brief ADC2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_ADC2_Init(void)
+{
+
+  /* USER CODE BEGIN ADC2_Init 0 */
+
+  /* USER CODE END ADC2_Init 0 */
+
+  ADC_ChannelConfTypeDef sConfig = {0};
+
+  /* USER CODE BEGIN ADC2_Init 1 */
+
+  /* USER CODE END ADC2_Init 1 */
+
+  /** Common config
+  */
+  hadc2.Instance = ADC2;
+  hadc2.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV2;
+  hadc2.Init.Resolution = ADC_RESOLUTION_12B;
+  hadc2.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+  hadc2.Init.GainCompensation = 0;
+  hadc2.Init.ScanConvMode = ADC_SCAN_DISABLE;
+  hadc2.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
+  hadc2.Init.LowPowerAutoWait = DISABLE;
+  hadc2.Init.ContinuousConvMode = DISABLE;
+  hadc2.Init.NbrOfConversion = 1;
+  hadc2.Init.DiscontinuousConvMode = DISABLE;
+  hadc2.Init.ExternalTrigConv = ADC_SOFTWARE_START;
+  hadc2.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
+  hadc2.Init.DMAContinuousRequests = DISABLE;
+  hadc2.Init.Overrun = ADC_OVR_DATA_PRESERVED;
+  hadc2.Init.OversamplingMode = DISABLE;
+  if (HAL_ADC_Init(&hadc2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure Regular Channel
+  */
+  sConfig.Channel = ADC_CHANNEL_15;
+  sConfig.Rank = ADC_REGULAR_RANK_1;
+  sConfig.SamplingTime = ADC_SAMPLETIME_2CYCLES_5;
+  sConfig.SingleDiff = ADC_SINGLE_ENDED;
+  sConfig.OffsetNumber = ADC_OFFSET_NONE;
+  sConfig.Offset = 0;
+  if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN ADC2_Init 2 */
+
+  /* USER CODE END ADC2_Init 2 */
+
 }
 
 /**
@@ -431,6 +510,65 @@ static void MX_TIM8_Init(void)
   /* USER CODE BEGIN TIM8_Init 2 */
 
   /* USER CODE END TIM8_Init 2 */
+
+}
+
+/**
+  * @brief TIM15 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM15_Init(void)
+{
+
+  /* USER CODE BEGIN TIM15_Init 0 */
+
+  /* USER CODE END TIM15_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+  TIM_IC_InitTypeDef sConfigIC = {0};
+
+  /* USER CODE BEGIN TIM15_Init 1 */
+
+  /* USER CODE END TIM15_Init 1 */
+  htim15.Instance = TIM15;
+  htim15.Init.Prescaler = 0;
+  htim15.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim15.Init.Period = 65535;
+  htim15.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim15.Init.RepetitionCounter = 0;
+  htim15.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim15) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim15, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_IC_Init(&htim15) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim15, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigIC.ICPolarity = TIM_INPUTCHANNELPOLARITY_RISING;
+  sConfigIC.ICSelection = TIM_ICSELECTION_DIRECTTI;
+  sConfigIC.ICPrescaler = TIM_ICPSC_DIV1;
+  sConfigIC.ICFilter = 0;
+  if (HAL_TIM_IC_ConfigChannel(&htim15, &sConfigIC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM15_Init 2 */
+
+  /* USER CODE END TIM15_Init 2 */
 
 }
 
@@ -536,10 +674,8 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, DEBUG_GPIO_Pin|FW_LED_Pin|GPIO_PIN_7, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : PRESSURE_EOC_Pin PA5 PA6 PA7
-                           PA10 */
-  GPIO_InitStruct.Pin = PRESSURE_EOC_Pin|GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_7
-                          |GPIO_PIN_10;
+  /*Configure GPIO pins : PRESSURE_EOC_Pin RED_SENSE_1_Pin ORANGE_SENSE_1_Pin VBUS_SENSE_Pin */
+  GPIO_InitStruct.Pin = PRESSURE_EOC_Pin|RED_SENSE_1_Pin|ORANGE_SENSE_1_Pin|VBUS_SENSE_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
@@ -551,13 +687,29 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(PRESSURE_RST_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PB0 PB1 PB2 PB10
-                           PB11 */
-  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_10
-                          |GPIO_PIN_11;
+  /*Configure GPIO pin : RED_SENSE_2_Pin */
+  GPIO_InitStruct.Pin = RED_SENSE_2_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(RED_SENSE_2_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : nBUZZER_SENSE_Pin ORANGE_SENSE_2_Pin NEUTRAL_DETECT_Pin */
+  GPIO_InitStruct.Pin = nBUZZER_SENSE_Pin|ORANGE_SENSE_2_Pin|NEUTRAL_DETECT_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : CAN_FLT_Pin */
+  GPIO_InitStruct.Pin = CAN_FLT_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+  HAL_GPIO_Init(CAN_FLT_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : START_DET_Pin */
+  GPIO_InitStruct.Pin = START_DET_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+  HAL_GPIO_Init(START_DET_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : DEBUG_GPIO_Pin FW_LED_Pin PB7 */
   GPIO_InitStruct.Pin = DEBUG_GPIO_Pin|FW_LED_Pin|GPIO_PIN_7;

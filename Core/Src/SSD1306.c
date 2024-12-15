@@ -121,9 +121,16 @@ typedef struct
     I2C_Write i2c_write;
     I2C_Read i2c_read;
     uint8_t i2c_data[N_BYTES_I2C_DATA];
-    int16_t pressure;
-    int16_t temperature;
     uint16_t counter;
+
+    int16_t temperature;
+    int16_t pressure;
+    int16_t vbat;
+    bool start;
+    bool neutral;
+    bool buzzer;
+    uint8_t red;
+    uint8_t orange;
 
     char SSD1306_Buffer[SSD1306_BUFFER_SIZE];
 
@@ -260,9 +267,8 @@ void SSD1306_ctor(I2C_Write i2c_write_fn, I2C_Read i2c_read_fn)
 static QState initial(SSD1306 *const me, void const *const par)
 {
     Q_UNUSED_PAR(par);
-    QActive_subscribe((QActive *)me, PUBSUB_PRESSURE_SIG);
-    QActive_subscribe((QActive *)me, PUBSUB_TEMPERATURE_SIG);
     QActive_subscribe((QActive *)me, PUBSUB_FAULT_GENERATED_SIG);
+    QActive_subscribe((QActive *)me, PUBSUB_MOTOR_DATA_SIG);
 
     return Q_TRAN(&startup);
 }
@@ -380,17 +386,16 @@ static QState top(SSD1306 *const me, QEvt const *const e)
         status = Q_HANDLED();
         break;
     }
-    case PUBSUB_PRESSURE_SIG:
-    {
-        const Int16Event_T *event = Q_EVT_CAST(Int16Event_T);
-        me->pressure = event->num;
-        status = Q_HANDLED();
-        break;
-    }
-    case PUBSUB_TEMPERATURE_SIG:
-    {
-        const Int16Event_T *event = Q_EVT_CAST(Int16Event_T);
-        me->temperature = event->num;
+    case PUBSUB_MOTOR_DATA_SIG: {
+        const MotorDataEvent_T *event = Q_EVT_CAST(MotorDataEvent_T);
+        me->temperature = event->temperature;
+        me->pressure = event->pressure;
+        me->vbat = event->vbat;
+        me->buzzer = event->buzzer;
+        me->start = event->start;
+        me->neutral = event->neutral;
+        me->red = event->red;
+        me->orange = event->orange;
         status = Q_HANDLED();
         break;
     }
@@ -451,24 +456,33 @@ static QState update_screen(SSD1306 *const me, QEvt const *const e)
     {
 
         ssd1306_Fill(Black);
-        ssd1306_SetCursor(0, 0);
-        ssd1306_WriteString("Hello World", Font_7x10, White);
-
         char print_buffer[32] = {0};
+
         snprintf(
             print_buffer,
             sizeof(print_buffer),
-            "Temperature: %d.%.2d",
-            me->temperature/100, me->temperature % 100);
-        ssd1306_SetCursor(0, 12);
+            "%d.%.2dV",
+            me->vbat/100, me->vbat % 100);
+        
+        ssd1306_SetCursor(0, 0);
         ssd1306_WriteString(print_buffer, Font_7x10, White);
 
+        if (true) {
+            ssd1306_SetCursor(50, 0);
+            ssd1306_WriteString("S", Font_7x10, White);
+        }
+
+        if (true) {
+            ssd1306_SetCursor(70, 0);
+            ssd1306_WriteString("N", Font_7x10, White);
+        }
+
         snprintf(
             print_buffer,
             sizeof(print_buffer),
-            "Pressure: %d.%.2d",
-            me->pressure/100, me->pressure % 100);
-        ssd1306_SetCursor(0, 24);
+            "%d.%.2dC   %d.%.2d PSI",
+            me->temperature/100, me->temperature % 100, me->pressure/100, me->pressure % 100);
+        ssd1306_SetCursor(0, 12);
         ssd1306_WriteString(print_buffer, Font_7x10, White);
 
         snprintf(

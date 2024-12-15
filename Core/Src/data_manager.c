@@ -1,11 +1,10 @@
-#include "LMT01.h"
+#include "data_manager.h"
 #include "bsp.h"
 #include "private_signal_ranges.h"
 #include "pubsub_signals.h"
-#include "stm32g4xx_hal.h"
 
 #ifdef Q_SPY
-Q_DEFINE_THIS_MODULE("LMT01")
+Q_DEFINE_THIS_MODULE("Data Manager")
 #endif // def Q_SPY
 
 /**************************************************************************************************\
@@ -18,32 +17,31 @@ Q_DEFINE_THIS_MODULE("LMT01")
 
 enum PressureSignals
 {
-    WAIT_TIMEOUT_SIG = PRIVATE_SIGNAL_LMT01_START,
+    WAIT_TIMEOUT_SIG = PRIVATE_SIGNAL_DATA_MANAGER_START,
 };
 
 typedef struct
 {
     QActive super; // inherit QActive
     QTimeEvt timer_evt;
-    uint16_t lmt01_counter;
+
+    int16_t pressure;
     int16_t temperature;
-} LMT01;
+} DataManager;
 
 /**************************************************************************************************\
 * Private memory declarations
 \**************************************************************************************************/
-static LMT01 lmt01_inst;
-QActive *const AO_LMT01 = &lmt01_inst.super;
-
-extern TIM_HandleTypeDef htim8; // counter
+static DataManager data_manager_inst;
+QActive *const AO_Data_Manager = &data_manager_inst.super;
 
 /**************************************************************************************************\
 * Private prototypes
 \**************************************************************************************************/
 
 // state handler functions
-static QState initial(LMT01 *const me, void const *const par);
-static QState running(LMT01 *const me, QEvt const *const e);
+static QState initial(DataManager *const me, void const *const par);
+static QState running(DataManager *const me, QEvt const *const e);
 
 /**************************************************************************************************\
 * Public functions
@@ -53,15 +51,12 @@ static QState running(LMT01 *const me, QEvt const *const e);
  ***************************************************************************************************
  * @brief   Constructor
  **************************************************************************************************/
-void LMT01_ctor()
+void Data_Manager_ctor()
 {
-    LMT01 *const me = &lmt01_inst;
+    DataManager *const me = &data_manager_inst;
 
     QActive_ctor(&me->super, Q_STATE_CAST(&initial));
     QTimeEvt_ctorX(&me->timer_evt, &me->super, WAIT_TIMEOUT_SIG, 0U);
-
-    // Start the pulse-counter timer
-    HAL_TIM_Base_Start_IT(&htim8);
 }
 
 /**************************************************************************************************\
@@ -72,11 +67,14 @@ void LMT01_ctor()
  ***************************************************************************************************
  * @brief   HSM
  **************************************************************************************************/
-static QState initial(LMT01 *const me, void const *const par)
+static QState initial(DataManager *const me, void const *const par)
 {
     Q_UNUSED_PAR(par);
 
-    // Conversion time of the LMT01 should be under 54ms
+    QActive_subscribe((QActive *)me, PUBSUB_PRESSURE_SIG);
+    QActive_subscribe((QActive *)me, PUBSUB_TEMPERATURE_SIG);
+
+    // Start update loop of 100hz
     QTimeEvt_armX(
         &me->timer_evt,
         BSP_TICKS_PER_SEC / 100,
@@ -85,7 +83,7 @@ static QState initial(LMT01 *const me, void const *const par)
     return Q_TRAN(&running);
 }
 
-static QState running(LMT01 *const me, QEvt const *const e)
+static QState running(DataManager *const me, QEvt const *const e)
 {
     QState status;
 
@@ -98,18 +96,39 @@ static QState running(LMT01 *const me, QEvt const *const e)
     }
     case WAIT_TIMEOUT_SIG:
     {
-        uint16_t prev_counter = me->lmt01_counter;
-        me->lmt01_counter = __HAL_TIM_GET_COUNTER(&htim8);
+        bool neutral = BSP_Get_Neutral();
+        bool start = BSP_Get_Start();
+        uint8_t red = BSP_Get_Red();
+        uint8_t orange = BSP_Get_Orange();
+        bool buzzer = BSP_Get_Buzzer();
+        uint16_t vbat_voltage = BSP_ADC_Read_VBAT();
 
-        if (prev_counter > 0 && prev_counter == me->lmt01_counter) {
-            __HAL_TIM_SET_COUNTER(&htim8, 0);
-            me->temperature = (me->lmt01_counter * 6.25) - 5000; // temperature in hundredths of degrees
-            
-            Int16Event_T *event = Q_NEW(
-                Int16Event_T, PUBSUB_TEMPERATURE_SIG);
-            event->num = (int16_t) me->temperature;
-            QACTIVE_PUBLISH(&event->super, &me->super);
-        }
+        MotorDataEvent_T *event = Q_NEW(
+            MotorDataEvent_T, PUBSUB_MOTOR_DATA_SIG);
+        event->neutral = neutral;
+        event->start = start;
+        event->red = red;
+        event->orange = orange;
+        event->buzzer = buzzer;
+        event->vbat = vbat_voltage;
+        event->temperature = me->temperature;
+        event->pressure = me->pressure;
+        QACTIVE_PUBLISH(&event->super, &me->super);
+
+        status = Q_HANDLED();
+        break;
+    }
+    case PUBSUB_PRESSURE_SIG:
+    {
+        const Int16Event_T *event = Q_EVT_CAST(Int16Event_T);
+        me->pressure = event->num;
+        status = Q_HANDLED();
+        break;
+    }
+    case PUBSUB_TEMPERATURE_SIG:
+    {
+        const Int16Event_T *event = Q_EVT_CAST(Int16Event_T);
+        me->temperature = event->num;
         status = Q_HANDLED();
         break;
     }

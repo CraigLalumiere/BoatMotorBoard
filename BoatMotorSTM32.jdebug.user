@@ -1,21 +1,21 @@
 
 
-
-Breakpoint=C:/Data/Jobs/Personal/BoatMotorSTM32/Core/Src/SSD1306.c:350:16, State=BP_STATE_DISABLED
-Breakpoint=C:/Data/Jobs/Personal/BoatMotorSTM32/Core/Src/SSD1306.c:725:5, State=BP_STATE_DISABLED
-Breakpoint=C:/Data/Jobs/Personal/BoatMotorSTM32/Core/Src/stm32g4xx_it.c:244:3, State=BP_STATE_DISABLED
-Breakpoint=C:/Data/Jobs/Personal/BoatMotorSTM32/Core/Src/LMT01.c:57:5, State=BP_STATE_DISABLED
-Breakpoint=C:/Data/Jobs/Personal/BoatMotorSTM32/Core/Src/pressure_sensor.c:275, State=BP_STATE_DISABLED
-Breakpoint=C:/Data/Jobs/Personal/BoatMotorSTM32/Core/Src/main.c:208:3, State=BP_STATE_DISABLED
-OpenDocument="LMT01.c", FilePath="C:/Data/Jobs/Personal/BoatMotorSTM32/Core/Src/LMT01.c", Line=33
-OpenDocument="SSD1306.c", FilePath="C:/Data/Jobs/Personal/BoatMotorSTM32/Core/Src/SSD1306.c", Line=350
+OpenDocument="data_manager.c", FilePath="C:/Data/Jobs/Personal/BoatMotorSTM32/Core/Src/data_manager.c", Line=76
+OpenDocument="qv.c", FilePath="C:/Data/Jobs/Personal/BoatMotorSTM32/Middlewares/Third_Party/QuantumLeaps_RTEF_qpc/src/qv/qv.c", Line=245
+OpenDocument="qf_qact.c", FilePath="C:/Data/Jobs/Personal/BoatMotorSTM32/Middlewares/Third_Party/QuantumLeaps_RTEF_qpc/src/qf/qf_qact.c", Line=98
+OpenDocument="startup_stm32g474xx.s", FilePath="C:/Data/Jobs/Personal/BoatMotorSTM32/startup_stm32g474xx.s", Line=54
+OpenDocument="stm32g4xx_it.c", FilePath="C:/Data/Jobs/Personal/BoatMotorSTM32/Core/Src/stm32g4xx_it.c", Line=70
+OpenDocument="qp.h", FilePath="C:/Data/Jobs/Personal/BoatMotorSTM32/Middlewares/Third_Party/QuantumLeaps_RTEF_qpc/include/qp.h", Line=169
+OpenDocument="bsp.c", FilePath="C:/Data/Jobs/Personal/BoatMotorSTM32/Core/bsp/drivers/bsp.c", Line=507
+OpenDocument="LMT01.c", FilePath="C:/Data/Jobs/Personal/BoatMotorSTM32/Core/Src/LMT01.c", Line=57
+OpenDocument="SSD1306.c", FilePath="C:/Data/Jobs/Personal/BoatMotorSTM32/Core/Src/SSD1306.c", Line=381
 OpenDocument="pressure_sensor.c", FilePath="C:/Data/Jobs/Personal/BoatMotorSTM32/Core/Src/pressure_sensor.c", Line=387
-OpenDocument="main.c", FilePath="C:/Data/Jobs/Personal/BoatMotorSTM32/Core/Src/main.c", Line=120
+OpenDocument="main.c", FilePath="C:/Data/Jobs/Personal/BoatMotorSTM32/Core/Src/main.c", Line=136
 OpenToolbar="Debug", Floating=0, x=0, y=0
-OpenWindow="Call Stack", DockArea=RIGHT, x=0, y=2, w=616, h=152, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
-OpenWindow="Disassembly", DockArea=RIGHT, x=0, y=0, w=616, h=292, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
-OpenWindow="Local Data", DockArea=RIGHT, x=0, y=1, w=616, h=183, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
-OpenWindow="Console", DockArea=BOTTOM, x=0, y=0, w=1920, h=321, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Call Stack", DockArea=RIGHT, x=0, y=2, w=616, h=231, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Disassembly", DockArea=RIGHT, x=0, y=0, w=616, h=670, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Local Data", DockArea=RIGHT, x=0, y=1, w=616, h=86, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Console", DockArea=BOTTOM, x=0, y=0, w=2560, h=321, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
 SmartViewPlugin="", Page="", Toolbar="Hidden", Window="SmartView 1"
 TableHeader="Local Data", SortCol="Name", SortOrder="ASCENDING", VisibleCols=["Name";"Value";"Location";"Size";"Type";"Scope"], ColWidths=[168;212;100;100;238;100]
 TableHeader="Call Stack", SortCol="Function", SortOrder="ASCENDING", VisibleCols=["Function";"Stack Frame";"Source";"PC";"Return Address";"Stack Used"], ColWidths=[249;112;100;100;168;100]

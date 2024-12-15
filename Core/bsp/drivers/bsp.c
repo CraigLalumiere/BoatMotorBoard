@@ -61,6 +61,8 @@ static SharedI2C_T SharedI2C_Bus2;
 const QActive *AO_SharedI2C2 = &(SharedI2C_Bus2.super); // externally available
 QEvt const *i2c_bus_2_deferred_queue_storage[SHARED_I2C_BUS_2_DEFERRED_QUEUE_LEN];
 
+extern ADC_HandleTypeDef hadc2; // defined in main.c by cubeMX
+
 // Static Function Declarations
 
 static uint16_t USB0_TransmitData(const uint8_t *data_ptr, const uint16_t data_len);
@@ -503,7 +505,7 @@ PUTCHAR_PROTOTYPE
  **************************************************************************************************/
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
-    (void) GPIO_Pin;
+    (void)GPIO_Pin;
     /* Prevent unused argument(s) compilation warning */
     // switch (GPIO_Pin)
     // {
@@ -522,4 +524,109 @@ void BSP_Put_Pressure_Sensor_Into_Reset(bool reset)
 {
     // Active low signal
     HAL_GPIO_WritePin(PRESSURE_RST_GPIO_Port, PRESSURE_RST_Pin, !reset);
+}
+
+/**
+ ***************************************************************************************************
+ * @brief   GPIO motor ECU Functions
+ **************************************************************************************************/
+
+void BSP_Tach_Capture_Timer_Enable {
+    // If the input capture occurs (rising edge and falling edge on DROP_SENSE input),
+    //   then HAL_TIM_IC_CaptureCallback will be called (twice, once for each edge)
+    // If the timeout counter counts down to zero, then HAL_TIM_PeriodElapsedCallback will
+    //   be called, indicating that the timeout period has occurred.
+    //
+    // TIM6 is prescaled to 1 microsecond per tick
+
+    TIM6->ARR = timeout_us;
+    TIM6->CNT = 0;
+
+    __HAL_TIM_CLEAR_FLAG(&htim2, TIM_FLAG_UPDATE);
+    __HAL_TIM_CLEAR_FLAG(&htim6, TIM_FLAG_UPDATE);
+
+    HAL_NVIC_EnableIRQ(TIM2_IRQn);
+    HAL_NVIC_EnableIRQ(TIM6_DAC_IRQn);
+
+    s_dmf_detect_is_first_captured = false;
+    HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_4); // input capture timer
+    HAL_TIM_Base_Start_IT(&htim6);              // timeout timer
+}
+
+bool BSP_Get_Neutral()
+{
+    // If in neutral, the neutral wire is 6Ω path to GND, so the GPIO is low
+    return HAL_GPIO_ReadPin(NEUTRAL_DETECT_GPIO_Port, NEUTRAL_DETECT_Pin) == GPIO_PIN_RESET;
+}
+
+bool BSP_Get_Start()
+{
+    // If starting, the neutral wire +12, so the GPIO is high
+    return HAL_GPIO_ReadPin(START_DET_GPIO_Port, START_DET_Pin) == GPIO_PIN_SET;
+}
+uint8_t BSP_Get_Red()
+{
+    // Test for tri-state
+    bool pin1 = HAL_GPIO_ReadPin(RED_SENSE_1_GPIO_Port, RED_SENSE_1_Pin) == GPIO_PIN_SET;
+    bool pin2 = HAL_GPIO_ReadPin(RED_SENSE_2_GPIO_Port, RED_SENSE_2_Pin) == GPIO_PIN_SET;
+    uint8_t data = (pin2 << 1) | pin1;
+    switch (data)
+    {
+    case 0x00:
+    {
+        return 0; // the wire is low
+    }
+    case 0x03:
+    {
+        return 1; // the wire is high
+    }
+    case 0x02:
+    {
+        return 3; // the wire is high-Z
+    }
+    default: {
+        return 4; // shouldn't happen
+    }
+    }
+}
+
+uint8_t BSP_Get_Orange()
+{
+    // Test for tri-state
+    bool pin1 = HAL_GPIO_ReadPin(ORANGE_SENSE_1_GPIO_Port, ORANGE_SENSE_1_Pin) == GPIO_PIN_SET;
+    bool pin2 = HAL_GPIO_ReadPin(ORANGE_SENSE_2_GPIO_Port, ORANGE_SENSE_2_Pin) == GPIO_PIN_SET;
+    uint8_t data = (pin2 << 1) | pin1;
+    switch (data)
+    {
+    case 0x00:
+    {
+        return 0; // the wire is low
+    }
+    case 0x03:
+    {
+        return 1; // the wire is high
+    }
+    case 0x02:
+    {
+        return 3; // the wire is high-Z
+    }
+    default: {
+        return 4; // shouldn't happen
+    }
+    }
+}
+
+bool BSP_Get_Buzzer()
+{
+    // Buzzer is active low
+    return HAL_GPIO_ReadPin(nBUZZER_SENSE_GPIO_Port, nBUZZER_SENSE_Pin) == GPIO_PIN_RESET;
+}
+
+uint16_t BSP_ADC_Read_VBAT(void)
+{
+    uint32_t raw_adc = HAL_ADC_GetValue(&hadc2);
+    HAL_ADC_Start(&hadc2); // a bit hacky, but start the next conversion
+    // Multiplier is 4.6 nominally, but the actual value seems to be 4.3
+    float hv_sense = raw_adc / 4096. * 4.3 * 100; // return hundredths of volts
+    return (uint16_t) hv_sense;
 }
