@@ -672,7 +672,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(PRESSURE_RST_GPIO_Port, PRESSURE_RST_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, DEBUG_GPIO_Pin|FW_LED_Pin|GPIO_PIN_7, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, DEBUG_GPIO_Pin|FW_LED_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pins : PRESSURE_EOC_Pin RED_SENSE_1_Pin ORANGE_SENSE_1_Pin VBUS_SENSE_Pin */
   GPIO_InitStruct.Pin = PRESSURE_EOC_Pin|RED_SENSE_1_Pin|ORANGE_SENSE_1_Pin|VBUS_SENSE_Pin;
@@ -711,19 +711,11 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_PULLDOWN;
   HAL_GPIO_Init(START_DET_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : DEBUG_GPIO_Pin FW_LED_Pin PB7 */
-  GPIO_InitStruct.Pin = DEBUG_GPIO_Pin|FW_LED_Pin|GPIO_PIN_7;
+  /*Configure GPIO pins : DEBUG_GPIO_Pin FW_LED_Pin */
+  GPIO_InitStruct.Pin = DEBUG_GPIO_Pin|FW_LED_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : PB8 */
-  GPIO_InitStruct.Pin = GPIO_PIN_8;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  GPIO_InitStruct.Alternate = GPIO_AF15_EVENTOUT;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
 /* USER CODE BEGIN MX_GPIO_Init_2 */
