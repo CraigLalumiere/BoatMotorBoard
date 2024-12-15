@@ -12,6 +12,7 @@ enum PubSubSignals
     PUBSUB_PRESSURE_SIG,
     PUBSUB_TEMPERATURE_SIG,
     PUBSUB_MOTOR_DATA_SIG,
+    PUBSUB_TACH_SIG,
     PUBSUB_MAX_SIG
 };
 
@@ -35,6 +36,7 @@ typedef struct
     QEvt super;
     int16_t temperature;
     int16_t pressure;
+    int16_t tachometer;
     int16_t vbat;
     bool start;
     bool neutral;

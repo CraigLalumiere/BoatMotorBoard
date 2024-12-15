@@ -125,6 +125,7 @@ typedef struct
 
     int16_t temperature;
     int16_t pressure;
+    int16_t tachometer;
     int16_t vbat;
     bool start;
     bool neutral;
@@ -386,10 +387,12 @@ static QState top(SSD1306 *const me, QEvt const *const e)
         status = Q_HANDLED();
         break;
     }
-    case PUBSUB_MOTOR_DATA_SIG: {
+    case PUBSUB_MOTOR_DATA_SIG:
+    {
         const MotorDataEvent_T *event = Q_EVT_CAST(MotorDataEvent_T);
         me->temperature = event->temperature;
         me->pressure = event->pressure;
+        me->tachometer = event->tachometer;
         me->vbat = event->vbat;
         me->buzzer = event->buzzer;
         me->start = event->start;
@@ -462,17 +465,19 @@ static QState update_screen(SSD1306 *const me, QEvt const *const e)
             print_buffer,
             sizeof(print_buffer),
             "%d.%.2dV",
-            me->vbat/100, me->vbat % 100);
-        
+            me->vbat / 100, me->vbat % 100);
+
         ssd1306_SetCursor(0, 0);
         ssd1306_WriteString(print_buffer, Font_7x10, White);
 
-        if (true) {
+        if (true)
+        {
             ssd1306_SetCursor(50, 0);
             ssd1306_WriteString("S", Font_7x10, White);
         }
 
-        if (true) {
+        if (true)
+        {
             ssd1306_SetCursor(70, 0);
             ssd1306_WriteString("N", Font_7x10, White);
         }
@@ -481,17 +486,26 @@ static QState update_screen(SSD1306 *const me, QEvt const *const e)
             print_buffer,
             sizeof(print_buffer),
             "%d.%.2dC   %d.%.2d PSI",
-            me->temperature/100, me->temperature % 100, me->pressure/100, me->pressure % 100);
+            me->temperature / 100, me->temperature % 100, me->pressure / 100, me->pressure % 100);
         ssd1306_SetCursor(0, 12);
         ssd1306_WriteString(print_buffer, Font_7x10, White);
 
         snprintf(
             print_buffer,
             sizeof(print_buffer),
-            "Counter: %d",
-            me->counter++);
-        ssd1306_SetCursor(0, 36);
+            "%d.%.2dRPM",
+            me->tachometer / 100, me->tachometer % 100);
+        ssd1306_SetCursor(0, 24);
         ssd1306_WriteString(print_buffer, Font_7x10, White);
+
+        me->counter++;
+        if (me->counter <= 3)
+        {
+            ssd1306_SetCursor(120, 0);
+            ssd1306_WriteString("*", Font_7x10, White);
+        }
+        if (me->counter == 6)
+            me->counter = 0;
 
         drawFaultTextToScreen();
 

@@ -61,7 +61,8 @@ static SharedI2C_T SharedI2C_Bus2;
 const QActive *AO_SharedI2C2 = &(SharedI2C_Bus2.super); // externally available
 QEvt const *i2c_bus_2_deferred_queue_storage[SHARED_I2C_BUS_2_DEFERRED_QUEUE_LEN];
 
-extern ADC_HandleTypeDef hadc2; // defined in main.c by cubeMX
+extern ADC_HandleTypeDef hadc2;  // defined in main.c by cubeMX
+extern TIM_HandleTypeDef htim15; // defined in main.c by cubeMX
 
 // Static Function Declarations
 
@@ -531,26 +532,49 @@ void BSP_Put_Pressure_Sensor_Into_Reset(bool reset)
  * @brief   GPIO motor ECU Functions
  **************************************************************************************************/
 
-void BSP_Tach_Capture_Timer_Enable {
+void BSP_Tach_Capture_Timer_Enable()
+{
     // If the input capture occurs (rising edge and falling edge on DROP_SENSE input),
     //   then HAL_TIM_IC_CaptureCallback will be called (twice, once for each edge)
     // If the timeout counter counts down to zero, then HAL_TIM_PeriodElapsedCallback will
     //   be called, indicating that the timeout period has occurred.
     //
-    // TIM6 is prescaled to 1 microsecond per tick
+    // TIM15 is prescaled to 16Mhz/(7+1)=2Mhz, or 0.5 microsecond per tick
 
-    TIM6->ARR = timeout_us;
-    TIM6->CNT = 0;
+    __HAL_TIM_CLEAR_FLAG(&htim15, TIM_FLAG_UPDATE);
 
-    __HAL_TIM_CLEAR_FLAG(&htim2, TIM_FLAG_UPDATE);
-    __HAL_TIM_CLEAR_FLAG(&htim6, TIM_FLAG_UPDATE);
+    HAL_NVIC_EnableIRQ(TIM1_BRK_TIM15_IRQn);
 
-    HAL_NVIC_EnableIRQ(TIM2_IRQn);
-    HAL_NVIC_EnableIRQ(TIM6_DAC_IRQn);
+    HAL_TIM_IC_Start_IT(&htim15, TIM_CHANNEL_1); // input capture timer
+}
 
-    s_dmf_detect_is_first_captured = false;
-    HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_4); // input capture timer
-    HAL_TIM_Base_Start_IT(&htim6);              // timeout timer
+void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
+{
+    static volatile uint32_t captured_val_old = 0;
+    static volatile uint32_t captured_val_new = 0;
+
+    if (htim->Instance != TIM15 || htim->Channel != HAL_TIM_ACTIVE_CHANNEL_1)
+    {
+        return;
+    }
+
+    captured_val_old = captured_val_new;
+    captured_val_new = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
+
+    // unsigned integer overflow will make this correct even
+    //  if counter has wrapped between capture 1 and 2
+    uint32_t width_clks = captured_val_new - captured_val_old;
+
+    Int16Event_T *capture_event = Q_NEW(
+        Int16Event_T, PUBSUB_TACH_SIG);
+
+    // TIM15 is on the APB2 clock bus, which is 16 MHz, and scaled down by (7+1) to 2Mhz
+    // microseconds = clocks / 2
+    // Hz = 10^6*2/clocks
+    uint32_t frequency = 1000 * 1000 * 2 / width_clks * 100 * 60; // hundredths of RPM
+    capture_event->num = (uint16_t)frequency;
+
+    QACTIVE_PUBLISH(&capture_event->super, &me->super);
 }
 
 bool BSP_Get_Neutral()
@@ -584,7 +608,8 @@ uint8_t BSP_Get_Red()
     {
         return 3; // the wire is high-Z
     }
-    default: {
+    default:
+    {
         return 4; // shouldn't happen
     }
     }
@@ -610,7 +635,8 @@ uint8_t BSP_Get_Orange()
     {
         return 3; // the wire is high-Z
     }
-    default: {
+    default:
+    {
         return 4; // shouldn't happen
     }
     }
@@ -628,5 +654,5 @@ uint16_t BSP_ADC_Read_VBAT(void)
     HAL_ADC_Start(&hadc2); // a bit hacky, but start the next conversion
     // Multiplier is 4.6 nominally, but the actual value seems to be 4.3
     float hv_sense = raw_adc / 4096. * 4.3 * 100; // return hundredths of volts
-    return (uint16_t) hv_sense;
+    return (uint16_t)hv_sense;
 }

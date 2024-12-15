@@ -27,6 +27,7 @@ typedef struct
 
     int16_t pressure;
     int16_t temperature;
+    int16_t tachometer;
 } DataManager;
 
 /**************************************************************************************************\
@@ -55,6 +56,8 @@ void Data_Manager_ctor()
 {
     DataManager *const me = &data_manager_inst;
 
+    BSP_Tach_Capture_Timer_Enable();
+
     QActive_ctor(&me->super, Q_STATE_CAST(&initial));
     QTimeEvt_ctorX(&me->timer_evt, &me->super, WAIT_TIMEOUT_SIG, 0U);
 }
@@ -73,6 +76,7 @@ static QState initial(DataManager *const me, void const *const par)
 
     QActive_subscribe((QActive *)me, PUBSUB_PRESSURE_SIG);
     QActive_subscribe((QActive *)me, PUBSUB_TEMPERATURE_SIG);
+    QActive_subscribe((QActive *)me, PUBSUB_TACH_SIG);
 
     // Start update loop of 100hz
     QTimeEvt_armX(
@@ -113,6 +117,7 @@ static QState running(DataManager *const me, QEvt const *const e)
         event->vbat = vbat_voltage;
         event->temperature = me->temperature;
         event->pressure = me->pressure;
+        event->tachometer = me->tachometer;
         QACTIVE_PUBLISH(&event->super, &me->super);
 
         status = Q_HANDLED();
@@ -129,6 +134,13 @@ static QState running(DataManager *const me, QEvt const *const e)
     {
         const Int16Event_T *event = Q_EVT_CAST(Int16Event_T);
         me->temperature = event->num;
+        status = Q_HANDLED();
+        break;
+    }
+    case PUBSUB_TACH_SIG:
+    {
+        const Int16Event_T *event = Q_EVT_CAST(Int16Event_T);
+        me->tachometer = event->num;
         status = Q_HANDLED();
         break;
     }
