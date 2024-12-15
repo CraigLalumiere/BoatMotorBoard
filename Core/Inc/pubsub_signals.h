@@ -16,6 +16,14 @@ enum PubSubSignals
     PUBSUB_MAX_SIG
 };
 
+typedef enum
+{
+    LOW,
+    HIGH,
+    HIGH_Z,
+    SIG_UNKNOWN
+} Colored_Wire_Stat_T;
+
 
 typedef struct
 {
@@ -41,8 +49,8 @@ typedef struct
     bool start;
     bool neutral;
     bool buzzer;
-    uint8_t red;
-    uint8_t orange;
+    Colored_Wire_Stat_T red;
+    Colored_Wire_Stat_T orange;
 } MotorDataEvent_T;
 
 

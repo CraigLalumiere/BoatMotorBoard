@@ -24,6 +24,7 @@ Q_DEFINE_THIS_MODULE("SSD1306")
 \**************************************************************************************************/
 
 #define OLED_FPS 30
+#define COLOR_CHANGE_SECONDS 5
 
 #define FAULT_STR_LEN 512
 
@@ -91,6 +92,7 @@ Q_DEFINE_THIS_MODULE("SSD1306")
 enum SSD1306Signals
 {
     WAIT_TIMEOUT_SIG = PRIVATE_SIGNAL_SSD1306_START,
+    COLOR_CHANGE_SIG,
     I2C_COMPLETE_SIG,
     I2C_ERROR_SIG,
 };
@@ -117,11 +119,14 @@ typedef enum
 typedef struct
 {
     QActive super;              // inherit QActive
-    QTimeEvt screen_update_evt; // timer to wait for voltage to settle
+    QTimeEvt screen_update_evt; // timer to set screen refresh rate
+    QTimeEvt color_update_evt;  // timer to change screen from light to dark mode (for burn in prevention)
     I2C_Write i2c_write;
     I2C_Read i2c_read;
     uint8_t i2c_data[N_BYTES_I2C_DATA];
     uint16_t counter;
+
+    SSD1306_COLOR text_color;
 
     int16_t temperature;
     int16_t pressure;
@@ -130,8 +135,8 @@ typedef struct
     bool start;
     bool neutral;
     bool buzzer;
-    uint8_t red;
-    uint8_t orange;
+    Colored_Wire_Stat_T red;
+    Colored_Wire_Stat_T orange;
 
     char SSD1306_Buffer[SSD1306_BUFFER_SIZE];
 
@@ -251,10 +256,13 @@ void SSD1306_ctor(I2C_Write i2c_write_fn, I2C_Read i2c_read_fn)
 
     me->fault_str_scroll_offset = 0;
 
+    me->text_color = White;
+
     ssd1306_Fill(Black);
 
     QActive_ctor(&me->super, Q_STATE_CAST(&initial));
     QTimeEvt_ctorX(&me->screen_update_evt, &me->super, WAIT_TIMEOUT_SIG, 0U);
+    QTimeEvt_ctorX(&me->color_update_evt, &me->super, COLOR_CHANGE_SIG, 0U);
 }
 
 /**************************************************************************************************\
@@ -384,6 +392,11 @@ static QState top(SSD1306 *const me, QEvt const *const e)
     {
     case Q_ENTRY_SIG:
     {
+
+        QTimeEvt_armX(
+            &me->color_update_evt,
+            BSP_TICKS_PER_SEC * COLOR_CHANGE_SECONDS,
+            BSP_TICKS_PER_SEC * COLOR_CHANGE_SECONDS);
         status = Q_HANDLED();
         break;
     }
@@ -399,6 +412,12 @@ static QState top(SSD1306 *const me, QEvt const *const e)
         me->neutral = event->neutral;
         me->red = event->red;
         me->orange = event->orange;
+        status = Q_HANDLED();
+        break;
+    }
+    case COLOR_CHANGE_SIG:
+    {
+        me->text_color = (SSD1306_COLOR)!me->text_color;
         status = Q_HANDLED();
         break;
     }
@@ -458,7 +477,8 @@ static QState update_screen(SSD1306 *const me, QEvt const *const e)
     case Q_ENTRY_SIG:
     {
 
-        ssd1306_Fill(Black);
+        SSD1306_COLOR background_color = (SSD1306_COLOR)!me->text_color;
+        ssd1306_Fill(background_color);
         char print_buffer[32] = {0};
 
         snprintf(
@@ -468,18 +488,24 @@ static QState update_screen(SSD1306 *const me, QEvt const *const e)
             me->vbat / 100, me->vbat % 100);
 
         ssd1306_SetCursor(0, 0);
-        ssd1306_WriteString(print_buffer, Font_7x10, White);
+        ssd1306_WriteString(print_buffer, Font_7x10, me->text_color);
 
-        if (true)
+        if (me->start)
         {
             ssd1306_SetCursor(50, 0);
-            ssd1306_WriteString("S", Font_7x10, White);
+            ssd1306_WriteString("S", Font_7x10, me->text_color);
         }
 
-        if (true)
+        if (me->neutral)
         {
-            ssd1306_SetCursor(70, 0);
-            ssd1306_WriteString("N", Font_7x10, White);
+            ssd1306_SetCursor(75, 0);
+            ssd1306_WriteString("N", Font_7x10, me->text_color);
+        }
+
+        if (me->buzzer)
+        {
+            ssd1306_SetCursor(25, 36);
+            ssd1306_WriteString("--ALARM--", Font_7x10, background_color);
         }
 
         snprintf(
@@ -488,7 +514,7 @@ static QState update_screen(SSD1306 *const me, QEvt const *const e)
             "%d.%.2dC   %d.%.2d PSI",
             me->temperature / 100, me->temperature % 100, me->pressure / 100, me->pressure % 100);
         ssd1306_SetCursor(0, 12);
-        ssd1306_WriteString(print_buffer, Font_7x10, White);
+        ssd1306_WriteString(print_buffer, Font_7x10, me->text_color);
 
         snprintf(
             print_buffer,
@@ -496,13 +522,65 @@ static QState update_screen(SSD1306 *const me, QEvt const *const e)
             "%d.%.2dRPM",
             me->tachometer / 100, me->tachometer % 100);
         ssd1306_SetCursor(0, 24);
-        ssd1306_WriteString(print_buffer, Font_7x10, White);
+        ssd1306_WriteString(print_buffer, Font_7x10, me->text_color);
+
+        switch (me->red)
+        {
+        case LOW:
+        {
+            break;
+        }
+        case HIGH:
+        {
+            ssd1306_SetCursor(80, 24);
+            ssd1306_WriteString("R", Font_7x10, me->text_color);
+            break;
+        }
+        case HIGH_Z:
+        {
+            ssd1306_SetCursor(80, 24);
+            ssd1306_WriteString("R", Font_7x10, background_color);
+            break;
+        }
+        case SIG_UNKNOWN:
+        {
+            ssd1306_SetCursor(80, 24);
+            ssd1306_WriteString("R?", Font_7x10, background_color);
+            break;
+        }
+        }
+
+        switch (me->orange)
+        {
+        case LOW:
+        {
+            break;
+        }
+        case HIGH:
+        {
+            ssd1306_SetCursor(100, 24);
+            ssd1306_WriteString("O", Font_7x10, me->text_color);
+            break;
+        }
+        case HIGH_Z:
+        {
+            ssd1306_SetCursor(100, 24);
+            ssd1306_WriteString("O", Font_7x10, background_color);
+            break;
+        }
+        case SIG_UNKNOWN:
+        {
+            ssd1306_SetCursor(100, 24);
+            ssd1306_WriteString("O?", Font_7x10, background_color);
+            break;
+        }
+        }
 
         me->counter++;
         if (me->counter <= 3)
         {
             ssd1306_SetCursor(120, 0);
-            ssd1306_WriteString("*", Font_7x10, White);
+            ssd1306_WriteString("*", Font_7x10, me->text_color);
         }
         if (me->counter == 6)
             me->counter = 0;

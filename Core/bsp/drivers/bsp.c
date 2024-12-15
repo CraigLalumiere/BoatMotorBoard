@@ -625,19 +625,19 @@ uint8_t BSP_Get_Orange()
     {
     case 0x00:
     {
-        return 0; // the wire is low
+        return LOW; // the wire is low
     }
     case 0x03:
     {
-        return 1; // the wire is high
+        return HIGH; // the wire is high
     }
     case 0x02:
     {
-        return 3; // the wire is high-Z
+        return HIGH_Z; // the wire is high-Z
     }
     default:
     {
-        return 4; // shouldn't happen
+        return SIG_UNKNOWN; // shouldn't happen
     }
     }
 }

@@ -102,8 +102,8 @@ static QState running(DataManager *const me, QEvt const *const e)
     {
         bool neutral = BSP_Get_Neutral();
         bool start = BSP_Get_Start();
-        uint8_t red = BSP_Get_Red();
-        uint8_t orange = BSP_Get_Orange();
+        Colored_Wire_Stat_T red = BSP_Get_Red();
+        Colored_Wire_Stat_T orange = BSP_Get_Orange();
         bool buzzer = BSP_Get_Buzzer();
         uint16_t vbat_voltage = BSP_ADC_Read_VBAT();
 
