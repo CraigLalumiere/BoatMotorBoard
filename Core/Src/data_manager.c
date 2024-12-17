@@ -141,6 +141,7 @@ static QState running(DataManager *const me, QEvt const *const e)
     {
         const Int16Event_T *event = Q_EVT_CAST(Int16Event_T);
         me->tachometer = event->num;
+        BSP_Tach_Capture_Timer_Enable();
         status = Q_HANDLED();
         break;
     }

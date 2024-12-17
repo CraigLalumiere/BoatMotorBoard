@@ -550,6 +550,9 @@ void BSP_Tach_Capture_Timer_Enable()
 
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
 {
+
+    HAL_NVIC_DisableIRQ(TIM1_BRK_TIM15_IRQn);
+
     static volatile uint32_t captured_val_old = 0;
     static volatile uint32_t captured_val_new = 0;
 
@@ -571,7 +574,7 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
     // TIM15 is on the APB2 clock bus, which is 16 MHz, and scaled down by (7+1) to 2Mhz
     // microseconds = clocks / 2
     // Hz = 10^6*2/clocks
-    uint32_t frequency = 1000 * 1000 * 2 / width_clks * 100 * 60; // hundredths of RPM
+    uint32_t frequency = 1000 * 1000 * 2 / width_clks / 10 * 100 * 60; // divided by ten, then hundredths of RPM
     capture_event->num = (uint16_t)frequency;
 
     QACTIVE_PUBLISH(&capture_event->super, &me->super);
