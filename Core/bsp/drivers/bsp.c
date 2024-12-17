@@ -54,6 +54,11 @@ Q_DEFINE_THIS_MODULE("bsp.c")
 #define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
 
 // Static Data
+
+static bool debug_gpio_state = false;
+
+static volatile bool s_tach_detect_is_first_captured = false;
+
 #define SHARED_I2C_BUS_2_DEFERRED_QUEUE_LEN 3
 static I2C_Bus_T s_i2c_bus2;
 
@@ -375,14 +380,21 @@ void BSP_ledOff()
 //............................................................................
 void BSP_debug_gpio_on()
 {
-    HAL_GPIO_WritePin(DEBUG_GPIO_GPIO_Port, DEBUG_GPIO_Pin, 1);
+    debug_gpio_state = true;
+    HAL_GPIO_WritePin(DEBUG_GPIO_GPIO_Port, DEBUG_GPIO_Pin, debug_gpio_state);
 }
 //............................................................................
 void BSP_debug_gpio_off()
 {
-    HAL_GPIO_WritePin(DEBUG_GPIO_GPIO_Port, DEBUG_GPIO_Pin, 0);
+    debug_gpio_state = false;
+    HAL_GPIO_WritePin(DEBUG_GPIO_GPIO_Port, DEBUG_GPIO_Pin, debug_gpio_state);
 }
-
+//............................................................................
+void BSP_debug_gpio_toggle()
+{
+    debug_gpio_state = !debug_gpio_state;
+    HAL_GPIO_WritePin(DEBUG_GPIO_GPIO_Port, DEBUG_GPIO_Pin, debug_gpio_state);
+}
 //............................................................................
 void BSP_terminate(int16_t result)
 {
@@ -401,15 +413,16 @@ void QF_onStartup(void)
 
     // set priorities of ALL ISRs used in the system, see NOTE1
     NVIC_SetPriority(USART2_IRQn, 0); // kernel UNAWARE interrupt
-    NVIC_SetPriority(EXTI0_IRQn, QF_AWARE_ISR_CMSIS_PRI + 0U);
-    NVIC_SetPriority(TIM4_IRQn, QF_AWARE_ISR_CMSIS_PRI + 0U);
-    NVIC_SetPriority(I2C2_EV_IRQn, QF_AWARE_ISR_CMSIS_PRI + 1U);
-    NVIC_SetPriority(I2C2_ER_IRQn, QF_AWARE_ISR_CMSIS_PRI + 1U);
+    // NVIC_SetPriority(EXTI0_IRQn, QF_AWARE_ISR_CMSIS_PRI + 0U);
+    // NVIC_SetPriority(TIM4_IRQn, QF_AWARE_ISR_CMSIS_PRI + 0U);
+    NVIC_SetPriority(TIM1_BRK_TIM15_IRQn, QF_AWARE_ISR_CMSIS_PRI + 0U); // tach input capture
+    NVIC_SetPriority(I2C2_EV_IRQn, QF_AWARE_ISR_CMSIS_PRI + 1U); // I2C for pressure and OLED
+    NVIC_SetPriority(I2C2_ER_IRQn, QF_AWARE_ISR_CMSIS_PRI + 1U); // I2C for pressure and OLED
     NVIC_SetPriority(SysTick_IRQn, QF_AWARE_ISR_CMSIS_PRI + 2U);
     // ...
 
     // enable IRQs...
-    NVIC_EnableIRQ(EXTI0_IRQn);
+    // NVIC_EnableIRQ(EXTI0_IRQn);
 
 #ifdef Q_SPY
     NVIC_EnableIRQ(USART2_IRQn); // UART2 interrupt used for QS-RX
@@ -546,38 +559,55 @@ void BSP_Tach_Capture_Timer_Enable()
     HAL_NVIC_EnableIRQ(TIM1_BRK_TIM15_IRQn);
 
     HAL_TIM_IC_Start_IT(&htim15, TIM_CHANNEL_1); // input capture timer
+
+    s_tach_detect_is_first_captured = true;
+
+    BSP_debug_gpio_on();
 }
 
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
 {
 
-    HAL_NVIC_DisableIRQ(TIM1_BRK_TIM15_IRQn);
-
-    static volatile uint32_t captured_val_old = 0;
-    static volatile uint32_t captured_val_new = 0;
+    static volatile uint32_t captured_val_1 = 0;
+    static volatile uint32_t captured_val_2 = 0;
 
     if (htim->Instance != TIM15 || htim->Channel != HAL_TIM_ACTIVE_CHANNEL_1)
     {
         return;
     }
 
-    captured_val_old = captured_val_new;
-    captured_val_new = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
+    if (s_tach_detect_is_first_captured)
+    {
+        captured_val_1 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
+        s_tach_detect_is_first_captured = false;
+    }
+    else
+    {
+        captured_val_2 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
 
-    // unsigned integer overflow will make this correct even
-    //  if counter has wrapped between capture 1 and 2
-    uint32_t width_clks = captured_val_new - captured_val_old;
+        // unsigned integer overflow will make this correct even
+        //  if counter has wrapped between capture 1 and 2
+        uint32_t width_clks = captured_val_2 - captured_val_1;
 
-    Int16Event_T *capture_event = Q_NEW(
-        Int16Event_T, PUBSUB_TACH_SIG);
+        // TIM15 is on the APB2 clock bus, which is 16 MHz, and scaled down by (7+1) to 2Mhz
+        // microseconds = clocks / 2
+        // Hz = 10^6*2/clocks
+        uint32_t frequency = 1000 * 1000 * 2 / width_clks / 10 * 60; // divided by ten, then from Hz to RPM
 
-    // TIM15 is on the APB2 clock bus, which is 16 MHz, and scaled down by (7+1) to 2Mhz
-    // microseconds = clocks / 2
-    // Hz = 10^6*2/clocks
-    uint32_t frequency = 1000 * 1000 * 2 / width_clks / 10 * 100 * 60; // divided by ten, then hundredths of RPM
-    capture_event->num = (uint16_t)frequency;
+        if (frequency == 0) //implausible
+        {
+            s_tach_detect_is_first_captured = true;
+            return;
+        }
 
-    QACTIVE_PUBLISH(&capture_event->super, &me->super);
+        Int16Event_T *capture_event = Q_NEW(
+            Int16Event_T, PUBSUB_TACH_SIG);
+        capture_event->num = (uint16_t)frequency;
+        QACTIVE_PUBLISH(&capture_event->super, &me->super);
+
+        HAL_NVIC_DisableIRQ(TIM1_BRK_TIM15_IRQn);
+        BSP_debug_gpio_off();
+    }
 }
 
 bool BSP_Get_Neutral()

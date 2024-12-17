@@ -519,8 +519,8 @@ static QState update_screen(SSD1306 *const me, QEvt const *const e)
         snprintf(
             print_buffer,
             sizeof(print_buffer),
-            "%d.%.2dRPM",
-            me->tachometer / 100, me->tachometer % 100);
+            "%dRPM",
+            me->tachometer);
         ssd1306_SetCursor(0, 24);
         ssd1306_WriteString(print_buffer, Font_7x10, me->text_color);
 
@@ -842,7 +842,7 @@ static void drawFaultTextToScreen()
     print_buffer[19] = ' '; // replace the null terminator with a space
 
     ssd1306_SetCursor(0, 54);
-    ssd1306_WriteString(print_buffer + me->fault_str_scroll_offset, Font_7x10, White);
+    ssd1306_WriteString(print_buffer + me->fault_str_scroll_offset, Font_7x10, me->text_color);
     me->fault_str_scroll_offset++;
 
     if (me->fault_str_scroll_offset >= strlen(print_buffer))

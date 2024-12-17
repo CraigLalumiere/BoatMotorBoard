@@ -55,6 +55,7 @@ void BSP_ledOn(void);
 void BSP_ledOff(void);
 void BSP_debug_gpio_on(void);
 void BSP_debug_gpio_off(void);
+void BSP_debug_gpio_toggle(void);
 
 /**
  ***************************************************************************************************
