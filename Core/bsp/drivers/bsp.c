@@ -57,8 +57,6 @@ Q_DEFINE_THIS_MODULE("bsp.c")
 
 static bool debug_gpio_state = false;
 
-static volatile bool s_tach_detect_is_first_captured = false;
-
 #define SHARED_I2C_BUS_2_DEFERRED_QUEUE_LEN 3
 static I2C_Bus_T s_i2c_bus2;
 
@@ -412,17 +410,18 @@ void QF_onStartup(void)
     NVIC_SetPriorityGrouping(0U);
 
     // set priorities of ALL ISRs used in the system, see NOTE1
-    NVIC_SetPriority(USART2_IRQn, 0); // kernel UNAWARE interrupt
     // NVIC_SetPriority(EXTI0_IRQn, QF_AWARE_ISR_CMSIS_PRI + 0U);
     // NVIC_SetPriority(TIM4_IRQn, QF_AWARE_ISR_CMSIS_PRI + 0U);
     NVIC_SetPriority(TIM1_BRK_TIM15_IRQn, QF_AWARE_ISR_CMSIS_PRI + 0U); // tach input capture
-    NVIC_SetPriority(I2C2_EV_IRQn, QF_AWARE_ISR_CMSIS_PRI + 1U); // I2C for pressure and OLED
-    NVIC_SetPriority(I2C2_ER_IRQn, QF_AWARE_ISR_CMSIS_PRI + 1U); // I2C for pressure and OLED
-    NVIC_SetPriority(SysTick_IRQn, QF_AWARE_ISR_CMSIS_PRI + 2U);
+    NVIC_SetPriority(I2C2_EV_IRQn, QF_AWARE_ISR_CMSIS_PRI + 1U);        // I2C for pressure and OLED
+    NVIC_SetPriority(I2C2_ER_IRQn, QF_AWARE_ISR_CMSIS_PRI + 1U);        // I2C for pressure and OLED
+    NVIC_SetPriority(USART2_IRQn, QF_AWARE_ISR_CMSIS_PRI + 2U);
+    NVIC_SetPriority(SysTick_IRQn, QF_AWARE_ISR_CMSIS_PRI + 12U);
     // ...
 
     // enable IRQs...
     // NVIC_EnableIRQ(EXTI0_IRQn);
+    // HAL_NVIC_EnableIRQ(TIM1_BRK_TIM15_IRQn); // enaled by AO
 
 #ifdef Q_SPY
     NVIC_EnableIRQ(USART2_IRQn); // UART2 interrupt used for QS-RX
@@ -547,67 +546,79 @@ void BSP_Put_Pressure_Sensor_Into_Reset(bool reset)
 
 void BSP_Tach_Capture_Timer_Enable()
 {
-    // If the input capture occurs (rising edge and falling edge on DROP_SENSE input),
-    //   then HAL_TIM_IC_CaptureCallback will be called (twice, once for each edge)
-    // If the timeout counter counts down to zero, then HAL_TIM_PeriodElapsedCallback will
-    //   be called, indicating that the timeout period has occurred.
-    //
-    // TIM15 is prescaled to 16Mhz/(7+1)=2Mhz, or 0.5 microsecond per tick
+    //     // If the input capture occurs (rising edge on TACH input),
+    //     //   then HAL_TIM_IC_CaptureCallback will be called (twice, once for each edge)
+    //     // If the timeout counter counts down to zero, then HAL_TIM_PeriodElapsedCallback will
+    //     //   be called, indicating that the timeout period has occurred.
+    //     //
+    //     // TIM15 is prescaled to 16Mhz/(7+1)=2Mhz, or 0.5 microsecond per tick
 
-    __HAL_TIM_CLEAR_FLAG(&htim15, TIM_FLAG_UPDATE);
+    //     __HAL_TIM_CLEAR_FLAG(&htim15, TIM_FLAG_UPDATE);
 
     HAL_NVIC_EnableIRQ(TIM1_BRK_TIM15_IRQn);
 
-    HAL_TIM_IC_Start_IT(&htim15, TIM_CHANNEL_1); // input capture timer
+    //     HAL_TIM_IC_Start_IT(&htim15, TIM_CHANNEL_1); // input capture timer
 
-    s_tach_detect_is_first_captured = true;
+    //     s_tach_detect_is_first_captured = true;
 
-    BSP_debug_gpio_on();
+    //     BSP_debug_gpio_on();
 }
+
+/**
+ ***************************************************************************************************
+ * @brief   TACH input TIM15 period elapsed callback (engine RPM is very low)
+ **************************************************************************************************/
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+    if (htim->Instance != TIM15)
+    {
+        return;
+    }
+
+    // engine RPM is very low (below stall speed), or more likely: engine is off
+
+    Int16Event_T *capture_event = Q_NEW(
+        Int16Event_T, PUBSUB_TACH_SIG);
+    capture_event->num = 0;
+    QACTIVE_PUBLISH(&capture_event->super, &me->super);
+}
+
+/**
+ ***************************************************************************************************
+ * @brief   TACH input TIM15 capture compare callback (tach input frequency is at least 183 RPM)
+ **************************************************************************************************/
+
+// TODO: Add the x2/3 fudge factor to RPM conversion
 
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
 {
 
-    static volatile uint32_t captured_val_1 = 0;
-    static volatile uint32_t captured_val_2 = 0;
+    static volatile uint32_t captured_val = 0;
 
     if (htim->Instance != TIM15 || htim->Channel != HAL_TIM_ACTIVE_CHANNEL_1)
     {
         return;
     }
 
-    if (s_tach_detect_is_first_captured)
-    {
-        captured_val_1 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
-        s_tach_detect_is_first_captured = false;
-    }
-    else
-    {
-        captured_val_2 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
+    captured_val = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
 
-        // unsigned integer overflow will make this correct even
-        //  if counter has wrapped between capture 1 and 2
-        uint32_t width_clks = captured_val_2 - captured_val_1;
+    if (captured_val == 0)
+        return;
 
-        // TIM15 is on the APB2 clock bus, which is 16 MHz, and scaled down by (7+1) to 2Mhz
-        // microseconds = clocks / 2
-        // Hz = 10^6*2/clocks
-        uint32_t frequency = 1000 * 1000 * 2 / width_clks / 10 * 60; // divided by ten, then from Hz to RPM
 
-        if (frequency == 0) //implausible
-        {
-            s_tach_detect_is_first_captured = true;
-            return;
-        }
+    // TIM15 is on the APB2 clock bus, which is 16 MHz, and scaled down by (7+1) to 2Mhz
+    // microseconds = clocks / 2
+    // Hz = 10^6*2/clocks
+    uint32_t frequency = 1000 * 1000 * 2 / captured_val / 10 * 60; // divided by ten, then from Hz to RPM
 
-        Int16Event_T *capture_event = Q_NEW(
-            Int16Event_T, PUBSUB_TACH_SIG);
-        capture_event->num = (uint16_t)frequency;
-        QACTIVE_PUBLISH(&capture_event->super, &me->super);
+    Int16Event_T *capture_event = Q_NEW(
+        Int16Event_T, PUBSUB_TACH_SIG);
+    capture_event->num = (uint16_t)frequency;
+    QACTIVE_PUBLISH(&capture_event->super, &me->super);
 
-        HAL_NVIC_DisableIRQ(TIM1_BRK_TIM15_IRQn);
-        BSP_debug_gpio_off();
-    }
+    HAL_NVIC_DisableIRQ(TIM1_BRK_TIM15_IRQn);
+    BSP_debug_gpio_off();
 }
 
 bool BSP_Get_Neutral()

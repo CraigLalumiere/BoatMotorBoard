@@ -1,7 +1,10 @@
 #include "data_manager.h"
 #include "bsp.h"
 #include "private_signal_ranges.h"
+#include "stm32g4xx_hal.h"
 #include "pubsub_signals.h"
+#include <string.h>
+#include <stdio.h>
 
 #ifdef Q_SPY
 Q_DEFINE_THIS_MODULE("Data Manager")
@@ -28,6 +31,8 @@ typedef struct
     int16_t pressure;
     int16_t temperature;
     int16_t tachometer;
+
+    UART_HandleTypeDef *p_huart;
 } DataManager;
 
 /**************************************************************************************************\
@@ -42,7 +47,9 @@ QActive *const AO_Data_Manager = &data_manager_inst.super;
 
 // state handler functions
 static QState initial(DataManager *const me, void const *const par);
+static QState top(DataManager *const me, QEvt const *const e);
 static QState running(DataManager *const me, QEvt const *const e);
+static QState waitingForUart(DataManager *const me, QEvt const *const e);
 
 /**************************************************************************************************\
 * Public functions
@@ -52,11 +59,13 @@ static QState running(DataManager *const me, QEvt const *const e);
  ***************************************************************************************************
  * @brief   Constructor
  **************************************************************************************************/
-void Data_Manager_ctor()
+void Data_Manager_ctor(UART_HandleTypeDef *p_huart)
 {
     DataManager *const me = &data_manager_inst;
 
-    BSP_Tach_Capture_Timer_Enable();
+    me->p_huart = p_huart;
+
+    // BSP_Tach_Capture_Timer_Enable();
 
     QActive_ctor(&me->super, Q_STATE_CAST(&initial));
     QTimeEvt_ctorX(&me->timer_evt, &me->super, WAIT_TIMEOUT_SIG, 0U);
@@ -78,6 +87,8 @@ static QState initial(DataManager *const me, void const *const par)
     QActive_subscribe((QActive *)me, PUBSUB_TEMPERATURE_SIG);
     QActive_subscribe((QActive *)me, PUBSUB_TACH_SIG);
 
+    BSP_Tach_Capture_Timer_Enable();
+
     // Start update loop of 100hz
     QTimeEvt_armX(
         &me->timer_evt,
@@ -87,6 +98,52 @@ static QState initial(DataManager *const me, void const *const par)
     return Q_TRAN(&running);
 }
 
+// top state that handles receiving data from various sources
+static QState top(DataManager *const me, QEvt const *const e)
+{
+    QState status;
+
+    switch (e->sig)
+    {
+    case Q_ENTRY_SIG:
+    {
+        status = Q_HANDLED();
+        break;
+    }
+    case PUBSUB_PRESSURE_SIG:
+    {
+        const Int16Event_T *event = Q_EVT_CAST(Int16Event_T);
+        me->pressure = event->num;
+        status = Q_HANDLED();
+        break;
+    }
+    case PUBSUB_TEMPERATURE_SIG:
+    {
+        const Int16Event_T *event = Q_EVT_CAST(Int16Event_T);
+        me->temperature = event->num;
+        status = Q_HANDLED();
+        break;
+    }
+    case PUBSUB_TACH_SIG:
+    {
+        const Int16Event_T *event = Q_EVT_CAST(Int16Event_T);
+        me->tachometer = event->num;
+        BSP_Tach_Capture_Timer_Enable();
+        status = Q_HANDLED();
+        break;
+    }
+    default:
+    {
+        status = Q_SUPER(&QHsm_top);
+        break;
+    }
+    }
+
+    return status;
+}
+
+// state that periodically bundles up information and publishes it on QP
+// and over the USART2 to the gauge cluster PCB
 static QState running(DataManager *const me, QEvt const *const e)
 {
     QState status;
@@ -120,34 +177,43 @@ static QState running(DataManager *const me, QEvt const *const e)
         event->tachometer = me->tachometer;
         QACTIVE_PUBLISH(&event->super, &me->super);
 
-        status = Q_HANDLED();
-        break;
-    }
-    case PUBSUB_PRESSURE_SIG:
-    {
-        const Int16Event_T *event = Q_EVT_CAST(Int16Event_T);
-        me->pressure = event->num;
-        status = Q_HANDLED();
-        break;
-    }
-    case PUBSUB_TEMPERATURE_SIG:
-    {
-        const Int16Event_T *event = Q_EVT_CAST(Int16Event_T);
-        me->temperature = event->num;
-        status = Q_HANDLED();
-        break;
-    }
-    case PUBSUB_TACH_SIG:
-    {
-        const Int16Event_T *event = Q_EVT_CAST(Int16Event_T);
-        me->tachometer = event->num;
-        BSP_Tach_Capture_Timer_Enable();
-        status = Q_HANDLED();
+        static char printBuffer[32];
+        memset(printBuffer, 0, sizeof(printBuffer));
+        sprintf(printBuffer, "P%d\r\nT%d\r\nR%d\r\n", me->pressure, me->temperature, me->tachometer);
+        HAL_UART_Transmit_IT(me->p_huart, (uint8_t *)printBuffer, sizeof(printBuffer));
+
+        status = Q_TRAN(&waitingForUart);
         break;
     }
     default:
     {
-        status = Q_SUPER(&QHsm_top);
+        status = Q_SUPER(&top);
+        break;
+    }
+    }
+
+    return status;
+}
+
+static QState waitingForUart(DataManager *const me, QEvt const *const e)
+{
+    QState status;
+
+    switch (e->sig)
+    {
+    case Q_ENTRY_SIG:
+    {
+        status = Q_HANDLED();
+        break;
+    }
+    case POSTED_UART_COMPLETE_SIG:
+    {
+        status = Q_TRAN(&running);
+        break;
+    }
+    default:
+    {
+        status = Q_SUPER(&top);
         break;
     }
     }

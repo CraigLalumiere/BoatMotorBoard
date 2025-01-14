@@ -26,7 +26,7 @@
 #include "blinky.h"
 #include "bsp.h"
 #include "tusb.h"
-#include "pubsub_signals.h"
+#include "posted_signals.h"
 #include "blinky.h"
 #include "app_cli.h"
 #include "usb.h"
@@ -144,6 +144,22 @@ void tud_umount_cb(void)
   // Do nothing for now
 }
 
+
+/**
+ * @brief  Tx Transfer completed callback
+ * @param  UartHandle: UART handle.
+ * @note   This example shows a simple way to report end of IT Tx transfer, and
+ *         you can add your own implementation.
+ * @retval None
+ */
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *UartHandle)
+{
+  /* Set transmission flag: transfer complete */
+    static QEvt const UARTCompleteEvent = QEVT_INITIALIZER(POSTED_UART_COMPLETE_SIG);
+
+    QACTIVE_POST(AO_Data_Manager, &UARTCompleteEvent, null);
+}
+
 /* USER CODE END 0 */
 
 /**
@@ -182,6 +198,27 @@ int main(void)
   MX_ADC2_Init();
   MX_TIM15_Init();
   /* USER CODE BEGIN 2 */
+
+  /**************************************************************************************************\
+  * Init TIM15 for tach input capture
+  \**************************************************************************************************/
+
+  // TIM15 is prescaled to 16Mhz/(7+1)=2Mhz, or 0.5 microsecond per tick
+  __HAL_TIM_CLEAR_FLAG(&htim15, TIM_FLAG_UPDATE);
+  HAL_TIM_IC_Start_IT(&htim15, TIM_CHANNEL_1); // input capture timer
+  __HAL_TIM_ENABLE_IT(&htim15, TIM_IT_UPDATE);
+
+  
+
+  /**************************************************************************************************\
+  * Init UART2
+  \**************************************************************************************************/
+  /* Flush the data registers from unexpected data */
+  __HAL_UART_FLUSH_DRREGISTER(&huart2);
+  // if (HAL_UART_Receive_IT(&huart2, (uint8_t *)&rx_byte, 1) != HAL_OK)
+  // {
+  //   Error_Handler();
+  // }
 
   QF_init(); // initialize the framework and the underlying RT kernel
   BSP_Init();
@@ -254,18 +291,18 @@ int main(void)
       AO_PRIO_LMT01,        // QP prio. of the AO
       LMT01QueueSto,        // event queue storage
       Q_DIM(LMT01QueueSto), // queue length [events]
-      (void *)0, 0U,           // no stack storage
-      (void *)0);              // no initialization param
+      (void *)0, 0U,        // no stack storage
+      (void *)0);           // no initialization param
 
   static QEvt const *DataManagerQueueSto[10];
-  Data_Manager_ctor();
+  Data_Manager_ctor(&huart2);
   QACTIVE_START(
       AO_Data_Manager,
-      AO_PRIO_DATA_MANAGER,        // QP prio. of the AO
+      AO_PRIO_DATA_MANAGER,       // QP prio. of the AO
       DataManagerQueueSto,        // event queue storage
       Q_DIM(DataManagerQueueSto), // queue length [events]
-      (void *)0, 0U,           // no stack storage
-      (void *)0);              // no initialization param
+      (void *)0, 0U,              // no stack storage
+      (void *)0);                 // no initialization param
 
   static QEvt const *app_cli_QueueSto[10];
   AppCLI_ctor(BSP_Get_Serial_IO_Interface_USB0());
@@ -526,6 +563,7 @@ static void MX_TIM15_Init(void)
   /* USER CODE END TIM15_Init 0 */
 
   TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_SlaveConfigTypeDef sSlaveConfig = {0};
   TIM_MasterConfigTypeDef sMasterConfig = {0};
   TIM_IC_InitTypeDef sConfigIC = {0};
 
@@ -549,6 +587,18 @@ static void MX_TIM15_Init(void)
     Error_Handler();
   }
   if (HAL_TIM_IC_Init(&htim15) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_OnePulse_Init(&htim15, TIM_OPMODE_SINGLE) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sSlaveConfig.SlaveMode = TIM_SLAVEMODE_COMBINED_RESETTRIGGER;
+  sSlaveConfig.InputTrigger = TIM_TS_TI1FP1;
+  sSlaveConfig.TriggerPolarity = TIM_INPUTCHANNELPOLARITY_RISING;
+  sSlaveConfig.TriggerFilter = 0;
+  if (HAL_TIM_SlaveConfigSynchro(&htim15, &sSlaveConfig) != HAL_OK)
   {
     Error_Handler();
   }
