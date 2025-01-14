@@ -67,6 +67,8 @@ QEvt const *i2c_bus_2_deferred_queue_storage[SHARED_I2C_BUS_2_DEFERRED_QUEUE_LEN
 extern ADC_HandleTypeDef hadc2;  // defined in main.c by cubeMX
 extern TIM_HandleTypeDef htim15; // defined in main.c by cubeMX
 
+static bool input_capture_found;
+
 // Static Function Declarations
 
 static uint16_t USB0_TransmitData(const uint8_t *data_ptr, const uint16_t data_len);
@@ -556,6 +558,7 @@ void BSP_Tach_Capture_Timer_Enable()
     //     __HAL_TIM_CLEAR_FLAG(&htim15, TIM_FLAG_UPDATE);
 
     HAL_NVIC_EnableIRQ(TIM1_BRK_TIM15_IRQn);
+    input_capture_found = false;
 
     //     HAL_TIM_IC_Start_IT(&htim15, TIM_CHANNEL_1); // input capture timer
 
@@ -575,6 +578,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     {
         return;
     }
+
+    if (input_capture_found)
+        return;
 
     // engine RPM is very low (below stall speed), or more likely: engine is off
 
@@ -602,10 +608,10 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
     }
 
     captured_val = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
+    input_capture_found = true;
 
     if (captured_val == 0)
         return;
-
 
     // TIM15 is on the APB2 clock bus, which is 16 MHz, and scaled down by (7+1) to 2Mhz
     // microseconds = clocks / 2
