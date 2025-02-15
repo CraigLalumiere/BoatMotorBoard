@@ -25,6 +25,11 @@
         "string_view": "c",
         "initializer_list": "c",
         "pressure_sensor.h": "c",
-        "lmt01.h": "c"
+        "lmt01.h": "c",
+        "blinky.h": "c",
+        "usb.h": "c",
+        "posted_signals.h": "c",
+        "bsp.h": "c",
+        "shared_i2c.h": "c"
     }
 }
