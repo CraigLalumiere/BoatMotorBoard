@@ -23,11 +23,8 @@ set(CMAKE_C_EXTENSIONS              ON)
 set(PROJ_PATH                       ${CMAKE_CURRENT_SOURCE_DIR})
 set(LIBRARY_PATH                    ${CMAKE_CURRENT_SOURCE_DIR}/library)
 set(DRIVERS_PATH                    ${CMAKE_CURRENT_SOURCE_DIR}/Drivers)
-set(MESSAGES_PATH                   ${CMAKE_CURRENT_SOURCE_DIR}/messages)
-set(MESSAGES_GENERATED_PATH         ${MESSAGES_PATH}/generated)
 
 
-include(${MESSAGES_PATH}/fetch_nanopb.cmake)
 
 #
 # Core MCU flags, CPU, instruction set and FPU setup
@@ -49,7 +46,7 @@ add_compile_options(
 )
 
 # Set linker script
-set(linker_script_SRC               ${PROJ_PATH}/Core/bsp/device/stm32g474retx_flash.ld) 
+set(linker_script_SRC               ${PROJ_PATH}/Core/bsp/device/STM32G474CETX_FLASH.ld) 
 
 set(EXECUTABLE                      ${CMAKE_PROJECT_NAME})
 
@@ -68,19 +65,10 @@ add_subdirectory(${LIBRARY_PATH}/qpc/ test)
 # List of source files to compile
 #
 
-set(messages_SRCS
-    ${MESSAGES_GENERATED_PATH}/c/LogPrint.pb.c
-    ${MESSAGES_GENERATED_PATH}/c/CLIData.pb.c
-    ${MESSAGES_GENERATED_PATH}/c/AddXYToPlot.pb.c
-    ${MESSAGES_GENERATED_PATH}/c/ClearPlots.pb.c
-    ${MESSAGES_GENERATED_PATH}/c/DrawBodePlot.pb.c
-    ${MESSAGES_GENERATED_PATH}/c/DrawPlot.pb.c
-    ${MESSAGES_GENERATED_PATH}/c/LogToPlot.pb.c
-)
 
 set(sources_SRCS 
     # processor startup
-    ${PROJ_PATH}/Core/bsp/device/startup_stm32g474xx.s
+    ${PROJ_PATH}/Core/bsp/device/startup_stm32g474cetx.s
 
     # cubeMX generated files
     ${PROJ_PATH}/Core/Src/stm32g4xx_it.c
@@ -93,14 +81,17 @@ set(sources_SRCS
     # services
     ${PROJ_PATH}/Core/services/cli/cli_commands.c
     ${PROJ_PATH}/Core/services/cli/cli_manual_commands.c
-    # ${PROJ_PATH}/Core/services/cli/cli.c
+    ${PROJ_PATH}/Core/services/cli/cli.c
     ${PROJ_PATH}/Core/services/fault_manager.c
     ${PROJ_PATH}/Core/services/blinky.c  
     ${PROJ_PATH}/Core/services/reset.c
-    ${PROJ_PATH}/Core/services/reset_reason_print.c    
-    ${PROJ_PATH}/Core/services/pc_com/hdlc.c
-    ${PROJ_PATH}/Core/services/pc_com/crc16.c
-    ${PROJ_PATH}/Core/services/pc_com/pc_com.c  
+    ${PROJ_PATH}/Core/services/reset_reason_print.c
+    ${PROJ_PATH}/Core/services/data_manager.c
+    ${PROJ_PATH}/Core/services/LMT01.c
+    ${PROJ_PATH}/Core/services/pressure_sensor.c
+    ${PROJ_PATH}/Core/services/SSD1306.c
+    ${PROJ_PATH}/Core/services/usb.c
+    ${PROJ_PATH}/Core/services/ssd1306_fonts.c
 
     # TODO: check if this file required
     ${PROJ_PATH}/Core/Src/system_stm32g4xx.c    
@@ -113,9 +104,12 @@ set(sources_SRCS
     ${PROJ_PATH}/Core/bsp/bsp.c
     ${PROJ_PATH}/Core/bsp/bsp_manual.c
     ${PROJ_PATH}/Core/bsp/gpio_stm32.c
-    ${PROJ_PATH}/Core/bsp/uart.c
-    ${PROJ_PATH}/Core/bsp/uart_mpu_specific.c
     ${PROJ_PATH}/Core/bsp/bsp_backup_ram.c
+    ${PROJ_PATH}/Core/bsp/usb_descriptors.c
+    ${PROJ_PATH}/Core/bsp/usb_board_api.c
+    ${PROJ_PATH}/Core/bsp/i2c_bus.c
+    ${PROJ_PATH}/Core/bsp/i2c_bus_stm32.c
+    ${PROJ_PATH}/Core/bsp/shared_i2c.c
 
 
 
@@ -131,31 +125,34 @@ set(sources_SRCS
     ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_rcc.c
     ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_rcc_ex.c
     ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_tim.c
-    ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_fdcan.c
     ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_tim_ex.c
-    ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_uart.c
-    ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_ll_fmc.c
     ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_ll_usb.c
     ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_adc.c
     ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_adc_ex.c
     ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_dma.c
-    ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_spi.c
-    ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_dac.c
-    ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_dac_ex.c
     ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_uart_ex.c
+    ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_i2c.c
+    ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_uart.c
+    ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_i2c_ex.c
     
+    
+
+    # Tiny USB
+    # Explicitly list required TinyUSB sources
+    ${LIBRARY_PATH}/tinyusb-0.17.0/src/tusb.c
+    ${LIBRARY_PATH}/tinyusb-0.17.0/src/common/tusb_fifo.c
+    ${LIBRARY_PATH}/tinyusb-0.17.0/src/device/usbd.c
+    ${LIBRARY_PATH}/tinyusb-0.17.0/src/device/usbd_control.c
+    ${LIBRARY_PATH}/tinyusb-0.17.0/src/class/cdc/cdc_device.c
+    ${LIBRARY_PATH}/tinyusb-0.17.0/src/portable/st/stm32_fsdev/dcd_stm32_fsdev.c
 
 
     # Segger RTT
     ${LIBRARY_PATH}/SEGGER_RTT_V810k/RTT/SEGGER_RTT.c
     ${LIBRARY_PATH}/SEGGER_RTT_V810k/RTT/SEGGER_RTT_printf.c
 
-    # nanopb and messages
-    ${nanopb_SRCS}
-    ${messages_SRCS}
-
     # DMSIS DSP
-    ${DRIVERS_PATH}/CMSIS/DSP/Source/ControllerFunctions/arm_pid_init_f32.c
+    # ${DRIVERS_PATH}/CMSIS/DSP/Source/ControllerFunctions/arm_pid_init_f32.c
 )
 
 #
@@ -167,7 +164,6 @@ set(include_path_DIRS
     ${PROJ_PATH}/Core/bsp
     ${PROJ_PATH}/Core/services
     ${PROJ_PATH}/Core/services/cli
-    ${PROJ_PATH}/Core/services/pc_com
 
     ${LIBRARY_PATH}/embedded-cli
 
@@ -207,8 +203,6 @@ target_include_directories(${EXECUTABLE} PRIVATE ${include_path_DIRS}
     ${MESSAGES_GENERATED_PATH}
     ${nanopb_SOURCE_DIR}
 )
-
-message(MESSAGES_GENERATED_PATH="${MESSAGES_GENERATED_PATH}")
 
 # Project symbols
 target_compile_definitions(${EXECUTABLE} PRIVATE ${symbols_SYMB})

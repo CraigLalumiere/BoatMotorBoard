@@ -19,7 +19,11 @@
         "analyzer.h": "c",
         "bsp.h": "c",
         "addxytoplot.pb.h": "c",
-        "clearplots.pb.h": "c"
+        "clearplots.pb.h": "c",
+        "shared_i2c.h": "c",
+        "tusb_common.h": "c",
+        "i2c_bus.h": "c",
+        "cli.h": "c"
     },
     "editor.rulers": [
         100
