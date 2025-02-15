@@ -1,0 +1,24 @@
+{
+    "name": "C",
+    "build": {
+      "dockerfile": "../Dockerfile",
+      "args": {
+        "USERNAME": "${localEnv:USER}"
+      }
+    },
+    "runArgs": ["--platform=linux/amd64"],
+    "customizations": {
+      "vscode": {
+        "settings": {
+          "terminal.integrated.defaultProfile.linux": "bash"
+        },
+        "extensions": [
+            "ms-vscode.cpptools",
+            "ms-vscode.cmake-tools",
+            "ms-vscode.cpptools-extension-pack",            
+            "cschlosser.doxdocgen",
+            "jebbs.plantuml"
+        ]
+      }
+    }
+  }

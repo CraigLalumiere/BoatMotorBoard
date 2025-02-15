@@ -1,35 +1,36 @@
 {
     "files.associations": {
-        "tusb.h": "c",
-        "qpc.h": "c",
-        "tusb_option.h": "c",
-        "app_cli_commands.h": "c",
-        "app_cli.h": "c",
         "stm32g4xx_hal.h": "c",
+        "stm32g4xx_hal_conf.h": "c",
+        "qpc.h": "c",
+        "qsafe.h": "c",
+        "tusb.h": "c",
+        "ctype.h": "c",
         "pubsub_signals.h": "c",
-        "gpio_stm32.h": "c",
-        "i2c_bus_stm32.h": "c",
-        "stm32g4xx.h": "c",
-        "app_cli_manual_commands.h": "c",
-        "private_signal_ranges.h": "c",
-        "ssd1306_fonts.h": "c",
-        "ssd1306.h": "c",
+        "cli_commands.h": "c",
+        "embedded_cli.h": "c",
+        "cli_manual_commands.h": "c",
+        "uart_mpu_specific.h": "c",
+        "pc_com.h": "c",
+        "hdlc.h": "c",
         "string.h": "c",
-        "stdio.h": "c",
-        "shared_i2c_events.h": "c",
-        "array": "c",
-        "deque": "c",
-        "string": "c",
-        "unordered_map": "c",
-        "vector": "c",
-        "string_view": "c",
-        "initializer_list": "c",
-        "pressure_sensor.h": "c",
-        "lmt01.h": "c",
-        "blinky.h": "c",
-        "usb.h": "c",
-        "posted_signals.h": "c",
+        "clidata.pb.h": "c",
+        "messagetype.pb.h": "c",
+        "analyzer.h": "c",
         "bsp.h": "c",
-        "shared_i2c.h": "c"
-    }
+        "addxytoplot.pb.h": "c",
+        "clearplots.pb.h": "c"
+    },
+    "editor.rulers": [
+        100
+    ],
+
+    "[c]": {
+        "editor.formatOnSave": true
+    },
+    "[cpp]": {
+        "editor.formatOnSave": true
+    },
+
+    "extensions.ignoreRecommendations": true,
 }
