@@ -49,8 +49,8 @@ ENV PATH="/gcc-arm-none-eabi/bin:${PATH}"
 # use the same directory naming as the vscode dev container when building from the command line. use /workspaces/cproject
 # The issue is that you’re changing the path names that appear in the compile_commands.json, the CMake output files, and the ELF file. 
 # This will screw up IntelliSense and incremental builds when you go back into the container.
-VOLUME ["/workspaces/nucleo-g474-template"]
-WORKDIR /workspaces/nucleo-g474-template
+VOLUME ["/workspaces/BoatMotorBoard"]
+WORKDIR /workspaces/BoatMotorBoard
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Install clang tools

@@ -198,24 +198,8 @@ int main(void)
     MX_TIM15_Init();
     /* USER CODE BEGIN 2 */
 
-    /**************************************************************************************************\
-    * Init TIM15 for tach input capture
-    \**************************************************************************************************/
-
-    // TIM15 is prescaled to 16Mhz/(7+1)=2Mhz, or 0.5 microsecond per tick
-    __HAL_TIM_CLEAR_FLAG(&htim15, TIM_FLAG_UPDATE);
-    HAL_TIM_IC_Start_IT(&htim15, TIM_CHANNEL_1); // input capture timer
-    __HAL_TIM_ENABLE_IT(&htim15, TIM_IT_UPDATE);
-
-    /**************************************************************************************************\
-    * Init UART2
-    \**************************************************************************************************/
-    /* Flush the data registers from unexpected data */
-    __HAL_UART_FLUSH_DRREGISTER(&huart2);
-    // if (HAL_UART_Receive_IT(&huart2, (uint8_t *)&rx_byte, 1) != HAL_OK)
-    // {
-    //   Error_Handler();
-    // }
+    uint16_t priority = QF_AWARE_ISR_CMSIS_PRI;
+    (void) priority; // be sure to set your QP aware interrupt priority in Cube MX to at least this
 
     BSP_Init();
 
@@ -228,6 +212,13 @@ int main(void)
 
     static QF_MPOOL_EL(LongMessageUnion_T) longPoolSto[10];
     QF_poolInit(longPoolSto, sizeof(longPoolSto), sizeof(longPoolSto[0]));
+
+    size_t smallsize  = sizeof(SmallMessageUnion_T);
+    size_t mediumsize = sizeof(MediumMessageUnion_T);
+    size_t largesize  = sizeof(LongMessageUnion_T);
+    (void) smallsize;
+    (void) mediumsize;
+    (void) largesize;
 
     // initialize publish-subscribe
     static QSubscrList subscrSto[PUBSUB_MAX_SIG];

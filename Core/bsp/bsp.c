@@ -22,8 +22,6 @@ Q_DEFINE_THIS_MODULE("bsp.c")
 #define USB_INTERFACE                       0
 #define SHARED_I2C_BUS_2_DEFERRED_QUEUE_LEN 3
 
-// #define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
-
 /**************************************************************************************************\
 * Private type definitions
 \**************************************************************************************************/
@@ -248,13 +246,11 @@ void BSP_Init(void)
 }
 void BSP_LED_On()
 {
-    printf("LED on\n\r");
     HAL_GPIO_WritePin(FW_LED_GPIO_Port, FW_LED_Pin, 1);
 }
 //............................................................................
 void BSP_LED_Off()
 {
-    printf("LED off\n\r");
     HAL_GPIO_WritePin(FW_LED_GPIO_Port, FW_LED_Pin, 0);
 }
 //............................................................................
@@ -425,9 +421,10 @@ static I2C_Return_T BSP_I2C_Read_SSD1306(
     I2C_Error_Callback error_cb,
     void *cb_data)
 {
-    return I2C_Bus_Read(I2C_BUS_ID_2, address, rx_buffer, data_len, complete_cb, error_cb, cb_data);
-    // return SharedI2C_Read(
-    //     &SharedI2C_Bus2, address, rx_buffer, data_len, complete_cb, error_cb, cb_data);
+    // return I2C_Bus_Read(I2C_BUS_ID_2, address, rx_buffer, data_len, complete_cb, error_cb,
+    // cb_data);
+    return SharedI2C_Read(
+        &SharedI2C_Bus2, address, rx_buffer, data_len, complete_cb, error_cb, cb_data);
 }
 
 static I2C_Return_T BSP_I2C_Write_Pressure(
@@ -468,12 +465,6 @@ const Serial_IO_T *BSP_Get_Serial_IO_Interface_USB0()
 //     /* Place your implementation of fputc here */
 //     /* e.g. write a character to the USART1 and Loop until the end of transmission */
 //     //  HAL_UART_Transmit(&huart1, (uint8_t *)&ch, 1, 0xFFFF);
-
-//     tud_cdc_n_write(USB_INTERFACE_PC_COM, (uint8_t *) &ch, 1);
-//     tud_cdc_n_write_flush(USB_INTERFACE_PC_COM);
-
-//     return ch;
-// }
 
 /**
  ***************************************************************************************************
