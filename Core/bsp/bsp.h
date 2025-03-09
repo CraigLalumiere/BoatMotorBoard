@@ -1,8 +1,8 @@
 #ifndef BSP_H_
 #define BSP_H_
 
-#include "interfaces/serial_io_interface.h"
 #include "interfaces/i2c_interface.h"
+#include "interfaces/serial_io_interface.h"
 #include "stdint.h"
 #include <stdbool.h>
 
@@ -10,7 +10,7 @@
 * Public macros
 \**************************************************************************************************/
 
-#define BSP_TICKS_PER_SEC 1000U
+#define BSP_TICKS_PER_SEC         1000U
 #define MILLISECONDS_TO_TICKS(ms) ((ms) * ((BSP_TICKS_PER_SEC) / 1000))
 
 /**************************************************************************************************\
@@ -49,7 +49,6 @@ void BSP_debug_gpio_toggle(void);
  * @brief   Retrieve Serial IO interface for the USB Interface serial comms channels
  **************************************************************************************************/
 const Serial_IO_T *BSP_Get_Serial_IO_Interface_USB0();
-const Serial_IO_T *BSP_Get_Serial_IO_Interface_USB1();
 
 /**
  ***************************************************************************************************
