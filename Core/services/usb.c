@@ -1,10 +1,14 @@
 #include "usb.h"
 #include "bsp.h"
+#include "private_signal_ranges.h"
 #include "tusb.h"
 #include <ctype.h>
 
-#include "private_signal_ranges.h"
+// Q_DEFINE_THIS_MODULE("usb")
 
+/**************************************************************************************************\
+* Private type definitions
+\**************************************************************************************************/
 enum USBSignals
 {
     USB_TASK_TIMEOUT_SIG = PRIVATE_SIGNAL_USB_START,
@@ -12,39 +16,50 @@ enum USBSignals
 
 typedef struct
 {
-    QActive super;        // inherit QActive
-    QTimeEvt taskTimeEvt; // time event to call tusb task
+    QActive super;         // inherit QActive
+    QTimeEvt usb_task_evt; // time event to call tusb task
 } USB;
 
-// state handler functions
-static QState USB_initial(USB *const me, void const *const par);
-static QState USB_active(USB *const me, QEvt const *const e);
-
+/**************************************************************************************************\
+* Private memory declarations
+\**************************************************************************************************/
 static USB USB_inst;
 QActive *const AO_USB = &USB_inst.super;
 
+/**************************************************************************************************\
+* Private prototypes
+\**************************************************************************************************/
+static QState USB_initial(USB *const me, void const *const par);
+static QState USB_active(USB *const me, QEvt const *const e);
+
+/**************************************************************************************************\
+* Public functions
+\**************************************************************************************************/
+
+/**
+ ***************************************************************************************************
+ * @brief   Constructor
+ **************************************************************************************************/
 void USB_ctor(void)
 {
     USB *const me = &USB_inst;
     QActive_ctor(&me->super, Q_STATE_CAST(&USB_initial));
-    QTimeEvt_ctorX(&me->taskTimeEvt, &me->super, USB_TASK_TIMEOUT_SIG, 0U);
+    QTimeEvt_ctorX(&me->usb_task_evt, &me->super, USB_TASK_TIMEOUT_SIG, 0U);
 }
 
-////////////////////////
-// HSM definition
-////////////////////////
+/**************************************************************************************************\
+* Private functions
+\**************************************************************************************************/
+/**
+ ***************************************************************************************************
+ * @brief   HSM States
+ **************************************************************************************************/
 QState USB_initial(USB *const me, void const *const par)
 {
     Q_UNUSED_PAR(par);
 
-#ifdef Q_SPY
-    // Add object and all state functions to the QSPY dictionaries
-    QS_OBJ_DICTIONARY(me);
-    QS_FUN_DICTIONARY(&USB_active);
-#endif
-
-    // taskTimeEvt will fire every 10ms
-    QTimeEvt_armX(&me->taskTimeEvt, BSP_TICKS_PER_SEC / 100U, BSP_TICKS_PER_SEC / 100U);
+    // Process USB events every 10ms
+    QTimeEvt_armX(&me->usb_task_evt, MILLISECONDS_TO_TICKS(10U), MILLISECONDS_TO_TICKS(10U));
 
     return Q_TRAN(&USB_active);
 }

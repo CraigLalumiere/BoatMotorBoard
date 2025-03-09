@@ -1,8 +1,8 @@
 #ifndef PUBSUB_SIGNALS_H_
 #define PUBSUB_SIGNALS_H_
 
-#include "qpc.h"
 #include "fault_manager.h"
+#include "qpc.h"
 #include <stddef.h>
 
 enum PubSubSignals
@@ -24,20 +24,17 @@ typedef enum
     SIG_UNKNOWN
 } Colored_Wire_Stat_T;
 
-
 typedef struct
 {
     QEvt super;
     float num; // size of the buffer 'instructions', which should be >= actual size
 } FloatEvent_T;
 
-
 typedef struct
 {
     QEvt super;
     int16_t num; // size of the buffer 'instructions', which should be >= actual size
 } Int16Event_T;
-
 
 typedef struct
 {
@@ -53,8 +50,6 @@ typedef struct
     Colored_Wire_Stat_T orange;
 } MotorDataEvent_T;
 
-
-
 typedef struct
 {
     QEvt super;
@@ -64,6 +59,5 @@ typedef struct
     uint16_t code;
     char msg[FAULT_GEN_EVENT_MAX_MSG_LENGTH];
 } FaultGeneratedEvent_T;
-
 
 #endif // PUBSUB_SIGNALS_H_

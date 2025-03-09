@@ -46,7 +46,7 @@ add_compile_options(
 )
 
 # Set linker script
-set(linker_script_SRC               ${PROJ_PATH}/Core/bsp/device/STM32G474CETX_FLASH.ld) 
+set(linker_script_SRC               ${PROJ_PATH}/Core/bsp/device/stm32g474cetx_flash.ld) 
 
 set(EXECUTABLE                      ${CMAKE_PROJECT_NAME})
 
@@ -68,7 +68,7 @@ add_subdirectory(${LIBRARY_PATH}/qpc/ test)
 
 set(sources_SRCS 
     # processor startup
-    ${PROJ_PATH}/Core/bsp/device/startup_stm32g474cetx.s
+    ${PROJ_PATH}/Core/bsp/device/startup_stm32g474xx.s
 
     # cubeMX generated files
     ${PROJ_PATH}/Core/Src/stm32g4xx_it.c
@@ -77,15 +77,17 @@ set(sources_SRCS
 
     # application
     ${PROJ_PATH}/Core/Src/main.c
+    ${PROJ_PATH}/Core/Src/interrupts.c
 
     # services
     ${PROJ_PATH}/Core/services/cli/cli_commands.c
     ${PROJ_PATH}/Core/services/cli/cli_manual_commands.c
     ${PROJ_PATH}/Core/services/cli/cli.c
     ${PROJ_PATH}/Core/services/fault_manager.c
-    ${PROJ_PATH}/Core/services/blinky.c  
+    ${PROJ_PATH}/Core/services/blinky.c
     ${PROJ_PATH}/Core/services/reset.c
     ${PROJ_PATH}/Core/services/reset_reason_print.c
+    ${PROJ_PATH}/Core/services/usb.c
     ${PROJ_PATH}/Core/services/data_manager.c
     ${PROJ_PATH}/Core/services/LMT01.c
     ${PROJ_PATH}/Core/services/pressure_sensor.c
@@ -130,12 +132,11 @@ set(sources_SRCS
     ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_adc.c
     ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_adc_ex.c
     ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_dma.c
-    ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_uart_ex.c
     ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_i2c.c
     ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_uart.c
+    ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_uart_ex.c
     ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_i2c_ex.c
-    
-    
+
 
     # Tiny USB
     # Explicitly list required TinyUSB sources
@@ -145,7 +146,7 @@ set(sources_SRCS
     ${LIBRARY_PATH}/tinyusb-0.17.0/src/device/usbd_control.c
     ${LIBRARY_PATH}/tinyusb-0.17.0/src/class/cdc/cdc_device.c
     ${LIBRARY_PATH}/tinyusb-0.17.0/src/portable/st/stm32_fsdev/dcd_stm32_fsdev.c
-
+    
 
     # Segger RTT
     ${LIBRARY_PATH}/SEGGER_RTT_V810k/RTT/SEGGER_RTT.c
@@ -182,9 +183,6 @@ set(include_path_DIRS
 
     ${LIBRARY_PATH}/SEGGER_RTT_V810k/Config
     ${LIBRARY_PATH}/SEGGER_RTT_V810k/RTT 
-
-    ${SHARED_PATH}/services
-    ${SHARED_PATH}/bsp/interfaces
 )
 
 #

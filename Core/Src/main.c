@@ -21,6 +21,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+
 #include "LMT01.h"
 #include "SSD1306.h"
 #include "blinky.h"
@@ -31,15 +32,14 @@
 #include "pressure_sensor.h"
 #include "qpc.h"
 #include "reset.h"
+#include "shared_i2c.h"
 #include "shared_i2c_events.h"
-#include "tusb.h"
 #include "usb.h"
-#include <ctype.h>
+#include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-#ifdef Q_SPY
-Q_DEFINE_THIS_MODULE("main")
-#endif // def Q_SPY
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -75,9 +75,9 @@ typedef struct
 {
     union
     {
-        QEvt base_event;
-        SharedI2CWriteEvent_T i2c_event;
-    } small_messages;
+        QEvt someMultipleQEvt[4];
+        DebugForceFaultEvent_T fault_event;
+    } medium_messages;
 } MediumMessageUnion_T;
 typedef struct
 {
@@ -85,8 +85,7 @@ typedef struct
     {
         QEvt base_event;
         FaultGeneratedEvent_T fault_event;
-        MotorDataEvent_T data_event;
-    } small_messages;
+    } large_messages;
 } LongMessageUnion_T;
 
 /* USER CODE END PTD */
@@ -127,37 +126,11 @@ static void MX_TIM8_Init(void);
 static void MX_ADC2_Init(void);
 static void MX_TIM15_Init(void);
 /* USER CODE BEGIN PFP */
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
-// Invoked when device is mounted
-void tud_mount_cb(void)
-{
-    // Do nothing for now
-}
-
-// Invoked when device is unmounted
-void tud_umount_cb(void)
-{
-    // Do nothing for now
-}
-
-/**
- * @brief  Tx Transfer completed callback
- * @param  UartHandle: UART handle.
- * @note   This example shows a simple way to report end of IT Tx transfer, and
- *         you can add your own implementation.
- * @retval None
- */
-void HAL_UART_TxCpltCallback(UART_HandleTypeDef *UartHandle)
-{
-    /* Set transmission flag: transfer complete */
-    static QEvt const UARTCompleteEvent = QEVT_INITIALIZER(POSTED_UART_COMPLETE_SIG);
-
-    QACTIVE_POST(AO_Data_Manager, &UARTCompleteEvent, null);
-}
 
 /* USER CODE END 0 */
 
@@ -186,6 +159,9 @@ int main(void)
 
     /* USER CODE BEGIN SysInit */
 
+    // IN CUBEMX, BE SURE TO SET INTERRUPT PRIORITY FOR ALL "QP AWARE" INTERRUPTS TO AT LEAST 4
+    // SINCE QF_AWARE_ISR_CMSIS_PRI is 3
+
     /* USER CODE END SysInit */
 
     /* Initialize all configured peripherals */
@@ -203,22 +179,22 @@ int main(void)
 
     BSP_Init();
 
-    // initialize event pools
-    static QF_MPOOL_EL(SmallMessageUnion_T) smlPoolSto[10];
-    QF_poolInit(smlPoolSto, sizeof(smlPoolSto), sizeof(smlPoolSto[0]));
-
-    static QF_MPOOL_EL(MediumMessageUnion_T) mediumPoolSto[10];
-    QF_poolInit(mediumPoolSto, sizeof(mediumPoolSto), sizeof(mediumPoolSto[0]));
-
-    static QF_MPOOL_EL(LongMessageUnion_T) longPoolSto[10];
-    QF_poolInit(longPoolSto, sizeof(longPoolSto), sizeof(longPoolSto[0]));
-
     size_t smallsize  = sizeof(SmallMessageUnion_T);
     size_t mediumsize = sizeof(MediumMessageUnion_T);
     size_t largesize  = sizeof(LongMessageUnion_T);
     (void) smallsize;
     (void) mediumsize;
     (void) largesize;
+
+    // initialize event pools
+    static QF_MPOOL_EL(SmallMessageUnion_T) smlPoolSto[10];
+    QF_poolInit(smlPoolSto, sizeof(smlPoolSto), sizeof(smlPoolSto[0]));
+
+    static QF_MPOOL_EL(MediumMessageUnion_T) mediumPoolSto[20];
+    QF_poolInit(mediumPoolSto, sizeof(mediumPoolSto), sizeof(mediumPoolSto[0]));
+
+    static QF_MPOOL_EL(LongMessageUnion_T) longPoolSto[20];
+    QF_poolInit(longPoolSto, sizeof(longPoolSto), sizeof(longPoolSto[0]));
 
     // initialize publish-subscribe
     static QSubscrList subscrSto[PUBSUB_MAX_SIG];
@@ -339,20 +315,21 @@ void SystemClock_Config(void)
 
     /** Configure the main internal regulator output voltage
      */
-    HAL_PWREx_ControlVoltageScaling(PWR_REGULATOR_VOLTAGE_SCALE1);
+    HAL_PWREx_ControlVoltageScaling(PWR_REGULATOR_VOLTAGE_SCALE1_BOOST);
 
     /** Initializes the RCC Oscillators according to the specified parameters
      * in the RCC_OscInitTypeDef structure.
      */
-    RCC_OscInitStruct.OscillatorType      = RCC_OSCILLATORTYPE_HSI;
+    RCC_OscInitStruct.OscillatorType      = RCC_OSCILLATORTYPE_HSI | RCC_OSCILLATORTYPE_HSI48;
     RCC_OscInitStruct.HSIState            = RCC_HSI_ON;
     RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+    RCC_OscInitStruct.HSI48State          = RCC_HSI48_ON;
     RCC_OscInitStruct.PLL.PLLState        = RCC_PLL_ON;
     RCC_OscInitStruct.PLL.PLLSource       = RCC_PLLSOURCE_HSI;
-    RCC_OscInitStruct.PLL.PLLM            = RCC_PLLM_DIV1;
-    RCC_OscInitStruct.PLL.PLLN            = 12;
+    RCC_OscInitStruct.PLL.PLLM            = RCC_PLLM_DIV2;
+    RCC_OscInitStruct.PLL.PLLN            = 42;
     RCC_OscInitStruct.PLL.PLLP            = RCC_PLLP_DIV2;
-    RCC_OscInitStruct.PLL.PLLQ            = RCC_PLLQ_DIV4;
+    RCC_OscInitStruct.PLL.PLLQ            = RCC_PLLQ_DIV2;
     RCC_OscInitStruct.PLL.PLLR            = RCC_PLLR_DIV2;
     if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
     {
@@ -363,12 +340,12 @@ void SystemClock_Config(void)
      */
     RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 |
         RCC_CLOCKTYPE_PCLK2;
-    RCC_ClkInitStruct.SYSCLKSource   = RCC_SYSCLKSOURCE_HSI;
+    RCC_ClkInitStruct.SYSCLKSource   = RCC_SYSCLKSOURCE_PLLCLK;
     RCC_ClkInitStruct.AHBCLKDivider  = RCC_SYSCLK_DIV1;
     RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
     RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
-    if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
+    if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_4) != HAL_OK)
     {
         Error_Handler();
     }
@@ -394,7 +371,7 @@ static void MX_ADC2_Init(void)
     /** Common config
      */
     hadc2.Instance                   = ADC2;
-    hadc2.Init.ClockPrescaler        = ADC_CLOCK_SYNC_PCLK_DIV2;
+    hadc2.Init.ClockPrescaler        = ADC_CLOCK_SYNC_PCLK_DIV4;
     hadc2.Init.Resolution            = ADC_RESOLUTION_12B;
     hadc2.Init.DataAlign             = ADC_DATAALIGN_RIGHT;
     hadc2.Init.GainCompensation      = 0;
@@ -446,7 +423,7 @@ static void MX_I2C2_Init(void)
 
     /* USER CODE END I2C2_Init 1 */
     hi2c2.Instance              = I2C2;
-    hi2c2.Init.Timing           = 0x00503D58;
+    hi2c2.Init.Timing           = 0x50916E9F;
     hi2c2.Init.OwnAddress1      = 0;
     hi2c2.Init.AddressingMode   = I2C_ADDRESSINGMODE_7BIT;
     hi2c2.Init.DualAddressMode  = I2C_DUALADDRESS_DISABLE;

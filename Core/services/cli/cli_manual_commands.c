@@ -38,8 +38,8 @@ void on_cli_digital_out_set(EmbeddedCli *cli, char *args, void *context)
     const char *arg2 = embeddedCliGetToken(args, 2);
     const char *arg3 = embeddedCliGetToken(args, 3);
 
-    arg_port = *arg1;
-    arg_pin = strtoul(arg2, &arg_end, 10);
+    arg_port  = *arg1;
+    arg_pin   = strtoul(arg2, &arg_end, 10);
     arg_value = strtoul(arg3, &arg_end, 10);
 
     if (strlen(arg1) > 1 || arg_port < 'A' || arg_port > 'K')
@@ -66,7 +66,7 @@ void on_cli_digital_out_set(EmbeddedCli *cli, char *args, void *context)
         return;
     }
 
-    BSP_Manual_Config_and_Set_Digital_Output(arg_port, (uint8_t)arg_pin, (arg_value > 0));
+    BSP_Manual_Config_and_Set_Digital_Output(arg_port, (uint8_t) arg_pin, (arg_value > 0));
 }
 
 #define HELP_FULL_DIGITAL_IN_READ \
@@ -93,7 +93,7 @@ void on_cli_digital_in_read(EmbeddedCli *cli, char *args, void *context)
     const char *arg2 = embeddedCliGetToken(args, 2);
 
     arg_port = *arg1;
-    arg_pin = strtoul(arg2, &arg_end, 10);
+    arg_pin  = strtoul(arg2, &arg_end, 10);
 
     if (strlen(arg1) > 1 || arg_port < 'A' || arg_port > 'K')
     {
@@ -113,7 +113,7 @@ void on_cli_digital_in_read(EmbeddedCli *cli, char *args, void *context)
         return;
     }
 
-    bool is_set = BSP_Manual_Config_and_Read_Digital_Input(arg_port, (uint8_t)arg_pin);
+    bool is_set = BSP_Manual_Config_and_Read_Digital_Input(arg_port, (uint8_t) arg_pin);
     embeddedCliPrint(cli, is_set ? "\r\n1\r\n" : "\r\n0\r\n");
 }
 
@@ -124,7 +124,7 @@ static uint16_t s_i2c_data_len;
 
 static void I2C_Read_Complete_CB(void *cb_data)
 {
-    EmbeddedCli *cli = (EmbeddedCli *)cb_data;
+    EmbeddedCli *cli = (EmbeddedCli *) cb_data;
 
     embeddedCliPrint(cli, "RX bytes:");
     for (uint16_t i = 0; i < s_i2c_data_len; i++)
@@ -134,8 +134,8 @@ static void I2C_Read_Complete_CB(void *cb_data)
         uint8_t nibble1 = (s_i2c_read_buffer[i] & 0xF0) >> 4;
 
         // print most significant nibble first
-        byte_str[0] = (char)nibble1 + ((nibble1 > 9) ? ('A' - 10) : '0');
-        byte_str[1] = (char)nibble0 + ((nibble0 > 9) ? ('A' - 10) : '0');
+        byte_str[0] = (char) nibble1 + ((nibble1 > 9) ? ('A' - 10) : '0');
+        byte_str[1] = (char) nibble0 + ((nibble0 > 9) ? ('A' - 10) : '0');
         byte_str[2] = ' ';
         byte_str[3] = '\0';
         embeddedCliPrint(cli, byte_str);
@@ -144,7 +144,7 @@ static void I2C_Read_Complete_CB(void *cb_data)
 
 static void I2C_Operation_Error_CB(void *cb_data)
 {
-    EmbeddedCli *cli = (EmbeddedCli *)cb_data;
+    EmbeddedCli *cli = (EmbeddedCli *) cb_data;
     embeddedCliPrint(cli, " A I2C Bus error occurred\r\n");
 }
 
@@ -167,7 +167,7 @@ void on_cli_i2c(EmbeddedCli *cli, char *args, void *context)
     unsigned long arg_address;
     char *arg_end;
     bool is_invalid_arg = false;
-    bool is_i2c_read = false;
+    bool is_i2c_read    = false;
 
     if (embeddedCliGetTokenCount(args) < MANUAL_I2C_MIN_NUM_ARGS_BEFORE_TX + 1)
     {
@@ -187,8 +187,8 @@ void on_cli_i2c(EmbeddedCli *cli, char *args, void *context)
     const char *arg3 = embeddedCliGetToken(args, 3);
 
     arg_i2c_type = arg1;
-    arg_bus_id = strtoul(arg2, &arg_end, 10);
-    arg_address = strtoul(arg3, &arg_end, 16);
+    arg_bus_id   = strtoul(arg2, &arg_end, 10);
+    arg_address  = strtoul(arg3, &arg_end, 16);
 
     if (strcmp(arg_i2c_type, "write") == 0)
     {
@@ -219,7 +219,7 @@ void on_cli_i2c(EmbeddedCli *cli, char *args, void *context)
     s_i2c_data_len = embeddedCliGetTokenCount(args) - MANUAL_I2C_MIN_NUM_ARGS_BEFORE_TX;
     for (uint16_t i = 0; i < s_i2c_data_len; i++)
     {
-        const char *arg = embeddedCliGetToken(args, i + MANUAL_I2C_MIN_NUM_ARGS_BEFORE_TX + 1);
+        const char *arg     = embeddedCliGetToken(args, i + MANUAL_I2C_MIN_NUM_ARGS_BEFORE_TX + 1);
         unsigned long value = strtoul(arg, &arg_end, 16);
         if (value > 0xFF)
         {
@@ -237,7 +237,7 @@ void on_cli_i2c(EmbeddedCli *cli, char *args, void *context)
     }
 
     I2C_Bus_ID_T bus_id = Get_I2C_Bus_ID(arg_bus_id);
-    uint8_t address = (uint8_t)arg_address;
+    uint8_t address     = (uint8_t) arg_address;
 
     I2C_Return_T retval;
     if (is_i2c_read)
@@ -273,20 +273,20 @@ static I2C_Bus_ID_T Get_I2C_Bus_ID(unsigned long arg_bus_id)
 
     switch (arg_bus_id)
     {
-    case 1:
-        return I2C_BUS_ID_1;
-    case 2:
-        return I2C_BUS_ID_2;
-    case 3:
-        return I2C_BUS_ID_3;
-    case 4:
-        return I2C_BUS_ID_4;
-    case 5:
-        return I2C_BUS_ID_5;
-    case 6:
-        return I2C_BUS_ID_6;
-    default:
-        Q_ASSERT(false);
-        return I2C_BUS_MAX_SUPPORTED;
+        case 1:
+            return I2C_BUS_ID_1;
+        case 2:
+            return I2C_BUS_ID_2;
+        case 3:
+            return I2C_BUS_ID_3;
+        case 4:
+            return I2C_BUS_ID_4;
+        case 5:
+            return I2C_BUS_ID_5;
+        case 6:
+            return I2C_BUS_ID_6;
+        default:
+            Q_ASSERT(false);
+            return I2C_BUS_MAX_SUPPORTED;
     }
 }

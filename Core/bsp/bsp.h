@@ -2,7 +2,7 @@
 #define BSP_H_
 
 #include "interfaces/i2c_interface.h"
-#include "interfaces/serial_io_interface.h"
+#include "interfaces/serial_interface.h"
 #include "stdint.h"
 #include <stdbool.h>
 
@@ -21,12 +21,12 @@
 * Public memory declarations
 \**************************************************************************************************/
 
+void BSP_Init(void);
+void BSP_terminate(int16_t result);
+
 /**************************************************************************************************\
 * Public prototypes
 \**************************************************************************************************/
-
-void BSP_Init(void);
-void BSP_terminate(int16_t result);
 
 /**
  ***************************************************************************************************
@@ -40,9 +40,9 @@ uint32_t BSP_Get_Milliseconds_Tick(void);
  **************************************************************************************************/
 void BSP_LED_On(void);
 void BSP_LED_Off(void);
-void BSP_debug_gpio_on(void);
-void BSP_debug_gpio_off(void);
-void BSP_debug_gpio_toggle(void);
+// void BSP_debug_gpio_on(void);
+// void BSP_debug_gpio_off(void);
+// void BSP_debug_gpio_toggle(void);
 
 /**
  ***************************************************************************************************

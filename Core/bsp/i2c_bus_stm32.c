@@ -1,5 +1,5 @@
-#include "assert.h"
 #include "i2c_bus_stm32.h"
+#include "assert.h"
 #include "stddef.h"
 
 static I2C_HandleTypeDef hi2c1;

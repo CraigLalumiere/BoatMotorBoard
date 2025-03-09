@@ -24,6 +24,7 @@
 /* USER CODE BEGIN Includes */
 #include "i2c_bus_stm32.h"
 #include "qpc.h"
+#include "reset.h"
 #include "tusb.h"
 /* USER CODE END Includes */
 
@@ -75,7 +76,12 @@ extern PCD_HandleTypeDef hpcd_USB_FS;
 void HardFault_Handler(void)
 {
     /* USER CODE BEGIN HardFault_IRQn 0 */
-
+    // https://interrupt.memfault.com/blog/cortex-m-hardfault-debug#relevant-status-registers
+    uint32_t hfsr  = SCB->HFSR;
+    uint32_t cfsr  = SCB->CFSR;
+    uint32_t abfsr = 0U; // not used
+    uint32_t mmfar = SCB->MMFAR;
+    Reset_DoResetWithReason(RESET_REASON_HARD_FAULT, hfsr, cfsr, abfsr, mmfar);
     /* USER CODE END HardFault_IRQn 0 */
     while (1)
     {
@@ -90,7 +96,12 @@ void HardFault_Handler(void)
 void MemManage_Handler(void)
 {
     /* USER CODE BEGIN MemoryManagement_IRQn 0 */
-
+    // https://interrupt.memfault.com/blog/cortex-m-hardfault-debug#relevant-status-registers
+    uint32_t hfsr  = SCB->HFSR;
+    uint32_t cfsr  = SCB->CFSR;
+    uint32_t abfsr = 0U; // not used
+    uint32_t mmfar = SCB->MMFAR;
+    Reset_DoResetWithReason(RESET_REASON_MEM_MANAGE_FAULT, hfsr, cfsr, abfsr, mmfar);
     /* USER CODE END MemoryManagement_IRQn 0 */
     while (1)
     {
@@ -105,7 +116,12 @@ void MemManage_Handler(void)
 void BusFault_Handler(void)
 {
     /* USER CODE BEGIN BusFault_IRQn 0 */
-
+    // https://interrupt.memfault.com/blog/cortex-m-hardfault-debug
+    uint32_t hfsr  = SCB->HFSR;
+    uint32_t cfsr  = SCB->CFSR;
+    uint32_t abfsr = 0U; // not used
+    uint32_t mmfar = SCB->MMFAR;
+    Reset_DoResetWithReason(RESET_REASON_BUS_FAULT, hfsr, cfsr, abfsr, mmfar);
     /* USER CODE END BusFault_IRQn 0 */
     while (1)
     {
@@ -120,7 +136,12 @@ void BusFault_Handler(void)
 void UsageFault_Handler(void)
 {
     /* USER CODE BEGIN UsageFault_IRQn 0 */
-
+    // https://interrupt.memfault.com/blog/cortex-m-hardfault-debug
+    uint32_t hfsr  = SCB->HFSR;
+    uint32_t cfsr  = SCB->CFSR;
+    uint32_t abfsr = 0U; // not used
+    uint32_t mmfar = SCB->MMFAR;
+    Reset_DoResetWithReason(RESET_REASON_USAGE_FAULT, hfsr, cfsr, abfsr, mmfar);
     /* USER CODE END UsageFault_IRQn 0 */
     while (1)
     {
@@ -210,10 +231,10 @@ void I2C2_EV_IRQHandler(void)
     /* USER CODE BEGIN I2C2_EV_IRQn 0 */
     QK_ISR_ENTRY();
     HAL_I2C_EV_IRQHandler(STM32_GetI2CHandle(I2C_BUS_ID_2));
-    QK_ISR_EXIT();
     /* USER CODE END I2C2_EV_IRQn 0 */
+    // HAL_I2C_EV_IRQHandler(&hi2c2);
     /* USER CODE BEGIN I2C2_EV_IRQn 1 */
-
+    QK_ISR_EXIT();
     /* USER CODE END I2C2_EV_IRQn 1 */
 }
 
@@ -225,10 +246,10 @@ void I2C2_ER_IRQHandler(void)
     /* USER CODE BEGIN I2C2_ER_IRQn 0 */
     QK_ISR_ENTRY();
     HAL_I2C_ER_IRQHandler(STM32_GetI2CHandle(I2C_BUS_ID_2));
-    QK_ISR_EXIT();
     /* USER CODE END I2C2_ER_IRQn 0 */
+    // HAL_I2C_ER_IRQHandler(&hi2c2);
     /* USER CODE BEGIN I2C2_ER_IRQn 1 */
-
+    QK_ISR_EXIT();
     /* USER CODE END I2C2_ER_IRQn 1 */
 }
 
@@ -256,27 +277,5 @@ void USBWakeUp_IRQHandler(void)
 {
     tud_int_handler(0);
 }
-
-/**
- ***************************************************************************************************
- * @brief   I2C 2 Event
- **************************************************************************************************/
-// void I2C2_EV_IRQHandler(void)
-// {
-//     // QK_ISR_ENTRY();
-//     HAL_I2C_EV_IRQHandler(STM32_GetI2CHandle(I2C_BUS_ID_2));
-//     // QK_ISR_EXIT();
-// }
-
-// /**
-//  ***************************************************************************************************
-//  * @brief   I2C 2 Error
-//  **************************************************************************************************/
-// void I2C2_ER_IRQHandler(void)
-// {
-//     // QK_ISR_ENTRY();
-//     HAL_I2C_ER_IRQHandler(STM32_GetI2CHandle(I2C_BUS_ID_2));
-//     // QK_ISR_EXIT();
-// }
 
 /* USER CODE END 1 */

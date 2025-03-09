@@ -1,7 +1,7 @@
 #ifndef APP_CLI_H
 #define APP_CLI_H
 
-#include "interfaces/serial_io_interface.h"
+#include "interfaces/serial_interface.h"
 #include "qpc.h"
 
 void AppCLI_ctor(const Serial_IO_T *const serial_io_interface);

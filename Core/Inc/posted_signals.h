@@ -22,7 +22,6 @@ enum DispatchedSignals
     DISPATCHED_MAX_SIG
 };
 
-
 #define PRINT_EVENT_MAX_MSG_LENGTH 64
 
 typedef struct
@@ -33,5 +32,14 @@ typedef struct
     char msg[PRINT_EVENT_MAX_MSG_LENGTH];
 } PrintEvent_T;
 
+/**************************************************************************************************\
+* Debug/misc events
+\**************************************************************************************************/
+
+typedef struct
+{
+    QEvt super;
+    uint32_t desiredFault;
+} DebugForceFaultEvent_T;
 
 #endif // POSTED_SIGNALS_H_

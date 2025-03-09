@@ -3,6 +3,6 @@
 
 #include "embedded_cli.h"
 
-void AppCLI_AddCommandsToCLI(EmbeddedCli *cli);
+void CLI_AddCommands(EmbeddedCli *cli);
 
 #endif // APP_CLI_COMMANDS_H

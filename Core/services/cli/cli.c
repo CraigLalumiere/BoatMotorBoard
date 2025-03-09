@@ -53,8 +53,8 @@ void AppCLI_ctor(const Serial_IO_T *const serial_io_interface)
     EmbeddedCliConfig *config = embeddedCliDefaultConfig();
 
     // use static allocated buffer for CLI storage
-    config->cliBuffer = AppCLI_inst.cliBuffer;
-    config->cliBufferSize = CLI_BUFFER_SIZE;
+    config->cliBuffer       = AppCLI_inst.cliBuffer;
+    config->cliBufferSize   = CLI_BUFFER_SIZE;
     config->maxBindingCount = 60;
 
     // create an instance of CLI
@@ -102,42 +102,37 @@ static QState AppCLI_active(AppCLI *const me, QEvt const *const e)
     QState status;
     switch (e->sig)
     {
-    case Q_ENTRY_SIG:
-    {
-        status = Q_HANDLED();
-        break;
-    }
-    case APP_CLI_DATA_AVAILABLE_SIG:
-    {
-        uint8_t rx_byte;
-        while (AppCLI_inst.serial_io_interface->rx_func(&rx_byte, 1) == 1)
-        {
-            embeddedCliReceiveChar(me->cli, (char)rx_byte);
+        case Q_ENTRY_SIG: {
+            status = Q_HANDLED();
+            break;
         }
-        status = Q_HANDLED();
-        break;
-    }
-    case APP_CLI_PROCESS_TIMEOUT_SIG:
-    {
-        embeddedCliProcess(me->cli);
-        status = Q_HANDLED();
-        break;
-    }
+        case APP_CLI_DATA_AVAILABLE_SIG: {
+            uint8_t rx_byte;
+            while (AppCLI_inst.serial_io_interface->rx_func(&rx_byte, 1) == 1)
+            {
+                embeddedCliReceiveChar(me->cli, (char) rx_byte);
+            }
+            status = Q_HANDLED();
+            break;
+        }
+        case APP_CLI_PROCESS_TIMEOUT_SIG: {
+            embeddedCliProcess(me->cli);
+            status = Q_HANDLED();
+            break;
+        }
 
-    case POSTED_APP_CLI_PRINT_SIG:
-    {
-        const PrintEvent_T *printEvent = Q_EVT_CAST(PrintEvent_T);
-        embeddedCliPrint(me->cli, printEvent->msg);
-        embeddedCliPrint(me->cli, "\r\n");
-        status = Q_HANDLED();
-        break;
-    }
+        case POSTED_APP_CLI_PRINT_SIG: {
+            const PrintEvent_T *printEvent = Q_EVT_CAST(PrintEvent_T);
+            embeddedCliPrint(me->cli, printEvent->msg);
+            embeddedCliPrint(me->cli, "\r\n");
+            status = Q_HANDLED();
+            break;
+        }
 
-    default:
-    {
-        status = Q_SUPER(&QHsm_top);
-        break;
-    }
+        default: {
+            status = Q_SUPER(&QHsm_top);
+            break;
+        }
     }
     return status;
 }
@@ -152,7 +147,7 @@ static void DataReadyCB(void *cb_data)
     static QEvt const DataReadyEvent = QEVT_INITIALIZER(APP_CLI_DATA_AVAILABLE_SIG);
 
     // callback data was our 'me' pointer
-    QActive *me = (QActive *)cb_data;
+    QActive *me = (QActive *) cb_data;
 
     // send (post) the event to our CLI active object
     QACTIVE_POST(me, &DataReadyEvent, NULL);
@@ -160,8 +155,8 @@ static void DataReadyCB(void *cb_data)
 
 static void CLI_WriteChar(EmbeddedCli *embeddedCli, char c)
 {
-    (void)embeddedCli;
-    AppCLI_inst.serial_io_interface->tx_func((uint8_t *)&c, 1);
+    (void) embeddedCli;
+    AppCLI_inst.serial_io_interface->tx_func((uint8_t *) &c, 1);
 }
 
 // Function to encapsulate the 'embeddedCliPrint()' call with print formatting arguments (act like
