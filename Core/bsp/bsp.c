@@ -460,12 +460,6 @@ const Serial_IO_T *BSP_Get_Serial_IO_Interface_USB0()
     return &s_bsp_serial_io_usb0;
 }
 
-// PUTCHAR_PROTOTYPE
-// {
-//     /* Place your implementation of fputc here */
-//     /* e.g. write a character to the USART1 and Loop until the end of transmission */
-//     //  HAL_UART_Transmit(&huart1, (uint8_t *)&ch, 1, 0xFFFF);
-
 /**
  ***************************************************************************************************
  * @brief   EXTI callback, called by HAL IRQ handler

@@ -1,14 +1,14 @@
 
 
-OpenDocument="usbd.c", FilePath="//wsl.localhost/Ubuntu/home/clalumiere/Jobs/personal/BoatMotorBoard/library/tinyusb-0.17.0/src/device/usbd.c", Line=1309
+OpenDocument="usbd.c", FilePath="//wsl.localhost/Ubuntu/home/clalumiere/Jobs/personal/BoatMotorBoard/library/tinyusb-0.17.0/src/device/usbd.c", Line=963
 OpenDocument="main.c", FilePath="//wsl.localhost/Ubuntu/home/clalumiere/Jobs/personal/BoatMotorBoard/Core/Src/main.c", Line=156
 OpenDocument="dcd_stm32_fsdev.c", FilePath="//wsl.localhost/Ubuntu/home/clalumiere/Jobs/personal/BoatMotorBoard/library/tinyusb-0.17.0/src/portable/st/stm32_fsdev/dcd_stm32_fsdev.c", Line=304
 OpenDocument="stm32g4xx_it.c", FilePath="//wsl.localhost/Ubuntu/home/clalumiere/Jobs/personal/BoatMotorBoard/Core/Src/stm32g4xx_it.c", Line=63
 OpenDocument="startup_stm32g474cetx.s", FilePath="//wsl.localhost/Ubuntu/home/clalumiere/Jobs/personal/BoatMotorBoard/Core/bsp/device/startup_stm32g474cetx.s", Line=49
 OpenToolbar="Debug", Floating=0, x=0, y=0
-OpenWindow="Call Stack", DockArea=RIGHT, x=0, y=2, w=833, h=416, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
-OpenWindow="Disassembly", DockArea=RIGHT, x=0, y=0, w=833, h=201, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
-OpenWindow="Local Data", DockArea=RIGHT, x=0, y=1, w=833, h=142, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Call Stack", DockArea=RIGHT, x=0, y=2, w=833, h=406, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Disassembly", DockArea=RIGHT, x=0, y=0, w=833, h=204, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Local Data", DockArea=RIGHT, x=0, y=1, w=833, h=149, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
 OpenWindow="Console", DockArea=BOTTOM, x=0, y=0, w=1920, h=189, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
 SmartViewPlugin="", Page="", Toolbar="Hidden", Window="SmartView 1"
 TableHeader="Local Data", SortCol="Name", SortOrder="ASCENDING", VisibleCols=["Name";"Value";"Location";"Size";"Type";"Scope"], ColWidths=[168;212;100;100;238;100]
