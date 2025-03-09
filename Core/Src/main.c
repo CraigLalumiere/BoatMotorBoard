@@ -30,6 +30,7 @@
 #include "posted_signals.h"
 #include "pressure_sensor.h"
 #include "qpc.h"
+#include "reset.h"
 #include "shared_i2c_events.h"
 #include "tusb.h"
 #include "usb.h"
@@ -167,7 +168,8 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *UartHandle)
 int main(void)
 {
     /* USER CODE BEGIN 1 */
-
+    Reset_Init();
+    QF_init(); // initialize the framework and the underlying RT kernel
     /* USER CODE END 1 */
 
     /* MCU Configuration--------------------------------------------------------*/
@@ -215,7 +217,6 @@ int main(void)
     //   Error_Handler();
     // }
 
-    QF_init(); // initialize the framework and the underlying RT kernel
     BSP_Init();
 
     // initialize event pools

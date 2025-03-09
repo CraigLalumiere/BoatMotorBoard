@@ -4,7 +4,7 @@
 *                         www.segger.com                             *
 **********************************************************************
 
-File          : C:/Data/Jobs/Personal/BoatMotorSTM32/BoatMotorSTM32.jdebug
+File          : //wsl.localhost/Ubuntu/home/clalumiere/Jobs/personal/BoatMotorBoard/BoatMotorSTM32.jdebug
 Created       : 3 Dec 2024 19:53
 Ozone Version : V3.34
 */
@@ -22,8 +22,8 @@ void OnProjectLoad (void) {
   //
   // Dialog-generated settings
   //
-  Project.AddPathSubstitute ("C:/Data/Jobs/Personal/BoatMotorSTM32", "$(ProjectDir)");
-  Project.AddPathSubstitute ("c:/data/jobs/personal/boatmotorstm32", "$(ProjectDir)");
+  Project.AddPathSubstitute ("workspaces/BoatMotorBoard", "$(ProjectDir)");
+  Project.AddPathSubstitute ("workspaces/BoatMotorBoard", "$(ProjectDir)");
   Project.SetDevice ("STM32G474CE");
   Project.SetHostIF ("USB", "");
   Project.SetTargetIF ("SWD");
@@ -32,7 +32,7 @@ void OnProjectLoad (void) {
   //
   // User settings
   //
-  File.Open ("$(ProjectDir)/build/Debug/CubeMX.elf");
+  File.Open ("$(ProjectDir)/build/Debug/BoatMotorBoard.elf");
 }
 
 /*********************************************************************

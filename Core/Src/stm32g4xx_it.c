@@ -23,6 +23,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "i2c_bus_stm32.h"
+#include "qpc.h"
 #include "tusb.h"
 /* USER CODE END Includes */
 
