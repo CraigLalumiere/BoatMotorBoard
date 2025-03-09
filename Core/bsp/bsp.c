@@ -23,7 +23,7 @@ Q_DEFINE_THIS_MODULE("bsp.c")
 #define USB_INTERFACE_PC_COM                1
 #define SHARED_I2C_BUS_2_DEFERRED_QUEUE_LEN 3
 
-#define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
+// #define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
 
 /**************************************************************************************************\
 * Private type definitions
@@ -103,8 +103,9 @@ static SharedI2C_T SharedI2C_Bus2;
 const QActive *AO_SharedI2C2 = &(SharedI2C_Bus2.super); // externally available
 QEvt const *i2c_bus_2_deferred_queue_storage[SHARED_I2C_BUS_2_DEFERRED_QUEUE_LEN];
 
-extern ADC_HandleTypeDef hadc2;  // defined in main.c by cubeMX
-extern TIM_HandleTypeDef htim15; // defined in main.c by cubeMX
+extern ADC_HandleTypeDef hadc2;   // defined in main.c by cubeMX
+extern TIM_HandleTypeDef htim15;  // defined in main.c by cubeMX
+extern UART_HandleTypeDef huart2; // defined in main.c by cubeMX
 
 static bool input_capture_found;
 
@@ -228,6 +229,28 @@ void BSP_Init_I2C(void)
 //............................................................................
 void BSP_Init(void)
 {
+    // initialize TinyUSB device stack on configured roothub port
+    tud_init(BOARD_TUD_RHPORT);
+
+    /**************************************************************************************************\
+    * Init TIM15 for tach input capture
+    \**************************************************************************************************/
+
+    // TIM15 is prescaled to 16Mhz/(7+1)=2Mhz, or 0.5 microsecond per tick
+    __HAL_TIM_CLEAR_FLAG(&htim15, TIM_FLAG_UPDATE);
+    HAL_TIM_IC_Start_IT(&htim15, TIM_CHANNEL_1); // input capture timer
+    __HAL_TIM_ENABLE_IT(&htim15, TIM_IT_UPDATE);
+
+    /**************************************************************************************************\
+    * Init UART2
+    \**************************************************************************************************/
+    /* Flush the data registers from unexpected data */
+    __HAL_UART_FLUSH_DRREGISTER(&huart2);
+    // if (HAL_UART_Receive_IT(&huart2, (uint8_t *)&rx_byte, 1) != HAL_OK)
+    // {
+    //   Error_Handler();
+    // }
+
     // Initialize I2C buses
     BSP_Init_I2C();
 
@@ -236,9 +259,6 @@ void BSP_Init(void)
         I2C_BUS_ID_2,
         i2c_bus_2_deferred_queue_storage,
         SHARED_I2C_BUS_2_DEFERRED_QUEUE_LEN);
-
-    // initialize TinyUSB device stack on configured roothub port
-    tud_init(BOARD_TUD_RHPORT);
 }
 void BSP_LED_On()
 {
@@ -491,17 +511,17 @@ const Serial_IO_T *BSP_Get_Serial_IO_Interface_USB1()
     return &s_bsp_serial_io_usb1;
 }
 
-PUTCHAR_PROTOTYPE
-{
-    /* Place your implementation of fputc here */
-    /* e.g. write a character to the USART1 and Loop until the end of transmission */
-    //  HAL_UART_Transmit(&huart1, (uint8_t *)&ch, 1, 0xFFFF);
+// PUTCHAR_PROTOTYPE
+// {
+//     /* Place your implementation of fputc here */
+//     /* e.g. write a character to the USART1 and Loop until the end of transmission */
+//     //  HAL_UART_Transmit(&huart1, (uint8_t *)&ch, 1, 0xFFFF);
 
-    tud_cdc_n_write(USB_INTERFACE_PC_COM, (uint8_t *) &ch, 1);
-    tud_cdc_n_write_flush(USB_INTERFACE_PC_COM);
+//     tud_cdc_n_write(USB_INTERFACE_PC_COM, (uint8_t *) &ch, 1);
+//     tud_cdc_n_write_flush(USB_INTERFACE_PC_COM);
 
-    return ch;
-}
+//     return ch;
+// }
 
 /**
  ***************************************************************************************************

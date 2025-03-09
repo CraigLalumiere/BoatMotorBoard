@@ -1,17 +1,14 @@
 
 
-OpenDocument="fsdev_stm32.h", FilePath="//wsl.localhost/Ubuntu/home/clalumiere/Jobs/personal/BoatMotorBoard/library/tinyusb-0.17.0/src/portable/st/stm32_fsdev/fsdev_stm32.h", Line=252
-OpenDocument="core_cm4.h", FilePath="//wsl.localhost/Ubuntu/home/clalumiere/Jobs/personal/BoatMotorBoard/Drivers/CMSIS/Include/core_cm4.h", Line=1663
-OpenDocument="startup_stm32g474cetx.s", FilePath="//wsl.localhost/Ubuntu/home/clalumiere/Jobs/personal/BoatMotorBoard/Core/bsp/device/startup_stm32g474cetx.s", Line=49
-OpenDocument="dcd_stm32_fsdev.c", FilePath="//wsl.localhost/Ubuntu/home/clalumiere/Jobs/personal/BoatMotorBoard/library/tinyusb-0.17.0/src/portable/st/stm32_fsdev/dcd_stm32_fsdev.c", Line=304
-OpenDocument="stm32g4xx_hal_i2c.c", FilePath="//wsl.localhost/Ubuntu/home/clalumiere/Jobs/personal/BoatMotorBoard/Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_i2c.c", Line=4963
-OpenDocument="i2c_bus_stm32.c", FilePath="//wsl.localhost/Ubuntu/home/clalumiere/Jobs/personal/BoatMotorBoard/Core/bsp/i2c_bus_stm32.c", Line=0
-OpenDocument="stm32g4xx_it.c", FilePath="//wsl.localhost/Ubuntu/home/clalumiere/Jobs/personal/BoatMotorBoard/Core/Src/stm32g4xx_it.c", Line=63
+OpenDocument="usbd.c", FilePath="//wsl.localhost/Ubuntu/home/clalumiere/Jobs/personal/BoatMotorBoard/library/tinyusb-0.17.0/src/device/usbd.c", Line=1309
 OpenDocument="main.c", FilePath="//wsl.localhost/Ubuntu/home/clalumiere/Jobs/personal/BoatMotorBoard/Core/Src/main.c", Line=156
+OpenDocument="dcd_stm32_fsdev.c", FilePath="//wsl.localhost/Ubuntu/home/clalumiere/Jobs/personal/BoatMotorBoard/library/tinyusb-0.17.0/src/portable/st/stm32_fsdev/dcd_stm32_fsdev.c", Line=304
+OpenDocument="stm32g4xx_it.c", FilePath="//wsl.localhost/Ubuntu/home/clalumiere/Jobs/personal/BoatMotorBoard/Core/Src/stm32g4xx_it.c", Line=63
+OpenDocument="startup_stm32g474cetx.s", FilePath="//wsl.localhost/Ubuntu/home/clalumiere/Jobs/personal/BoatMotorBoard/Core/bsp/device/startup_stm32g474cetx.s", Line=49
 OpenToolbar="Debug", Floating=0, x=0, y=0
-OpenWindow="Call Stack", DockArea=RIGHT, x=0, y=2, w=833, h=409, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
-OpenWindow="Disassembly", DockArea=RIGHT, x=0, y=0, w=833, h=204, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
-OpenWindow="Local Data", DockArea=RIGHT, x=0, y=1, w=833, h=146, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Call Stack", DockArea=RIGHT, x=0, y=2, w=833, h=416, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Disassembly", DockArea=RIGHT, x=0, y=0, w=833, h=201, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Local Data", DockArea=RIGHT, x=0, y=1, w=833, h=142, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
 OpenWindow="Console", DockArea=BOTTOM, x=0, y=0, w=1920, h=189, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
 SmartViewPlugin="", Page="", Toolbar="Hidden", Window="SmartView 1"
 TableHeader="Local Data", SortCol="Name", SortOrder="ASCENDING", VisibleCols=["Name";"Value";"Location";"Size";"Type";"Scope"], ColWidths=[168;212;100;100;238;100]

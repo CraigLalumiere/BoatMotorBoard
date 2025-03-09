@@ -324,23 +324,16 @@ int main(void)
         (void *) 0);         // no initialization param
 
     return QF_run(); // run the QF application
-    /* USER CODE END 2 */
+                     /* USER CODE END 2 */
 
     /* Infinite loop */
     /* USER CODE BEGIN WHILE */
-    while (1)
-    {
-        //	  tud_task();
-        //	  cdc_task();
-        //	  printf("Hello World\n\r");
-        //	  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_7, 1);
-        //	  HAL_Delay(500);
-        //	  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_7, 0);
-        //	  HAL_Delay(500);
-        /* USER CODE END WHILE */
+    // while (1)
+    // {
+    /* USER CODE END WHILE */
 
-        /* USER CODE BEGIN 3 */
-    }
+    /* USER CODE BEGIN 3 */
+
     /* USER CODE END 3 */
 }
 
