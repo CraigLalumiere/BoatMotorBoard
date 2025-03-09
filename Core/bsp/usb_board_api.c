@@ -1,11 +1,6 @@
 #include "usb_board_api.h"
 #include "stm32g4xx.h"
 
-uint32_t board_millis(void)
-{
-    return HAL_GetTick();
-}
-
 size_t board_get_unique_id(uint8_t id[], size_t max_len)
 {
     (void) max_len;

@@ -23,8 +23,6 @@ Q_DEFINE_THIS_MODULE("bsp.c")
 #define USB_INTERFACE_PC_COM                1
 #define SHARED_I2C_BUS_2_DEFERRED_QUEUE_LEN 3
 
-#define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
-
 /**************************************************************************************************\
 * Private type definitions
 \**************************************************************************************************/
@@ -262,13 +260,11 @@ void BSP_Init(void)
 }
 void BSP_LED_On()
 {
-    printf("LED on\n\r");
     HAL_GPIO_WritePin(FW_LED_GPIO_Port, FW_LED_Pin, 1);
 }
 //............................................................................
 void BSP_LED_Off()
 {
-    printf("LED off\n\r");
     HAL_GPIO_WritePin(FW_LED_GPIO_Port, FW_LED_Pin, 0);
 }
 //............................................................................
@@ -510,18 +506,6 @@ const Serial_IO_T *BSP_Get_Serial_IO_Interface_USB0()
 const Serial_IO_T *BSP_Get_Serial_IO_Interface_USB1()
 {
     return &s_bsp_serial_io_usb1;
-}
-
-PUTCHAR_PROTOTYPE
-{
-    /* Place your implementation of fputc here */
-    /* e.g. write a character to the USART1 and Loop until the end of transmission */
-    //  HAL_UART_Transmit(&huart1, (uint8_t *)&ch, 1, 0xFFFF);
-
-    tud_cdc_n_write(USB_INTERFACE_PC_COM, (uint8_t *) &ch, 1);
-    tud_cdc_n_write_flush(USB_INTERFACE_PC_COM);
-
-    return ch;
 }
 
 /**
