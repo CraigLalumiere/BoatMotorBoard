@@ -11,7 +11,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 #
 # Core project settings
 #
-project(NUCLEO-G474-example)
+project(BoatMotorBoard)
 enable_language(C ASM)
 
 message("Build type: " ${CMAKE_BUILD_TYPE})

@@ -23,6 +23,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "i2c_bus_stm32.h"
+#include "qpc.h"
 #include "tusb.h"
 /* USER CODE END Includes */
 
@@ -168,7 +169,6 @@ void USB_HP_IRQHandler(void)
 {
     /* USER CODE BEGIN USB_HP_IRQn 0 */
     tud_int_handler(0);
-    QK_ARM_ERRATUM_838869();
     /* USER CODE END USB_HP_IRQn 0 */
     /* USER CODE BEGIN USB_HP_IRQn 1 */
 
@@ -182,7 +182,6 @@ void USB_LP_IRQHandler(void)
 {
     /* USER CODE BEGIN USB_LP_IRQn 0 */
     tud_int_handler(0);
-    QK_ARM_ERRATUM_838869();
     /* USER CODE END USB_LP_IRQn 0 */
     /* USER CODE BEGIN USB_LP_IRQn 1 */
 
@@ -256,7 +255,6 @@ void USART2_IRQHandler(void)
 void USBWakeUp_IRQHandler(void)
 {
     tud_int_handler(0);
-    QK_ARM_ERRATUM_838869();
 }
 
 /**

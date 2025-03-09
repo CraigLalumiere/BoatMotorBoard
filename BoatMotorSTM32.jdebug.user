@@ -1,22 +1,21 @@
 
 
-OpenDocument="qf_dyn.c", FilePath="C:/Data/Jobs/Personal/STM32/BoatMotorSTM32/Middlewares/Third_Party/QuantumLeaps_RTEF_qpc/src/qf/qf_dyn.c", Line=125
-OpenDocument="pressure_sensor.c", FilePath="C:/Data/Jobs/Personal/STM32/BoatMotorSTM32/Core/Src/pressure_sensor.c", Line=188
-OpenDocument="stm32g4xx_hal_tim.c", FilePath="C:/Data/Jobs/Personal/STM32/BoatMotorSTM32/Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_tim.c", Line=3941
-OpenDocument="stm32g4xx_hal_uart.c", FilePath="C:/Data/Jobs/Personal/STM32/BoatMotorSTM32/Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_uart.c", Line=2522
-OpenDocument="startup_stm32g474xx.s", FilePath="C:/Data/Jobs/Personal/STM32/BoatMotorSTM32/startup_stm32g474xx.s", Line=45
-OpenDocument="data_manager.c", FilePath="C:/Data/Jobs/Personal/STM32/BoatMotorSTM32/Core/Src/data_manager.c", Line=157
-OpenDocument="stm32g4xx_it.c", FilePath="C:/Data/Jobs/Personal/STM32/BoatMotorSTM32/Core/Src/stm32g4xx_it.c", Line=221
-OpenDocument="bsp.c", FilePath="C:/Data/Jobs/Personal/STM32/BoatMotorSTM32/Core/bsp/drivers/bsp.c", Line=588
-OpenDocument="main.c", FilePath="C:/Data/Jobs/Personal/STM32/BoatMotorSTM32/Core/Src/main.c", Line=153
+OpenDocument="", FilePath="", Line=0
+OpenDocument="main.c", FilePath="//wsl.localhost/Ubuntu/home/clalumiere/Jobs/personal/BoatMotorBoard/Core/Src/main.c", Line=155
+OpenDocument="main.c", FilePath="//wsl.localhost/Ubuntu/home/clalumiere/Jobs/personal/BoatMotorBoard/Core/Src/main.c", Line=155
+OpenDocument="", FilePath="", Line=0
+OpenDocument="", FilePath="", Line=0
+OpenDocument="", FilePath="", Line=0
+OpenDocument="", FilePath="", Line=0
+OpenDocument="", FilePath="", Line=0
 OpenToolbar="Debug", Floating=0, x=0, y=0
-OpenWindow="Call Stack", DockArea=RIGHT, x=0, y=2, w=833, h=433, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
-OpenWindow="Disassembly", DockArea=RIGHT, x=0, y=0, w=833, h=428, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
-OpenWindow="Local Data", DockArea=RIGHT, x=0, y=1, w=833, h=236, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
-OpenWindow="Console", DockArea=BOTTOM, x=0, y=0, w=2560, h=189, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Call Stack", DockArea=RIGHT, x=0, y=2, w=833, h=286, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Disassembly", DockArea=RIGHT, x=0, y=0, w=833, h=283, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Local Data", DockArea=RIGHT, x=0, y=1, w=833, h=190, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Console", DockArea=BOTTOM, x=0, y=0, w=1920, h=189, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
 SmartViewPlugin="", Page="", Toolbar="Hidden", Window="SmartView 1"
-TableHeader="Local Data", SortCol="Name", SortOrder="ASCENDING", VisibleCols=["Name";"Value";"Location";"Size";"Type";"Scope"], ColWidths=[168;212;100;100;238;266]
+TableHeader="Local Data", SortCol="Name", SortOrder="ASCENDING", VisibleCols=["Name";"Value";"Location";"Size";"Type";"Scope"], ColWidths=[168;212;100;100;238;100]
 TableHeader="Call Stack", SortCol="Function", SortOrder="ASCENDING", VisibleCols=["Function";"Stack Frame";"Source";"PC";"Return Address";"Stack Used"], ColWidths=[249;112;100;100;168;104]
 TableHeader="Power Sampling", SortCol="None", SortOrder="ASCENDING", VisibleCols=["Index";"Time";"Ch 0"], ColWidths=[100;100;100]
 TableHeader="RegisterSelectionDialog", SortCol="None", SortOrder="ASCENDING", VisibleCols=[], ColWidths=[]
-TableHeader="TargetExceptionDialog", SortCol="Name", SortOrder="ASCENDING", VisibleCols=["Name";"Value";"Address";"Description"], ColWidths=[27;137;146;843]
+TableHeader="TargetExceptionDialog", SortCol="Name", SortOrder="ASCENDING", VisibleCols=["Name";"Value";"Address";"Description"], ColWidths=[27;137;146;851]

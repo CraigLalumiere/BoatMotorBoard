@@ -103,8 +103,9 @@ static SharedI2C_T SharedI2C_Bus2;
 const QActive *AO_SharedI2C2 = &(SharedI2C_Bus2.super); // externally available
 QEvt const *i2c_bus_2_deferred_queue_storage[SHARED_I2C_BUS_2_DEFERRED_QUEUE_LEN];
 
-extern ADC_HandleTypeDef hadc2;  // defined in main.c by cubeMX
-extern TIM_HandleTypeDef htim15; // defined in main.c by cubeMX
+extern ADC_HandleTypeDef hadc2;   // defined in main.c by cubeMX
+extern TIM_HandleTypeDef htim15;  // defined in main.c by cubeMX
+extern UART_HandleTypeDef huart2; // defined in main.c by cubeMX
 
 static bool input_capture_found;
 
@@ -228,6 +229,28 @@ void BSP_Init_I2C(void)
 //............................................................................
 void BSP_Init(void)
 {
+    // initialize TinyUSB device stack on configured roothub port
+    tud_init(BOARD_TUD_RHPORT);
+
+    /**************************************************************************************************\
+    * Init TIM15 for tach input capture
+    \**************************************************************************************************/
+
+    // TIM15 is prescaled to 16Mhz/(7+1)=2Mhz, or 0.5 microsecond per tick
+    __HAL_TIM_CLEAR_FLAG(&htim15, TIM_FLAG_UPDATE);
+    HAL_TIM_IC_Start_IT(&htim15, TIM_CHANNEL_1); // input capture timer
+    __HAL_TIM_ENABLE_IT(&htim15, TIM_IT_UPDATE);
+
+    /**************************************************************************************************\
+    * Init UART2
+    \**************************************************************************************************/
+    /* Flush the data registers from unexpected data */
+    __HAL_UART_FLUSH_DRREGISTER(&huart2);
+    // if (HAL_UART_Receive_IT(&huart2, (uint8_t *)&rx_byte, 1) != HAL_OK)
+    // {
+    //   Error_Handler();
+    // }
+
     // Initialize I2C buses
     BSP_Init_I2C();
 
@@ -236,9 +259,6 @@ void BSP_Init(void)
         I2C_BUS_ID_2,
         i2c_bus_2_deferred_queue_storage,
         SHARED_I2C_BUS_2_DEFERRED_QUEUE_LEN);
-
-    // initialize TinyUSB device stack on configured roothub port
-    tud_init(BOARD_TUD_RHPORT);
 }
 void BSP_LED_On()
 {
@@ -448,9 +468,10 @@ static I2C_Return_T BSP_I2C_Read_SSD1306(
     I2C_Error_Callback error_cb,
     void *cb_data)
 {
-    return I2C_Bus_Read(I2C_BUS_ID_2, address, rx_buffer, data_len, complete_cb, error_cb, cb_data);
-    // return SharedI2C_Read(
-    //     &SharedI2C_Bus2, address, rx_buffer, data_len, complete_cb, error_cb, cb_data);
+    // return I2C_Bus_Read(I2C_BUS_ID_2, address, rx_buffer, data_len, complete_cb, error_cb,
+    // cb_data);
+    return SharedI2C_Read(
+        &SharedI2C_Bus2, address, rx_buffer, data_len, complete_cb, error_cb, cb_data);
 }
 
 static I2C_Return_T BSP_I2C_Write_Pressure(

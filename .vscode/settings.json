@@ -23,7 +23,9 @@
         "shared_i2c.h": "c",
         "tusb_common.h": "c",
         "i2c_bus.h": "c",
-        "cli.h": "c"
+        "cli.h": "c",
+        "i2c_bus_stm32.h": "c",
+        "reset.h": "c"
     },
     "editor.rulers": [
         100
