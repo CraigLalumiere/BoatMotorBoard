@@ -25,3 +25,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     capture_event->num          = 0;
     QACTIVE_PUBLISH(&capture_event->super, &me->super);
 }
+
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
+{
+    UNUSED(huart);
+
+    static QEvt const event = QEVT_INITIALIZER(PUBSUB_UART_COMPLETE_SIG);
+    QACTIVE_PUBLISH(&event, &me->super);
+}

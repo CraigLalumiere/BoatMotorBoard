@@ -260,11 +260,11 @@ void I2C2_ER_IRQHandler(void)
 void USART2_IRQHandler(void)
 {
     /* USER CODE BEGIN USART2_IRQn 0 */
-
+    QK_ISR_ENTRY();
     /* USER CODE END USART2_IRQn 0 */
     HAL_UART_IRQHandler(&huart2);
     /* USER CODE BEGIN USART2_IRQn 1 */
-    QK_ARM_ERRATUM_838869();
+    QK_ISR_EXIT();
     /* USER CODE END USART2_IRQn 1 */
 }
 
