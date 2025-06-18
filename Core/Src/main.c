@@ -315,21 +315,20 @@ void SystemClock_Config(void)
 
     /** Configure the main internal regulator output voltage
      */
-    HAL_PWREx_ControlVoltageScaling(PWR_REGULATOR_VOLTAGE_SCALE1_BOOST);
+    HAL_PWREx_ControlVoltageScaling(PWR_REGULATOR_VOLTAGE_SCALE1);
 
     /** Initializes the RCC Oscillators according to the specified parameters
      * in the RCC_OscInitTypeDef structure.
      */
-    RCC_OscInitStruct.OscillatorType      = RCC_OSCILLATORTYPE_HSI | RCC_OSCILLATORTYPE_HSI48;
+    RCC_OscInitStruct.OscillatorType      = RCC_OSCILLATORTYPE_HSI;
     RCC_OscInitStruct.HSIState            = RCC_HSI_ON;
     RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
-    RCC_OscInitStruct.HSI48State          = RCC_HSI48_ON;
     RCC_OscInitStruct.PLL.PLLState        = RCC_PLL_ON;
     RCC_OscInitStruct.PLL.PLLSource       = RCC_PLLSOURCE_HSI;
-    RCC_OscInitStruct.PLL.PLLM            = RCC_PLLM_DIV2;
-    RCC_OscInitStruct.PLL.PLLN            = 42;
-    RCC_OscInitStruct.PLL.PLLP            = RCC_PLLP_DIV2;
-    RCC_OscInitStruct.PLL.PLLQ            = RCC_PLLQ_DIV2;
+    RCC_OscInitStruct.PLL.PLLM            = RCC_PLLM_DIV1;
+    RCC_OscInitStruct.PLL.PLLN            = 18;
+    RCC_OscInitStruct.PLL.PLLP            = RCC_PLLP_DIV5;
+    RCC_OscInitStruct.PLL.PLLQ            = RCC_PLLQ_DIV6;
     RCC_OscInitStruct.PLL.PLLR            = RCC_PLLR_DIV2;
     if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
     {
@@ -423,7 +422,7 @@ static void MX_I2C2_Init(void)
 
     /* USER CODE END I2C2_Init 1 */
     hi2c2.Instance              = I2C2;
-    hi2c2.Init.Timing           = 0x50916E9F;
+    hi2c2.Init.Timing           = 0x60715075;
     hi2c2.Init.OwnAddress1      = 0;
     hi2c2.Init.AddressingMode   = I2C_ADDRESSINGMODE_7BIT;
     hi2c2.Init.DualAddressMode  = I2C_DUALADDRESS_DISABLE;
