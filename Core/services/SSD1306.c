@@ -24,7 +24,7 @@ Q_DEFINE_THIS_MODULE("SSD1306")
 \**************************************************************************************************/
 
 #define OLED_FPS             30
-#define COLOR_CHANGE_SECONDS 5
+#define COLOR_CHANGE_SECONDS 30
 
 #define FAULT_STR_LEN 512
 
@@ -508,7 +508,11 @@ static QState update_screen(SSD1306 *const me, QEvt const *const e)
             char print_buffer[32] = {0};
 
             snprintf(
-                print_buffer, sizeof(print_buffer), "%d.%.2dV", me->vbat / 100, me->vbat % 100);
+                print_buffer,
+                sizeof(print_buffer),
+                "%d.%.2dV",
+                me->vbat / 100,
+                abs(me->vbat % 100));
 
             ssd1306_SetCursor(0, 0);
             ssd1306_WriteString(print_buffer, Font_7x10, me->text_color);
@@ -536,9 +540,9 @@ static QState update_screen(SSD1306 *const me, QEvt const *const e)
                 sizeof(print_buffer),
                 "%d.%.2dC   %d.%.2d PSI",
                 me->temperature / 100,
-                me->temperature % 100,
+                abs(me->temperature % 100),
                 me->pressure / 100,
-                me->pressure % 100);
+                abs(me->pressure % 100));
             ssd1306_SetCursor(0, 12);
             ssd1306_WriteString(print_buffer, Font_7x10, me->text_color);
 

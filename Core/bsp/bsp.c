@@ -18,6 +18,7 @@ Q_DEFINE_THIS_MODULE("bsp.c")
 
 #define USB_INTERFACE                       0
 #define SHARED_I2C_BUS_2_DEFERRED_QUEUE_LEN 3
+#define AVREF                               2.9
 
 /**************************************************************************************************\
 * Private type definitions
@@ -190,7 +191,9 @@ uint16_t BSP_ADC_Read_VBAT(void)
     uint32_t raw_adc = HAL_ADC_GetValue(&hadc2);
     HAL_ADC_Start(&hadc2); // a bit hacky, but start the next conversion
     // Multiplier is 4.6 nominally, but the actual value seems to be 4.3
-    float hv_sense = raw_adc / 4096. * 4.3 * 100; // return hundredths of volts
+    float hv_sense = raw_adc * AVREF / 4096. * 4.6 * 100; // return hundredths of volts
+    // calibration scale & offset
+    hv_sense = 1.08992 * hv_sense + 1.0109;
     return (uint16_t) hv_sense;
 }
 
@@ -327,11 +330,11 @@ void BSP_Init(void)
     // initialize TinyUSB device stack on configured roothub port
     tud_init(BOARD_TUD_RHPORT);
 
-    /**************************************************************************************************\
+    /**********************************************************************************P****************\
     * Init TIM15 for tach input capture
     \**************************************************************************************************/
 
-    // TIM15 is prescaled to 16Mhz/(7+1)=2Mhz, or 0.5 microsecond per tick
+    // TIM15 is prescaled to 144Mhz/(71+1)=2Mhz, or 0.5 microsecond per tick
     __HAL_TIM_CLEAR_FLAG(&htim15, TIM_FLAG_UPDATE);
     HAL_TIM_IC_Start_IT(&htim15, TIM_CHANNEL_1); // input capture timer
     __HAL_TIM_ENABLE_IT(&htim15, TIM_IT_UPDATE);

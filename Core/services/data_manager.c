@@ -14,6 +14,8 @@ Q_DEFINE_THIS_MODULE("Data Manager")
 * Private macros
 \**************************************************************************************************/
 
+#define TACH_LAMBDA 0.9
+
 /**************************************************************************************************\
 * Private type definitions
 \**************************************************************************************************/
@@ -30,7 +32,7 @@ typedef struct
 
     int16_t pressure;
     int16_t temperature;
-    int16_t tachometer;
+    float tachometer;
 
     UART_HandleTypeDef *p_huart;
 } DataManager;
@@ -120,8 +122,8 @@ static QState top(DataManager *const me, QEvt const *const e)
             break;
         }
         case PUBSUB_TACH_SIG: {
-            const Int16Event_T *event = Q_EVT_CAST(Int16Event_T);
-            me->tachometer            = event->num;
+            const FloatEvent_T *event = Q_EVT_CAST(FloatEvent_T);
+            me->tachometer = TACH_LAMBDA * me->tachometer + (1 - TACH_LAMBDA) * event->num;
             BSP_Tach_Capture_Timer_Enable();
             status = Q_HANDLED();
             break;
@@ -164,7 +166,7 @@ static QState running(DataManager *const me, QEvt const *const e)
             event->vbat             = vbat_voltage;
             event->temperature      = me->temperature;
             event->pressure         = me->pressure;
-            event->tachometer       = me->tachometer;
+            event->tachometer       = (uint16_t) me->tachometer;
             QACTIVE_PUBLISH(&event->super, &me->super);
 
             static char printBuffer[32];
@@ -174,7 +176,7 @@ static QState running(DataManager *const me, QEvt const *const e)
                 "P%d\r\nT%d\r\nR%d\r\n",
                 me->pressure,
                 me->temperature,
-                me->tachometer);
+                (int) me->tachometer);
             HAL_UART_Transmit_IT(me->p_huart, (uint8_t *) printBuffer, sizeof(printBuffer));
 
             status = Q_TRAN(&waitingForUart);

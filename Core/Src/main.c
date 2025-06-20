@@ -521,7 +521,7 @@ static void MX_TIM15_Init(void)
 
     /* USER CODE END TIM15_Init 1 */
     htim15.Instance               = TIM15;
-    htim15.Init.Prescaler         = 7;
+    htim15.Init.Prescaler         = 71;
     htim15.Init.CounterMode       = TIM_COUNTERMODE_UP;
     htim15.Init.Period            = 65535;
     htim15.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;

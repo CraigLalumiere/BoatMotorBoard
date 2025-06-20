@@ -12,6 +12,8 @@ Q_DEFINE_THIS_MODULE("LMT01")
 * Private macros
 \**************************************************************************************************/
 
+#define LAMBDA 0.95
+
 /**************************************************************************************************\
 * Private type definitions
 \**************************************************************************************************/
@@ -60,6 +62,8 @@ void LMT01_ctor()
     QActive_ctor(&me->super, Q_STATE_CAST(&initial));
     QTimeEvt_ctorX(&me->timer_evt, &me->super, WAIT_TIMEOUT_SIG, 0U);
 
+    me->temperature = -999;
+
     // Start the pulse-counter timer
     HAL_TIM_Base_Start_IT(&htim8);
 }
@@ -77,10 +81,7 @@ static QState initial(LMT01 *const me, void const *const par)
     Q_UNUSED_PAR(par);
 
     // Conversion time of the LMT01 should be under 54ms
-    QTimeEvt_armX(
-        &me->timer_evt,
-        BSP_TICKS_PER_SEC / 100,
-        BSP_TICKS_PER_SEC / 100);
+    QTimeEvt_armX(&me->timer_evt, BSP_TICKS_PER_SEC / 100, BSP_TICKS_PER_SEC / 100);
 
     return Q_TRAN(&running);
 }
@@ -91,33 +92,41 @@ static QState running(LMT01 *const me, QEvt const *const e)
 
     switch (e->sig)
     {
-    case Q_ENTRY_SIG:
-    {
-        status = Q_HANDLED();
-        break;
-    }
-    case WAIT_TIMEOUT_SIG:
-    {
-        uint16_t prev_counter = me->lmt01_counter;
-        me->lmt01_counter = __HAL_TIM_GET_COUNTER(&htim8);
-
-        if (prev_counter > 0 && prev_counter == me->lmt01_counter) {
-            __HAL_TIM_SET_COUNTER(&htim8, 0);
-            me->temperature = (me->lmt01_counter * 6.25) - 5000; // temperature in hundredths of degrees
-            
-            Int16Event_T *event = Q_NEW(
-                Int16Event_T, PUBSUB_TEMPERATURE_SIG);
-            event->num = (int16_t) me->temperature;
-            QACTIVE_PUBLISH(&event->super, &me->super);
+        case Q_ENTRY_SIG: {
+            status = Q_HANDLED();
+            break;
         }
-        status = Q_HANDLED();
-        break;
-    }
-    default:
-    {
-        status = Q_SUPER(&QHsm_top);
-        break;
-    }
+        case WAIT_TIMEOUT_SIG: {
+            uint16_t prev_counter = me->lmt01_counter;
+            me->lmt01_counter     = __HAL_TIM_GET_COUNTER(&htim8);
+
+            if (prev_counter > 0 && prev_counter == me->lmt01_counter)
+            {
+                __HAL_TIM_SET_COUNTER(&htim8, 0); // reset the timer
+
+                // deglitching
+                if (me->lmt01_counter > 10)
+                {
+                    int16_t new_temperature = (me->lmt01_counter * 6.25) -
+                        5000; // temperature in hundredths of degrees
+
+                    if (me->temperature == -999)
+                        me->temperature = new_temperature;
+                    else
+                        me->temperature = LAMBDA * me->temperature + (1 - LAMBDA) * new_temperature;
+
+                    Int16Event_T *event = Q_NEW(Int16Event_T, PUBSUB_TEMPERATURE_SIG);
+                    event->num          = (int16_t) me->temperature;
+                    QACTIVE_PUBLISH(&event->super, &me->super);
+                }
+            }
+            status = Q_HANDLED();
+            break;
+        }
+        default: {
+            status = Q_SUPER(&QHsm_top);
+            break;
+        }
     }
 
     return status;
