@@ -540,10 +540,6 @@ static void MX_TIM15_Init(void)
     {
         Error_Handler();
     }
-    if (HAL_TIM_OnePulse_Init(&htim15, TIM_OPMODE_SINGLE) != HAL_OK)
-    {
-        Error_Handler();
-    }
     sSlaveConfig.SlaveMode       = TIM_SLAVEMODE_RESET;
     sSlaveConfig.InputTrigger    = TIM_TS_TI1FP1;
     sSlaveConfig.TriggerPolarity = TIM_INPUTCHANNELPOLARITY_RISING;
