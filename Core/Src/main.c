@@ -544,7 +544,7 @@ static void MX_TIM15_Init(void)
     {
         Error_Handler();
     }
-    sSlaveConfig.SlaveMode       = TIM_SLAVEMODE_COMBINED_RESETTRIGGER;
+    sSlaveConfig.SlaveMode       = TIM_SLAVEMODE_RESET;
     sSlaveConfig.InputTrigger    = TIM_TS_TI1FP1;
     sSlaveConfig.TriggerPolarity = TIM_INPUTCHANNELPOLARITY_RISING;
     sSlaveConfig.TriggerFilter   = 0;
