@@ -23,6 +23,7 @@ set(CMAKE_C_EXTENSIONS              ON)
 set(PROJ_PATH                       ${CMAKE_CURRENT_SOURCE_DIR})
 set(LIBRARY_PATH                    ${CMAKE_CURRENT_SOURCE_DIR}/library)
 set(DRIVERS_PATH                    ${CMAKE_CURRENT_SOURCE_DIR}/Drivers)
+set(MIDDLEWARES_PATH                ${CMAKE_CURRENT_SOURCE_DIR}/Middlewares)
 
 
 
@@ -94,6 +95,7 @@ set(sources_SRCS
     ${PROJ_PATH}/Core/services/SSD1306.c
     ${PROJ_PATH}/Core/services/usb.c
     ${PROJ_PATH}/Core/services/ssd1306_fonts.c
+    ${PROJ_PATH}/Core/services/flowsensor.c
 
     # TODO: check if this file required
     ${PROJ_PATH}/Core/Src/system_stm32g4xx.c    
@@ -179,7 +181,7 @@ set(include_path_DIRS
        
     ${DRIVERS_PATH}/CMSIS/Device/ST/STM32G4xx/Include
     ${DRIVERS_PATH}/CMSIS/Include
-    ${DRIVERS_PATH}/CMSIS/DSP/Include
+    ${MIDDLEWARES_PATH}/ST/ARM/DSP/Inc
 
     ${LIBRARY_PATH}/SEGGER_RTT_V810k/Config
     ${LIBRARY_PATH}/SEGGER_RTT_V810k/RTT 

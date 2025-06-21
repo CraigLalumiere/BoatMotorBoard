@@ -1,5 +1,6 @@
 #include "data_manager.h"
 #include "bsp.h"
+#include "flowsensor.h"
 #include "private_signal_ranges.h"
 #include "pubsub_signals.h"
 #include "stm32g4xx_hal.h"
@@ -15,6 +16,7 @@ Q_DEFINE_THIS_MODULE("Data Manager")
 \**************************************************************************************************/
 
 #define TACH_LAMBDA 0.9
+#define VBAT_LAMBDA 0.99
 
 /**************************************************************************************************\
 * Private type definitions
@@ -32,6 +34,7 @@ typedef struct
 
     int16_t pressure;
     int16_t temperature;
+    float vbat_volts;
     float tachometer;
 
     UART_HandleTypeDef *p_huart;
@@ -87,10 +90,9 @@ static QState initial(DataManager *const me, void const *const par)
 
     QActive_subscribe((QActive *) me, PUBSUB_PRESSURE_SIG);
     QActive_subscribe((QActive *) me, PUBSUB_TEMPERATURE_SIG);
-    QActive_subscribe((QActive *) me, PUBSUB_TACH_SIG);
     QActive_subscribe((QActive *) me, PUBSUB_UART_COMPLETE_SIG);
 
-    BSP_Tach_Capture_Timer_Enable();
+    // BSP_Tach_Capture_Timer_Enable();
 
     // Start update loop of 100hz
     QTimeEvt_armX(&me->timer_evt, BSP_TICKS_PER_SEC / 100, BSP_TICKS_PER_SEC / 100);
@@ -121,13 +123,13 @@ static QState top(DataManager *const me, QEvt const *const e)
             status                    = Q_HANDLED();
             break;
         }
-        case PUBSUB_TACH_SIG: {
-            const FloatEvent_T *event = Q_EVT_CAST(FloatEvent_T);
-            me->tachometer = TACH_LAMBDA * me->tachometer + (1 - TACH_LAMBDA) * event->num;
-            BSP_Tach_Capture_Timer_Enable();
-            status = Q_HANDLED();
-            break;
-        }
+        // case PUBSUB_TACH_SIG: {
+        //     const FloatEvent_T *event = Q_EVT_CAST(FloatEvent_T);
+        //     me->tachometer = TACH_LAMBDA * me->tachometer + (1 - TACH_LAMBDA) * event->num;
+        //     BSP_Tach_Capture_Timer_Enable();
+        //     status = Q_HANDLED();
+        //     break;
+        // }
         default: {
             status = Q_SUPER(&QHsm_top);
             break;
@@ -155,7 +157,11 @@ static QState running(DataManager *const me, QEvt const *const e)
             Colored_Wire_Stat_T red    = BSP_Get_Red();
             Colored_Wire_Stat_T orange = BSP_Get_Orange();
             bool buzzer                = BSP_Get_Buzzer();
-            uint16_t vbat_voltage      = BSP_ADC_Read_VBAT();
+            me->vbat_volts = VBAT_LAMBDA * me->vbat_volts + (1 - VBAT_LAMBDA) * BSP_ADC_Read_VBAT();
+
+            float this_tach = Flow_Sensor_Read_Hz();
+            this_tach       = this_tach * 60 / 6.666;
+            me->tachometer  = TACH_LAMBDA * me->tachometer + (1 - TACH_LAMBDA) * this_tach;
 
             MotorDataEvent_T *event = Q_NEW(MotorDataEvent_T, PUBSUB_MOTOR_DATA_SIG);
             event->neutral          = neutral;
@@ -163,7 +169,7 @@ static QState running(DataManager *const me, QEvt const *const e)
             event->red              = red;
             event->orange           = orange;
             event->buzzer           = buzzer;
-            event->vbat             = vbat_voltage;
+            event->vbat             = (int16_t) (me->vbat_volts * 100);
             event->temperature      = me->temperature;
             event->pressure         = me->pressure;
             event->tachometer       = (uint16_t) me->tachometer;

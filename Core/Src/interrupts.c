@@ -1,4 +1,5 @@
 #include "bsp.h"
+#include "flowsensor.h"
 #include "pubsub_signals.h"
 #include "stm32g4xx_hal.h"
 
@@ -16,14 +17,16 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
         return;
     }
 
-    if (input_capture_found)
-        return;
+    Flow_Sensor_Period_Elapsed_Callback(htim);
+
+    // if (input_capture_found)
+    //     return;
 
     // engine RPM is very low (below stall speed), or more likely: engine is off
 
-    FloatEvent_T *capture_event = Q_NEW(FloatEvent_T, PUBSUB_TACH_SIG);
-    capture_event->num          = 0;
-    QACTIVE_PUBLISH(&capture_event->super, &me->super);
+    // FloatEvent_T *capture_event = Q_NEW(FloatEvent_T, PUBSUB_TACH_SIG);
+    // capture_event->num          = 0;
+    // QACTIVE_PUBLISH(&capture_event->super, &me->super);
 }
 
 /**
@@ -33,33 +36,35 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
 {
-    static volatile uint32_t captured_val = 0;
+    // static volatile uint32_t captured_val = 0;
 
     if (htim->Instance != TIM15 || htim->Channel != HAL_TIM_ACTIVE_CHANNEL_1)
     {
         return;
     }
 
-    captured_val        = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
-    input_capture_found = true;
+    Flow_Sensor_IC_Callback(htim, TIM_CHANNEL_1);
 
-    if (captured_val == 0)
-        return;
+    // captured_val        = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
+    // input_capture_found = true;
 
-    // TIM15 is on the APB2 clock bus, which is 144 MHz, and scaled down by (71+1) to 2Mhz
-    // microseconds = periods / 2
-    // Hz = 10^6*2/periods
-    float frequency = 1000.0 * 1000.0 * 2.0 / captured_val; // hz
+    // if (captured_val == 0)
+    //     return;
 
-    frequency *= 60; // convert to rpm
+    // // TIM15 is on the APB2 clock bus, which is 144 MHz, and scaled down by (71+1) to 2Mhz
+    // // microseconds = periods / 2
+    // // Hz = 10^6*2/periods
+    // float frequency = 1000.0 * 1000.0 * 2.0 / captured_val; // hz
 
-    frequency = frequency / 10 * 2 / 3; // fudge factor needed for the BF20D motor
+    // frequency *= 60; // convert to rpm
 
-    FloatEvent_T *capture_event = Q_NEW(FloatEvent_T, PUBSUB_TACH_SIG);
-    capture_event->num          = frequency;
-    QACTIVE_PUBLISH(&capture_event->super, &me->super);
+    // frequency = frequency / 6.666; // fudge factor needed for the BF20D motor
 
-    HAL_NVIC_DisableIRQ(TIM1_BRK_TIM15_IRQn);
+    // FloatEvent_T *capture_event = Q_NEW(FloatEvent_T, PUBSUB_TACH_SIG);
+    // capture_event->num          = frequency;
+    // QACTIVE_PUBLISH(&capture_event->super, &me->super);
+
+    // HAL_NVIC_DisableIRQ(TIM1_BRK_TIM15_IRQn);
 }
 
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)

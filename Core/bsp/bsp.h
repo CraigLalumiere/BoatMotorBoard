@@ -64,7 +64,8 @@ I2C_Read BSP_Get_I2C_Read_Pressure();
  * @brief   Tachometer Functions
  **************************************************************************************************/
 
-void BSP_Tach_Capture_Timer_Enable();
+// void BSP_Tach_Capture_Timer_Enable();
+int32_t BSP_Get_Flow_Sensor_IRQN(void); // 'flow sensor' since code is copied from Purafy
 
 /**
  ***************************************************************************************************
@@ -81,7 +82,7 @@ bool BSP_Get_Start();
 uint8_t BSP_Get_Red();
 uint8_t BSP_Get_Orange();
 bool BSP_Get_Buzzer();
-uint16_t BSP_ADC_Read_VBAT(void);
+float BSP_ADC_Read_VBAT(void);
 
 /**
  ***************************************************************************************************

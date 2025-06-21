@@ -1,13 +1,16 @@
 
 
-OpenDocument="main.c", FilePath="//wsl.localhost/Ubuntu/home/clalumiere/Jobs/Personal/BoatMotorBoard/Core/Src/main.c", Line=116
+OpenDocument="startup_stm32g474xx.s", FilePath="//wsl.localhost/Ubuntu/home/clalumiere/Jobs/Personal/BoatMotorBoard/Core/bsp/device/startup_stm32g474xx.s", Line=42
+OpenDocument="stm32g4xx_it.c", FilePath="//wsl.localhost/Ubuntu/home/clalumiere/Jobs/Personal/BoatMotorBoard/Core/Src/stm32g4xx_it.c", Line=57
+OpenDocument="main.c", FilePath="//wsl.localhost/Ubuntu/home/clalumiere/Jobs/Personal/BoatMotorBoard/Core/Src/main.c", Line=122
 OpenToolbar="Debug", Floating=0, x=0, y=0
-OpenWindow="Call Stack", DockArea=RIGHT, x=0, y=2, w=833, h=377, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
-OpenWindow="Disassembly", DockArea=RIGHT, x=0, y=0, w=833, h=209, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
-OpenWindow="Local Data", DockArea=RIGHT, x=0, y=1, w=833, h=165, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
-OpenWindow="Console", DockArea=BOTTOM, x=0, y=0, w=1920, h=189, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Call Stack", DockArea=RIGHT, x=0, y=2, w=833, h=547, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Disassembly", DockArea=RIGHT, x=0, y=0, w=833, h=312, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Local Data", DockArea=RIGHT, x=0, y=1, w=833, h=252, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Console", DockArea=BOTTOM, x=0, y=0, w=2560, h=189, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
 SmartViewPlugin="", Page="", Toolbar="Hidden", Window="SmartView 1"
 TableHeader="Local Data", SortCol="Name", SortOrder="ASCENDING", VisibleCols=["Name";"Value";"Location";"Size";"Type";"Scope"], ColWidths=[168;212;100;100;238;100]
 TableHeader="Call Stack", SortCol="Function", SortOrder="ASCENDING", VisibleCols=["Function";"Stack Frame";"Source";"PC";"Return Address";"Stack Used"], ColWidths=[249;112;100;100;168;104]
 TableHeader="Power Sampling", SortCol="None", SortOrder="ASCENDING", VisibleCols=["Index";"Time";"Ch 0"], ColWidths=[100;100;100]
 TableHeader="RegisterSelectionDialog", SortCol="None", SortOrder="ASCENDING", VisibleCols=[], ColWidths=[]
+TableHeader="TargetExceptionDialog", SortCol="Name", SortOrder="ASCENDING", VisibleCols=["Name";"Value";"Address";"Description"], ColWidths=[200;100;100;376]

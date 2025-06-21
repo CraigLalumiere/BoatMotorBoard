@@ -186,15 +186,15 @@ bool BSP_Get_Buzzer()
     return HAL_GPIO_ReadPin(nBUZZER_SENSE_GPIO_Port, nBUZZER_SENSE_Pin) == GPIO_PIN_RESET;
 }
 
-uint16_t BSP_ADC_Read_VBAT(void)
+float BSP_ADC_Read_VBAT(void)
 {
     uint32_t raw_adc = HAL_ADC_GetValue(&hadc2);
     HAL_ADC_Start(&hadc2); // a bit hacky, but start the next conversion
     // Multiplier is 4.6 nominally, but the actual value seems to be 4.3
-    float hv_sense = raw_adc * AVREF / 4096. * 4.6 * 100; // return hundredths of volts
+    float hv_sense = raw_adc * AVREF / 4096. * 4.6; // return volts
     // calibration scale & offset
-    hv_sense = 1.08992 * hv_sense + 1.0109;
-    return (uint16_t) hv_sense;
+    hv_sense = 1.12139 * hv_sense + 0.61052;
+    return hv_sense;
 }
 
 /**
@@ -202,10 +202,15 @@ uint16_t BSP_ADC_Read_VBAT(void)
  * @brief   GPIO motor ECU Functions
  **************************************************************************************************/
 
-void BSP_Tach_Capture_Timer_Enable()
+// void BSP_Tach_Capture_Timer_Enable()
+// {
+//     HAL_NVIC_EnableIRQ(TIM1_BRK_TIM15_IRQn);
+//     input_capture_found = false;
+// }
+
+int32_t BSP_Get_Flow_Sensor_IRQN(void)
 {
-    HAL_NVIC_EnableIRQ(TIM1_BRK_TIM15_IRQn);
-    input_capture_found = false;
+    return TIM1_BRK_TIM15_IRQn;
 }
 
 /**
@@ -335,9 +340,12 @@ void BSP_Init(void)
     \**************************************************************************************************/
 
     // TIM15 is prescaled to 144Mhz/(71+1)=2Mhz, or 0.5 microsecond per tick
-    __HAL_TIM_CLEAR_FLAG(&htim15, TIM_FLAG_UPDATE);
+    // __HAL_TIM_CLEAR_FLAG(&htim15, TIM_FLAG_UPDATE);
     HAL_TIM_IC_Start_IT(&htim15, TIM_CHANNEL_1); // input capture timer
+    // the above function only enables the input capture interrupt flag
+    // enable also the update event (oveflow)
     __HAL_TIM_ENABLE_IT(&htim15, TIM_IT_UPDATE);
+    // __HAL_TIM_ENABLE_IT(&htim15, TIM_IT_UPDATE);
 
     /**************************************************************************************************\
     * Init UART2
