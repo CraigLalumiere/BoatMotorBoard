@@ -193,7 +193,7 @@ float BSP_ADC_Read_VBAT(void)
     // Multiplier is 4.6 nominally, but the actual value seems to be 4.3
     float hv_sense = raw_adc * AVREF / 4096. * 4.6; // return volts
     // calibration scale & offset
-    hv_sense = 1.12139 * hv_sense + 0.61052;
+    hv_sense = 1.5633 * hv_sense + 0.81196;
     return hv_sense;
 }
 

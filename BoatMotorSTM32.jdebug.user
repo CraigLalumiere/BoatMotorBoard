@@ -1,12 +1,18 @@
 
 
+
+Breakpoint=/workspaces/BoatMotorBoard/Core/Src/interrupts.c:38, State=BP_STATE_ON
+OpenDocument="main.c", FilePath="//wsl.localhost/Ubuntu/home/clalumiere/Jobs/Personal/BoatMotorBoard/Core/Src/main.c", Line=122
+OpenDocument="stm32g4xx_hal_tim.c", FilePath="//wsl.localhost/Ubuntu/home/clalumiere/Jobs/Personal/BoatMotorBoard/Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_tim.c", Line=3968
+OpenDocument="flowsensor.c", FilePath="//wsl.localhost/Ubuntu/home/clalumiere/Jobs/Personal/BoatMotorBoard/Core/services/flowsensor.c", Line=37
+OpenDocument="interrupts.c", FilePath="//wsl.localhost/Ubuntu/home/clalumiere/Jobs/Personal/BoatMotorBoard/Core/Src/interrupts.c", Line=0
 OpenDocument="startup_stm32g474xx.s", FilePath="//wsl.localhost/Ubuntu/home/clalumiere/Jobs/Personal/BoatMotorBoard/Core/bsp/device/startup_stm32g474xx.s", Line=42
 OpenDocument="stm32g4xx_it.c", FilePath="//wsl.localhost/Ubuntu/home/clalumiere/Jobs/Personal/BoatMotorBoard/Core/Src/stm32g4xx_it.c", Line=57
-OpenDocument="main.c", FilePath="//wsl.localhost/Ubuntu/home/clalumiere/Jobs/Personal/BoatMotorBoard/Core/Src/main.c", Line=122
+OpenDocument="data_manager.c", FilePath="//wsl.localhost/Ubuntu/home/clalumiere/Jobs/Personal/BoatMotorBoard/Core/services/data_manager.c", Line=139
 OpenToolbar="Debug", Floating=0, x=0, y=0
-OpenWindow="Call Stack", DockArea=RIGHT, x=0, y=2, w=833, h=547, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
-OpenWindow="Disassembly", DockArea=RIGHT, x=0, y=0, w=833, h=312, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
-OpenWindow="Local Data", DockArea=RIGHT, x=0, y=1, w=833, h=252, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Call Stack", DockArea=RIGHT, x=0, y=2, w=833, h=540, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Disassembly", DockArea=RIGHT, x=0, y=0, w=833, h=313, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Local Data", DockArea=RIGHT, x=0, y=1, w=833, h=258, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
 OpenWindow="Console", DockArea=BOTTOM, x=0, y=0, w=2560, h=189, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
 SmartViewPlugin="", Page="", Toolbar="Hidden", Window="SmartView 1"
 TableHeader="Local Data", SortCol="Name", SortOrder="ASCENDING", VisibleCols=["Name";"Value";"Location";"Size";"Type";"Scope"], ColWidths=[168;212;100;100;238;100]
