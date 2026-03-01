@@ -66,11 +66,3 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
 
     // HAL_NVIC_DisableIRQ(TIM1_BRK_TIM15_IRQn);
 }
-
-void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
-{
-    UNUSED(huart);
-
-    static QEvt const event = QEVT_INITIALIZER(PUBSUB_UART_COMPLETE_SIG);
-    QACTIVE_PUBLISH(&event, &me->super);
-}

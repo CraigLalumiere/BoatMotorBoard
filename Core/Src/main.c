@@ -245,7 +245,7 @@ int main(void)
         (void *) 0); // no initialization param
 
     static QEvt const *DataManagerQueueSto[10];
-    Data_Manager_ctor(&huart2);
+    Data_Manager_ctor();
     QACTIVE_START(
         AO_Data_Manager,
         AO_PRIO_DATA_MANAGER,       // QP prio. of the AO

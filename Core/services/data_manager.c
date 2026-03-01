@@ -36,8 +36,6 @@ typedef struct
     int16_t temperature;
     float vbat_volts;
     float tachometer;
-
-    UART_HandleTypeDef *p_huart;
 } DataManager;
 
 /**************************************************************************************************\
@@ -54,7 +52,6 @@ QActive *const AO_Data_Manager = &data_manager_inst.super;
 static QState initial(DataManager *const me, void const *const par);
 static QState top(DataManager *const me, QEvt const *const e);
 static QState running(DataManager *const me, QEvt const *const e);
-static QState waitingForUart(DataManager *const me, QEvt const *const e);
 
 /**************************************************************************************************\
 * Public functions
@@ -64,11 +61,9 @@ static QState waitingForUart(DataManager *const me, QEvt const *const e);
  ***************************************************************************************************
  * @brief   Constructor
  **************************************************************************************************/
-void Data_Manager_ctor(UART_HandleTypeDef *p_huart)
+void Data_Manager_ctor()
 {
     DataManager *const me = &data_manager_inst;
-
-    me->p_huart = p_huart;
 
     // BSP_Tach_Capture_Timer_Enable();
 
@@ -90,7 +85,6 @@ static QState initial(DataManager *const me, void const *const par)
 
     QActive_subscribe((QActive *) me, PUBSUB_PRESSURE_SIG);
     QActive_subscribe((QActive *) me, PUBSUB_TEMPERATURE_SIG);
-    QActive_subscribe((QActive *) me, PUBSUB_UART_COMPLETE_SIG);
 
     // BSP_Tach_Capture_Timer_Enable();
 
@@ -152,11 +146,11 @@ static QState running(DataManager *const me, QEvt const *const e)
             break;
         }
         case WAIT_TIMEOUT_SIG: {
-            bool neutral               = BSP_Get_Neutral();
-            bool start                 = BSP_Get_Start();
-            Colored_Wire_Stat_T red    = BSP_Get_Red();
-            Colored_Wire_Stat_T orange = BSP_Get_Orange();
-            bool buzzer                = BSP_Get_Buzzer();
+            bool neutral   = BSP_Get_Neutral();
+            bool start     = BSP_Get_Start();
+            bool temp_good = BSP_Get_Temp_Good();
+            bool pres_good = BSP_Get_Pres_Good();
+            bool buzzer    = BSP_Get_Buzzer();
             me->vbat_volts = VBAT_LAMBDA * me->vbat_volts + (1 - VBAT_LAMBDA) * BSP_ADC_Read_VBAT();
 
             float this_tach = Flow_Sensor_Read_Hz();
@@ -166,8 +160,8 @@ static QState running(DataManager *const me, QEvt const *const e)
             MotorDataEvent_T *event = Q_NEW(MotorDataEvent_T, PUBSUB_MOTOR_DATA_SIG);
             event->neutral          = neutral;
             event->start            = start;
-            event->red              = red;
-            event->orange           = orange;
+            event->temp_good        = temp_good;
+            event->pres_good        = pres_good;
             event->buzzer           = buzzer;
             event->vbat             = (int16_t) (me->vbat_volts * 100);
             event->temperature      = me->temperature;
@@ -175,40 +169,7 @@ static QState running(DataManager *const me, QEvt const *const e)
             event->tachometer       = (uint16_t) me->tachometer;
             QACTIVE_PUBLISH(&event->super, &me->super);
 
-            static char printBuffer[32];
-            memset(printBuffer, 0, sizeof(printBuffer));
-            sprintf(
-                printBuffer,
-                "P%d\r\nT%d\r\nR%d\r\n",
-                me->pressure,
-                me->temperature,
-                (int) me->tachometer);
-            HAL_UART_Transmit_IT(me->p_huart, (uint8_t *) printBuffer, sizeof(printBuffer));
-
-            status = Q_TRAN(&waitingForUart);
-            break;
-        }
-        default: {
-            status = Q_SUPER(&top);
-            break;
-        }
-    }
-
-    return status;
-}
-
-static QState waitingForUart(DataManager *const me, QEvt const *const e)
-{
-    QState status;
-
-    switch (e->sig)
-    {
-        case Q_ENTRY_SIG: {
             status = Q_HANDLED();
-            break;
-        }
-        case PUBSUB_UART_COMPLETE_SIG: {
-            status = Q_TRAN(&running);
             break;
         }
         default: {

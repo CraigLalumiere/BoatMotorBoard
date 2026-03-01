@@ -12,17 +12,16 @@ enum PubSubSignals
     PUBSUB_PRESSURE_SIG,
     PUBSUB_TEMPERATURE_SIG,
     PUBSUB_MOTOR_DATA_SIG,
-    PUBSUB_UART_COMPLETE_SIG,
     PUBSUB_MAX_SIG
 };
 
-typedef enum
-{
-    LOW,
-    HIGH,
-    HIGH_Z,
-    SIG_UNKNOWN
-} Colored_Wire_Stat_T;
+// typedef enum
+// {
+//     LOW,
+//     HIGH,
+//     HIGH_Z,
+//     SIG_UNKNOWN
+// } Colored_Wire_Stat_T;
 
 typedef struct
 {
@@ -46,8 +45,8 @@ typedef struct
     bool start;
     bool neutral;
     bool buzzer;
-    Colored_Wire_Stat_T red;
-    Colored_Wire_Stat_T orange;
+    bool temp_good;
+    bool pres_good;
 } MotorDataEvent_T;
 
 typedef struct

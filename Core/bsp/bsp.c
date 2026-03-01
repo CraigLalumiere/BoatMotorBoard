@@ -74,9 +74,8 @@ static SharedI2C_T SharedI2C_Bus2;
 const QActive *AO_SharedI2C2 = &(SharedI2C_Bus2.super); // externally available
 QEvt const *i2c_bus_2_deferred_queue_storage[SHARED_I2C_BUS_2_DEFERRED_QUEUE_LEN];
 
-extern ADC_HandleTypeDef hadc2;   // defined in main.c by cubeMX
-extern TIM_HandleTypeDef htim15;  // defined in main.c by cubeMX
-extern UART_HandleTypeDef huart2; // defined in main.c by cubeMX
+extern ADC_HandleTypeDef hadc2;  // defined in main.c by cubeMX
+extern TIM_HandleTypeDef htim15; // defined in main.c by cubeMX
 
 bool input_capture_found;
 
@@ -134,50 +133,14 @@ bool BSP_Get_Start()
     // If starting, the neutral wire +12, so the GPIO is high
     return HAL_GPIO_ReadPin(START_DET_GPIO_Port, START_DET_Pin) == GPIO_PIN_SET;
 }
-uint8_t BSP_Get_Red()
+uint8_t BSP_Get_Temp_Good()
 {
-    // Test for tri-state
-    bool pin1    = HAL_GPIO_ReadPin(RED_SENSE_1_GPIO_Port, RED_SENSE_1_Pin) == GPIO_PIN_SET;
-    bool pin2    = HAL_GPIO_ReadPin(RED_SENSE_2_GPIO_Port, RED_SENSE_2_Pin) == GPIO_PIN_SET;
-    uint8_t data = (pin2 << 1) | pin1;
-    switch (data)
-    {
-        case 0x00: {
-            return LOW; // the wire is low
-        }
-        case 0x03: {
-            return HIGH; // the wire is high
-        }
-        case 0x02: {
-            return HIGH_Z; // the wire is high-Z
-        }
-        default: {
-            return SIG_UNKNOWN; // shouldn't happen
-        }
-    }
+    return HAL_GPIO_ReadPin(nOVERHEATING_GPIO_Port, nOVERHEATING_Pin) == GPIO_PIN_SET;
 }
 
-uint8_t BSP_Get_Orange()
+uint8_t BSP_Get_Pres_Good()
 {
-    // Test for tri-state
-    bool pin1    = HAL_GPIO_ReadPin(ORANGE_SENSE_1_GPIO_Port, ORANGE_SENSE_1_Pin) == GPIO_PIN_SET;
-    bool pin2    = HAL_GPIO_ReadPin(ORANGE_SENSE_2_GPIO_Port, ORANGE_SENSE_2_Pin) == GPIO_PIN_SET;
-    uint8_t data = (pin2 << 1) | pin1;
-    switch (data)
-    {
-        case 0x00: {
-            return LOW; // the wire is low
-        }
-        case 0x03: {
-            return HIGH; // the wire is high
-        }
-        case 0x02: {
-            return HIGH_Z; // the wire is high-Z
-        }
-        default: {
-            return SIG_UNKNOWN; // shouldn't happen
-        }
-    }
+    return HAL_GPIO_ReadPin(OIL_PRES_LOW_GPIO_Port, OIL_PRES_LOW_Pin) == GPIO_PIN_RESET;
 }
 
 bool BSP_Get_Buzzer()
@@ -346,16 +309,6 @@ void BSP_Init(void)
     // enable also the update event (oveflow)
     __HAL_TIM_ENABLE_IT(&htim15, TIM_IT_UPDATE);
     // __HAL_TIM_ENABLE_IT(&htim15, TIM_IT_UPDATE);
-
-    /**************************************************************************************************\
-    * Init UART2
-    \**************************************************************************************************/
-    /* Flush the data registers from unexpected data */
-    __HAL_UART_FLUSH_DRREGISTER(&huart2);
-    // if (HAL_UART_Receive_IT(&huart2, (uint8_t *)&rx_byte, 1) != HAL_OK)
-    // {
-    //   Error_Handler();
-    // }
 
     // Initialize I2C buses
     BSP_Init_I2C();

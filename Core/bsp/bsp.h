@@ -79,8 +79,8 @@ void BSP_Put_Pressure_Sensor_Into_Reset(bool reset);
  **************************************************************************************************/
 bool BSP_Get_Neutral();
 bool BSP_Get_Start();
-uint8_t BSP_Get_Red();
-uint8_t BSP_Get_Orange();
+uint8_t BSP_Get_Temp_Good();
+uint8_t BSP_Get_Pres_Good();
 bool BSP_Get_Buzzer();
 float BSP_ADC_Read_VBAT(void);
 
