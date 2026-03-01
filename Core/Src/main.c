@@ -642,29 +642,29 @@ static void MX_GPIO_Init(void)
     __HAL_RCC_GPIOB_CLK_ENABLE();
 
     /*Configure GPIO pin Output Level */
-    HAL_GPIO_WritePin(GPIOA, PRESSURE_RESET_Pin | PRES_EN_Pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(GPIOA, PRESSURE_RST_Pin | PRES_EN_Pin, GPIO_PIN_RESET);
 
     /*Configure GPIO pin Output Level */
     HAL_GPIO_WritePin(GPIOB, DEBUG_GPIO_Pin | FW_LED_Pin | FW_LED_2_Pin, GPIO_PIN_RESET);
 
-    /*Configure GPIO pins : PRESURE_EOC_Pin nBUZZER_SENSE_Pin nOVERHEATING_Pin VBUS_SENSE_Pin */
-    GPIO_InitStruct.Pin  = PRESURE_EOC_Pin | nBUZZER_SENSE_Pin | nOVERHEATING_Pin | VBUS_SENSE_Pin;
+    /*Configure GPIO pins : PRESURE_EOC_Pin VBUS_SENSE_Pin */
+    GPIO_InitStruct.Pin  = PRESURE_EOC_Pin | VBUS_SENSE_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-    /*Configure GPIO pins : PRESSURE_RESET_Pin PRES_EN_Pin */
-    GPIO_InitStruct.Pin   = PRESSURE_RESET_Pin | PRES_EN_Pin;
+    /*Configure GPIO pins : PRESSURE_RST_Pin PRES_EN_Pin */
+    GPIO_InitStruct.Pin   = PRESSURE_RST_Pin | PRES_EN_Pin;
     GPIO_InitStruct.Mode  = GPIO_MODE_OUTPUT_PP;
     GPIO_InitStruct.Pull  = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-    /*Configure GPIO pin : OIL_PRES_LOW_Pin */
-    GPIO_InitStruct.Pin  = OIL_PRES_LOW_Pin;
+    /*Configure GPIO pins : OIL_PRES_LOW_Pin nBUZZER_SENSE_Pin nOVERHEATING_Pin */
+    GPIO_InitStruct.Pin  = OIL_PRES_LOW_Pin | nBUZZER_SENSE_Pin | nOVERHEATING_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
     GPIO_InitStruct.Pull = GPIO_PULLUP;
-    HAL_GPIO_Init(OIL_PRES_LOW_GPIO_Port, &GPIO_InitStruct);
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
     /*Configure GPIO pin : CAN_FLT_Pin */
     GPIO_InitStruct.Pin  = CAN_FLT_Pin;

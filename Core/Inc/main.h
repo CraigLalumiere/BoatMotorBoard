@@ -61,8 +61,8 @@ void Error_Handler(void);
 #define LMT01_GPIO_Port          GPIOA
 #define PRESURE_EOC_Pin          GPIO_PIN_2
 #define PRESURE_EOC_GPIO_Port    GPIOA
-#define PRESSURE_RESET_Pin       GPIO_PIN_3
-#define PRESSURE_RESET_GPIO_Port GPIOA
+#define PRESSURE_RST_Pin         GPIO_PIN_3
+#define PRESSURE_RST_GPIO_Port   GPIOA
 #define PRES_EN_Pin              GPIO_PIN_4
 #define PRES_EN_GPIO_Port        GPIOA
 #define OIL_PRES_LOW_Pin         GPIO_PIN_5
