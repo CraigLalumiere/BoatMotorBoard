@@ -23,7 +23,6 @@
 /* USER CODE BEGIN Includes */
 
 #include "LMT01.h"
-#include "SSD1306.h"
 #include "blinky.h"
 #include "bsp.h"
 #include "cli.h"
@@ -53,7 +52,6 @@ typedef enum
     AO_RESERVED = 0U,
     AO_PRIO_BLINKY,
     AO_PRIO_APP_CLI,
-    AO_PRIO_SSD1306,
     AO_PRIO_DATA_MANAGER,
     AO_PRIO_LMT01,
     AO_PRIO_PRESSURE,
@@ -223,17 +221,6 @@ int main(void)
         (void *) 0,                  // stack storage (not used in QK)
         0U,                          // stack size [bytes] (not used in QK)
         (void *) 0);                 // no initialization param
-
-    static QEvt const *SSD1306QueueSto[10];
-    SSD1306_ctor(BSP_Get_I2C_Write_SSD1306(), BSP_Get_I2C_Read_SSD1306());
-    QACTIVE_START(
-        AO_SSD1306,
-        AO_PRIO_SSD1306,        // QP prio. of the AO
-        SSD1306QueueSto,        // event queue storage
-        Q_DIM(SSD1306QueueSto), // queue length [events]
-        (void *) 0,
-        0U,          // no stack storage
-        (void *) 0); // no initialization param
 
     // static QEvt const *PressureQueueSto[10];
     // Pressure_Sensor_ctor(BSP_Get_I2C_Write_Pressure(), BSP_Get_I2C_Read_Pressure());

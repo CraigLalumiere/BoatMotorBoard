@@ -92,9 +92,9 @@ set(sources_SRCS
     ${PROJ_PATH}/Core/services/data_manager.c
     ${PROJ_PATH}/Core/services/LMT01.c
     ${PROJ_PATH}/Core/services/pressure_sensor.c
-    ${PROJ_PATH}/Core/services/SSD1306.c
+    # ${PROJ_PATH}/Core/services/SSD1306.c
     ${PROJ_PATH}/Core/services/usb.c
-    ${PROJ_PATH}/Core/services/ssd1306_fonts.c
+    # ${PROJ_PATH}/Core/services/ssd1306_fonts.c
     ${PROJ_PATH}/Core/services/flowsensor.c
 
     # TODO: check if this file required
