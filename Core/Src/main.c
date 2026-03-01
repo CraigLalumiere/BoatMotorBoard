@@ -101,12 +101,12 @@ typedef struct
 /* Private variables ---------------------------------------------------------*/
 ADC_HandleTypeDef hadc2;
 
+FDCAN_HandleTypeDef hfdcan2;
+
 I2C_HandleTypeDef hi2c2;
 
 TIM_HandleTypeDef htim8;
 TIM_HandleTypeDef htim15;
-
-UART_HandleTypeDef huart2;
 
 PCD_HandleTypeDef hpcd_USB_FS;
 
@@ -119,10 +119,10 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USB_PCD_Init(void);
 static void MX_I2C2_Init(void);
-static void MX_USART2_UART_Init(void);
 static void MX_TIM8_Init(void);
 static void MX_ADC2_Init(void);
 static void MX_TIM15_Init(void);
+static void MX_FDCAN2_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -166,10 +166,10 @@ int main(void)
     MX_GPIO_Init();
     MX_USB_PCD_Init();
     MX_I2C2_Init();
-    MX_USART2_UART_Init();
     MX_TIM8_Init();
     MX_ADC2_Init();
     MX_TIM15_Init();
+    MX_FDCAN2_Init();
     /* USER CODE BEGIN 2 */
 
     uint16_t priority = QF_AWARE_ISR_CMSIS_PRI;
@@ -395,6 +395,47 @@ static void MX_ADC2_Init(void)
 }
 
 /**
+ * @brief FDCAN2 Initialization Function
+ * @param None
+ * @retval None
+ */
+static void MX_FDCAN2_Init(void)
+{
+    /* USER CODE BEGIN FDCAN2_Init 0 */
+
+    /* USER CODE END FDCAN2_Init 0 */
+
+    /* USER CODE BEGIN FDCAN2_Init 1 */
+
+    /* USER CODE END FDCAN2_Init 1 */
+    hfdcan2.Instance                  = FDCAN2;
+    hfdcan2.Init.ClockDivider         = FDCAN_CLOCK_DIV1;
+    hfdcan2.Init.FrameFormat          = FDCAN_FRAME_CLASSIC;
+    hfdcan2.Init.Mode                 = FDCAN_MODE_NORMAL;
+    hfdcan2.Init.AutoRetransmission   = DISABLE;
+    hfdcan2.Init.TransmitPause        = DISABLE;
+    hfdcan2.Init.ProtocolException    = DISABLE;
+    hfdcan2.Init.NominalPrescaler     = 16;
+    hfdcan2.Init.NominalSyncJumpWidth = 1;
+    hfdcan2.Init.NominalTimeSeg1      = 1;
+    hfdcan2.Init.NominalTimeSeg2      = 1;
+    hfdcan2.Init.DataPrescaler        = 1;
+    hfdcan2.Init.DataSyncJumpWidth    = 1;
+    hfdcan2.Init.DataTimeSeg1         = 1;
+    hfdcan2.Init.DataTimeSeg2         = 1;
+    hfdcan2.Init.StdFiltersNbr        = 0;
+    hfdcan2.Init.ExtFiltersNbr        = 0;
+    hfdcan2.Init.TxFifoQueueMode      = FDCAN_TX_FIFO_OPERATION;
+    if (HAL_FDCAN_Init(&hfdcan2) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    /* USER CODE BEGIN FDCAN2_Init 2 */
+
+    /* USER CODE END FDCAN2_Init 2 */
+}
+
+/**
  * @brief I2C2 Initialization Function
  * @param None
  * @retval None
@@ -555,52 +596,6 @@ static void MX_TIM15_Init(void)
 }
 
 /**
- * @brief USART2 Initialization Function
- * @param None
- * @retval None
- */
-static void MX_USART2_UART_Init(void)
-{
-    /* USER CODE BEGIN USART2_Init 0 */
-
-    /* USER CODE END USART2_Init 0 */
-
-    /* USER CODE BEGIN USART2_Init 1 */
-
-    /* USER CODE END USART2_Init 1 */
-    huart2.Instance                    = USART2;
-    huart2.Init.BaudRate               = 115200;
-    huart2.Init.WordLength             = UART_WORDLENGTH_8B;
-    huart2.Init.StopBits               = UART_STOPBITS_1;
-    huart2.Init.Parity                 = UART_PARITY_NONE;
-    huart2.Init.Mode                   = UART_MODE_TX_RX;
-    huart2.Init.HwFlowCtl              = UART_HWCONTROL_NONE;
-    huart2.Init.OverSampling           = UART_OVERSAMPLING_16;
-    huart2.Init.OneBitSampling         = UART_ONE_BIT_SAMPLE_DISABLE;
-    huart2.Init.ClockPrescaler         = UART_PRESCALER_DIV1;
-    huart2.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
-    if (HAL_UART_Init(&huart2) != HAL_OK)
-    {
-        Error_Handler();
-    }
-    if (HAL_UARTEx_SetTxFifoThreshold(&huart2, UART_TXFIFO_THRESHOLD_1_8) != HAL_OK)
-    {
-        Error_Handler();
-    }
-    if (HAL_UARTEx_SetRxFifoThreshold(&huart2, UART_RXFIFO_THRESHOLD_1_8) != HAL_OK)
-    {
-        Error_Handler();
-    }
-    if (HAL_UARTEx_DisableFifoMode(&huart2) != HAL_OK)
-    {
-        Error_Handler();
-    }
-    /* USER CODE BEGIN USART2_Init 2 */
-
-    /* USER CODE END USART2_Init 2 */
-}
-
-/**
  * @brief USB Initialization Function
  * @param None
  * @retval None
@@ -647,35 +642,29 @@ static void MX_GPIO_Init(void)
     __HAL_RCC_GPIOB_CLK_ENABLE();
 
     /*Configure GPIO pin Output Level */
-    HAL_GPIO_WritePin(PRESSURE_RST_GPIO_Port, PRESSURE_RST_Pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(GPIOA, PRESSURE_RESET_Pin | PRES_EN_Pin, GPIO_PIN_RESET);
 
     /*Configure GPIO pin Output Level */
-    HAL_GPIO_WritePin(GPIOB, DEBUG_GPIO_Pin | FW_LED_Pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(GPIOB, DEBUG_GPIO_Pin | FW_LED_Pin | FW_LED_2_Pin, GPIO_PIN_RESET);
 
-    /*Configure GPIO pins : PRESSURE_EOC_Pin RED_SENSE_1_Pin ORANGE_SENSE_1_Pin VBUS_SENSE_Pin */
-    GPIO_InitStruct.Pin  = PRESSURE_EOC_Pin | RED_SENSE_1_Pin | ORANGE_SENSE_1_Pin | VBUS_SENSE_Pin;
+    /*Configure GPIO pins : PRESURE_EOC_Pin nBUZZER_SENSE_Pin nOVERHEATING_Pin VBUS_SENSE_Pin */
+    GPIO_InitStruct.Pin  = PRESURE_EOC_Pin | nBUZZER_SENSE_Pin | nOVERHEATING_Pin | VBUS_SENSE_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-    /*Configure GPIO pin : PRESSURE_RST_Pin */
-    GPIO_InitStruct.Pin   = PRESSURE_RST_Pin;
+    /*Configure GPIO pins : PRESSURE_RESET_Pin PRES_EN_Pin */
+    GPIO_InitStruct.Pin   = PRESSURE_RESET_Pin | PRES_EN_Pin;
     GPIO_InitStruct.Mode  = GPIO_MODE_OUTPUT_PP;
     GPIO_InitStruct.Pull  = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-    HAL_GPIO_Init(PRESSURE_RST_GPIO_Port, &GPIO_InitStruct);
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-    /*Configure GPIO pin : RED_SENSE_2_Pin */
-    GPIO_InitStruct.Pin  = RED_SENSE_2_Pin;
+    /*Configure GPIO pin : OIL_PRES_LOW_Pin */
+    GPIO_InitStruct.Pin  = OIL_PRES_LOW_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
     GPIO_InitStruct.Pull = GPIO_PULLUP;
-    HAL_GPIO_Init(RED_SENSE_2_GPIO_Port, &GPIO_InitStruct);
-
-    /*Configure GPIO pins : nBUZZER_SENSE_Pin ORANGE_SENSE_2_Pin NEUTRAL_DETECT_Pin */
-    GPIO_InitStruct.Pin  = nBUZZER_SENSE_Pin | ORANGE_SENSE_2_Pin | NEUTRAL_DETECT_Pin;
-    GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-    GPIO_InitStruct.Pull = GPIO_PULLUP;
-    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+    HAL_GPIO_Init(OIL_PRES_LOW_GPIO_Port, &GPIO_InitStruct);
 
     /*Configure GPIO pin : CAN_FLT_Pin */
     GPIO_InitStruct.Pin  = CAN_FLT_Pin;
@@ -683,14 +672,20 @@ static void MX_GPIO_Init(void)
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     HAL_GPIO_Init(CAN_FLT_GPIO_Port, &GPIO_InitStruct);
 
+    /*Configure GPIO pin : NEUTRAL_DETECT_Pin */
+    GPIO_InitStruct.Pin  = NEUTRAL_DETECT_Pin;
+    GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    HAL_GPIO_Init(NEUTRAL_DETECT_GPIO_Port, &GPIO_InitStruct);
+
     /*Configure GPIO pin : START_DET_Pin */
     GPIO_InitStruct.Pin  = START_DET_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
     GPIO_InitStruct.Pull = GPIO_PULLDOWN;
     HAL_GPIO_Init(START_DET_GPIO_Port, &GPIO_InitStruct);
 
-    /*Configure GPIO pins : DEBUG_GPIO_Pin FW_LED_Pin */
-    GPIO_InitStruct.Pin   = DEBUG_GPIO_Pin | FW_LED_Pin;
+    /*Configure GPIO pins : DEBUG_GPIO_Pin FW_LED_Pin FW_LED_2_Pin */
+    GPIO_InitStruct.Pin   = DEBUG_GPIO_Pin | FW_LED_Pin | FW_LED_2_Pin;
     GPIO_InitStruct.Mode  = GPIO_MODE_OUTPUT_PP;
     GPIO_InitStruct.Pull  = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -718,7 +713,6 @@ void Error_Handler(void)
     }
     /* USER CODE END Error_Handler_Debug */
 }
-
 #ifdef USE_FULL_ASSERT
 /**
  * @brief  Reports the name of the source file and the source line number

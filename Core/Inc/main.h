@@ -57,20 +57,20 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define PRESSURE_EOC_Pin         GPIO_PIN_0
-#define PRESSURE_EOC_GPIO_Port   GPIOA
-#define PRESSURE_RST_Pin         GPIO_PIN_1
-#define PRESSURE_RST_GPIO_Port   GPIOA
-#define RED_SENSE_2_Pin          GPIO_PIN_5
-#define RED_SENSE_2_GPIO_Port    GPIOA
-#define RED_SENSE_1_Pin          GPIO_PIN_6
-#define RED_SENSE_1_GPIO_Port    GPIOA
-#define ORANGE_SENSE_1_Pin       GPIO_PIN_7
-#define ORANGE_SENSE_1_GPIO_Port GPIOA
-#define nBUZZER_SENSE_Pin        GPIO_PIN_0
-#define nBUZZER_SENSE_GPIO_Port  GPIOB
-#define ORANGE_SENSE_2_Pin       GPIO_PIN_1
-#define ORANGE_SENSE_2_GPIO_Port GPIOB
+#define LMT01_Pin                GPIO_PIN_0
+#define LMT01_GPIO_Port          GPIOA
+#define PRESURE_EOC_Pin          GPIO_PIN_2
+#define PRESURE_EOC_GPIO_Port    GPIOA
+#define PRESSURE_RESET_Pin       GPIO_PIN_3
+#define PRESSURE_RESET_GPIO_Port GPIOA
+#define PRES_EN_Pin              GPIO_PIN_4
+#define PRES_EN_GPIO_Port        GPIOA
+#define OIL_PRES_LOW_Pin         GPIO_PIN_5
+#define OIL_PRES_LOW_GPIO_Port   GPIOA
+#define nBUZZER_SENSE_Pin        GPIO_PIN_6
+#define nBUZZER_SENSE_GPIO_Port  GPIOA
+#define nOVERHEATING_Pin         GPIO_PIN_7
+#define nOVERHEATING_GPIO_Port   GPIOA
 #define CAN_FLT_Pin              GPIO_PIN_2
 #define CAN_FLT_GPIO_Port        GPIOB
 #define NEUTRAL_DETECT_Pin       GPIO_PIN_10
@@ -87,8 +87,8 @@ void Error_Handler(void);
 #define DEBUG_GPIO_GPIO_Port     GPIOB
 #define FW_LED_Pin               GPIO_PIN_5
 #define FW_LED_GPIO_Port         GPIOB
-#define LMT01_Pin                GPIO_PIN_6
-#define LMT01_GPIO_Port          GPIOB
+#define FW_LED_2_Pin             GPIO_PIN_6
+#define FW_LED_2_GPIO_Port       GPIOB
 
 /* USER CODE BEGIN Private defines */
 
