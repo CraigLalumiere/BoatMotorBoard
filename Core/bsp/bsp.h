@@ -1,6 +1,7 @@
 #ifndef BSP_H_
 #define BSP_H_
 
+#include "interfaces/can_interface.h"
 #include "interfaces/i2c_interface.h"
 #include "interfaces/serial_interface.h"
 #include "stdint.h"
@@ -52,10 +53,20 @@ const Serial_IO_T *BSP_Get_Serial_IO_Interface_USB0();
 
 /**
  ***************************************************************************************************
+ * @brief   Init the CAN bus
+ **************************************************************************************************/
+void BSP_CAN_Bus_Init(void);
+
+/**
+ ***************************************************************************************************
+ * @brief   Write CAN Message with Standard ID (range of 0 to 0x7FF)
+ **************************************************************************************************/
+int32_t BSP_CAN_Write_Msg(const CAN_Message_T *msg);
+
+/**
+ ***************************************************************************************************
  * @brief   I2C Functions
  **************************************************************************************************/
-I2C_Write BSP_Get_I2C_Write_SSD1306();
-I2C_Read BSP_Get_I2C_Read_SSD1306();
 I2C_Write BSP_Get_I2C_Write_Pressure();
 I2C_Read BSP_Get_I2C_Read_Pressure();
 

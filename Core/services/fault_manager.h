@@ -24,6 +24,7 @@ typedef enum
 {
     FAULT_TYPE_NONE,
     FAULT_TYPE_DRIVER,
+    FAULT_TYPE_SYSTEM
 } Fault_Type_T;
 
 typedef enum
@@ -33,6 +34,7 @@ typedef enum
     FAULT_ID_PRESSURE_SENSOR_I2C,
     FAULT_ID_OLED_GEN,
     FAULT_ID_OLED_I2C,
+    FAULT_ID_CAN_FAILURE,
     FAULT_ID_NUM_FAULT_IDS,
 } Fault_ID_T;
 
