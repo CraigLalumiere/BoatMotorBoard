@@ -77,6 +77,10 @@ void Error_Handler(void);
 #define NEUTRAL_DETECT_GPIO_Port GPIOB
 #define START_DET_Pin            GPIO_PIN_11
 #define START_DET_GPIO_Port      GPIOB
+#define CAN_RX_Pin               GPIO_PIN_12
+#define CAN_RX_GPIO_Port         GPIOB
+#define CAN_TX_Pin               GPIO_PIN_13
+#define CAN_TX_GPIO_Port         GPIOB
 #define TACH_Pin                 GPIO_PIN_14
 #define TACH_GPIO_Port           GPIOB
 #define VBAT_SENSE_Pin           GPIO_PIN_15
