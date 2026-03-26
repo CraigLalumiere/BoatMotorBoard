@@ -26,9 +26,9 @@ typedef struct
     uint32_t id;  // unique message ID
     uint32_t dlc; // Data Length Code
     uint32_t tick;
-    int16_t temperature;
-    int16_t pressure;
-    int16_t tachometer;
+    float temperature;
+    float pressure;
+    float tachometer;
 } __attribute__((packed, aligned(1))) CAN_Msg_Motor_Data_T;
 
 /**************************************************************************************************\

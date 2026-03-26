@@ -17,7 +17,8 @@
             "ms-vscode.cmake-tools",
             "ms-vscode.cpptools-extension-pack",            
             "cschlosser.doxdocgen",
-            "jebbs.plantuml"
+            "jebbs.plantuml",
+            "openai.codex"
         ]
       }
     }

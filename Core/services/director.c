@@ -32,8 +32,8 @@ typedef struct
     QActive super; // inherit QActive
     QTimeEvt timer_evt;
 
-    int16_t pressure;
-    int16_t temperature;
+    float pressure;
+    float temperature;
     float vbat_volts;
     float tachometer;
 } Director;
@@ -110,13 +110,13 @@ static QState top(Director *const me, QEvt const *const e)
             break;
         }
         case PUBSUB_PRESSURE_SIG: {
-            const Int16Event_T *event = Q_EVT_CAST(Int16Event_T);
+            const FloatEvent_T *event = Q_EVT_CAST(FloatEvent_T);
             me->pressure              = event->num;
             status                    = Q_HANDLED();
             break;
         }
         case PUBSUB_TEMPERATURE_SIG: {
-            const Int16Event_T *event = Q_EVT_CAST(Int16Event_T);
+            const FloatEvent_T *event = Q_EVT_CAST(FloatEvent_T);
             me->temperature           = event->num;
             status                    = Q_HANDLED();
             break;
@@ -167,10 +167,10 @@ static QState running(Director *const me, QEvt const *const e)
             event->temp_good        = temp_good;
             event->pres_good        = pres_good;
             event->buzzer           = buzzer;
-            event->vbat             = (int16_t) (me->vbat_volts * 100);
+            event->vbat             = me->vbat_volts;
             event->temperature      = me->temperature;
             event->pressure         = me->pressure;
-            event->tachometer       = 3000; //(uint16_t) me->tachometer;
+            event->tachometer       = me->tachometer;
             QACTIVE_PUBLISH(&event->super, &me->super);
 
             status = Q_HANDLED();

@@ -107,16 +107,16 @@ static QState running(LMT01 *const me, QEvt const *const e)
                 // deglitching
                 if (me->lmt01_counter > 10)
                 {
-                    int16_t new_temperature = (me->lmt01_counter * 6.25) -
-                        5000; // temperature in hundredths of degrees
+                    int16_t new_temperature = (me->lmt01_counter * 0.0625f) -
+                        50; // temperature in degrees C
 
                     if (me->temperature == -999)
                         me->temperature = new_temperature;
                     else
                         me->temperature = LAMBDA * me->temperature + (1 - LAMBDA) * new_temperature;
 
-                    Int16Event_T *event = Q_NEW(Int16Event_T, PUBSUB_TEMPERATURE_SIG);
-                    event->num          = (int16_t) me->temperature;
+                    FloatEvent_T *event = Q_NEW(FloatEvent_T, PUBSUB_TEMPERATURE_SIG);
+                    event->num          = me->temperature;
                     QACTIVE_PUBLISH(&event->super, &me->super);
                 }
             }
