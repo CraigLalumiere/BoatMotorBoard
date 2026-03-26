@@ -1,4 +1,4 @@
-#include "data_manager.h"
+#include "director.h"
 #include "bsp.h"
 #include "flowsensor.h"
 #include "private_signal_ranges.h"
@@ -8,7 +8,7 @@
 #include <string.h>
 
 #ifdef Q_SPY
-Q_DEFINE_THIS_MODULE("Data Manager")
+Q_DEFINE_THIS_MODULE("Director")
 #endif // def Q_SPY
 
 /**************************************************************************************************\
@@ -24,7 +24,7 @@ Q_DEFINE_THIS_MODULE("Data Manager")
 
 enum PressureSignals
 {
-    WAIT_TIMEOUT_SIG = PRIVATE_SIGNAL_DATA_MANAGER_START,
+    WAIT_TIMEOUT_SIG = PRIVATE_SIGNAL_DIRECTOR_START,
 };
 
 typedef struct
@@ -36,22 +36,22 @@ typedef struct
     int16_t temperature;
     float vbat_volts;
     float tachometer;
-} DataManager;
+} Director;
 
 /**************************************************************************************************\
 * Private memory declarations
 \**************************************************************************************************/
-static DataManager data_manager_inst;
-QActive *const AO_Data_Manager = &data_manager_inst.super;
+static Director director_inst;
+QActive *const AO_Director = &director_inst.super;
 
 /**************************************************************************************************\
 * Private prototypes
 \**************************************************************************************************/
 
 // state handler functions
-static QState initial(DataManager *const me, void const *const par);
-static QState top(DataManager *const me, QEvt const *const e);
-static QState running(DataManager *const me, QEvt const *const e);
+static QState initial(Director *const me, void const *const par);
+static QState top(Director *const me, QEvt const *const e);
+static QState running(Director *const me, QEvt const *const e);
 
 /**************************************************************************************************\
 * Public functions
@@ -61,9 +61,9 @@ static QState running(DataManager *const me, QEvt const *const e);
  ***************************************************************************************************
  * @brief   Constructor
  **************************************************************************************************/
-void Data_Manager_ctor()
+void Director_ctor()
 {
-    DataManager *const me = &data_manager_inst;
+    Director *const me = &director_inst;
 
     // BSP_Tach_Capture_Timer_Enable();
 
@@ -79,7 +79,7 @@ void Data_Manager_ctor()
  ***************************************************************************************************
  * @brief   HSM
  **************************************************************************************************/
-static QState initial(DataManager *const me, void const *const par)
+static QState initial(Director *const me, void const *const par)
 {
     Q_UNUSED_PAR(par);
 
@@ -95,13 +95,17 @@ static QState initial(DataManager *const me, void const *const par)
 }
 
 // top state that handles receiving data from various sources
-static QState top(DataManager *const me, QEvt const *const e)
+static QState top(Director *const me, QEvt const *const e)
 {
     QState status;
 
     switch (e->sig)
     {
         case Q_ENTRY_SIG: {
+            // startup Box to Box (CAN)
+            QEvt *evt = Q_NEW(QEvt, PUBSUB_BOX_TO_BOX_STARTUP_SIG);
+            QACTIVE_PUBLISH(evt, &me->super);
+
             status = Q_HANDLED();
             break;
         }
@@ -135,7 +139,7 @@ static QState top(DataManager *const me, QEvt const *const e)
 
 // state that periodically bundles up information and publishes it on QP
 // and over the USART2 to the gauge cluster PCB
-static QState running(DataManager *const me, QEvt const *const e)
+static QState running(Director *const me, QEvt const *const e)
 {
     QState status;
 
@@ -154,7 +158,7 @@ static QState running(DataManager *const me, QEvt const *const e)
             me->vbat_volts = VBAT_LAMBDA * me->vbat_volts + (1 - VBAT_LAMBDA) * BSP_ADC_Read_VBAT();
 
             float this_tach = Flow_Sensor_Read_Hz();
-            this_tach       = this_tach * 60 / 6.666;
+            this_tach       = this_tach * 60 / 6.666; // Hz to RPM + fudge factor for BF20
             me->tachometer  = TACH_LAMBDA * me->tachometer + (1 - TACH_LAMBDA) * this_tach;
 
             MotorDataEvent_T *event = Q_NEW(MotorDataEvent_T, PUBSUB_MOTOR_DATA_SIG);
@@ -166,7 +170,7 @@ static QState running(DataManager *const me, QEvt const *const e)
             event->vbat             = (int16_t) (me->vbat_volts * 100);
             event->temperature      = me->temperature;
             event->pressure         = me->pressure;
-            event->tachometer       = (uint16_t) me->tachometer;
+            event->tachometer       = 3000; //(uint16_t) me->tachometer;
             QACTIVE_PUBLISH(&event->super, &me->super);
 
             status = Q_HANDLED();

@@ -30,8 +30,6 @@ static const Fault_ID_Info_T s_fault_info_list[] = {
     {FAULT_ID_NONE, 0, "No Fault", FAULT_TYPE_NONE},
     {FAULT_ID_PRESSURE_SENSOR_GEN, 1000, "Pressure Sensor Generic Fault", FAULT_TYPE_DRIVER},
     {FAULT_ID_PRESSURE_SENSOR_I2C, 1001, "Pressure Sensor I2C Fault", FAULT_TYPE_DRIVER},
-    {FAULT_ID_OLED_GEN, 1002, "OLED Generic Fault", FAULT_TYPE_DRIVER},
-    {FAULT_ID_OLED_I2C, 1003, "OLED I2C Fault", FAULT_TYPE_DRIVER},
     {FAULT_ID_CAN_FAILURE, 1005, "CAN BUS FAULT", FAULT_TYPE_SYSTEM},
 };
 

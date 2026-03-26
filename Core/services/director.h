@@ -1,5 +1,5 @@
-#ifndef DATA_MANAGER_AO_H
-#define DATA_MANAGER_AO_H
+#ifndef DIRECTOR_AO_H
+#define DIRECTOR_AO_H
 
 #include "qpc.h"
 
@@ -7,23 +7,19 @@
 extern "C" {
 #endif
 
-
 #include <stddef.h>
-
-
 
 /**************************************************************************************************\
 * Public memory declarations
 \**************************************************************************************************/
-extern QActive *const AO_Data_Manager; // opaque pointer
+extern QActive *const AO_Director; // opaque pointer
 
 /**************************************************************************************************\
 * Public prototypes
 \**************************************************************************************************/
-void Data_Manager_ctor();
+void Director_ctor();
 
 #ifdef __cplusplus
 }
 #endif
-#endif // DATA_MANAGER_AO_H
-
+#endif // DIRECTOR_AO_H

@@ -89,7 +89,7 @@ set(sources_SRCS
     ${PROJ_PATH}/Core/services/reset.c
     ${PROJ_PATH}/Core/services/reset_reason_print.c
     ${PROJ_PATH}/Core/services/usb.c
-    ${PROJ_PATH}/Core/services/data_manager.c
+    ${PROJ_PATH}/Core/services/director.c
     ${PROJ_PATH}/Core/services/LMT01.c
     ${PROJ_PATH}/Core/services/pressure_sensor.c
     # ${PROJ_PATH}/Core/services/SSD1306.c

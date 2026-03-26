@@ -24,9 +24,10 @@
 
 #include "LMT01.h"
 #include "blinky.h"
+#include "box_to_box.h"
 #include "bsp.h"
 #include "cli.h"
-#include "data_manager.h"
+#include "director.h"
 #include "posted_signals.h"
 #include "pressure_sensor.h"
 #include "qpc.h"
@@ -52,10 +53,11 @@ typedef enum
     AO_RESERVED = 0U,
     AO_PRIO_BLINKY,
     AO_PRIO_APP_CLI,
-    AO_PRIO_DATA_MANAGER,
+    AO_PRIO_DIRECTOR,
     AO_PRIO_LMT01,
     AO_PRIO_PRESSURE,
     AO_PRIO_SHARED_I2C2,
+    AO_PRIO_BOX_TO_BOX,
     AO_PRIO_USB,
 } AO_Priority_T;
 
@@ -244,13 +246,24 @@ int main(void)
         0U,          // no stack storage
         (void *) 0); // no initialization param
 
-    static QEvt const *DataManagerQueueSto[10];
-    Data_Manager_ctor();
+    static QEvt const *box_to_box_QueueSto[20];
+    Box_To_Box_ctor();
     QACTIVE_START(
-        AO_Data_Manager,
-        AO_PRIO_DATA_MANAGER,       // QP prio. of the AO
-        DataManagerQueueSto,        // event queue storage
-        Q_DIM(DataManagerQueueSto), // queue length [events]
+        AO_BOX_TO_BOX,
+        AO_PRIO_BOX_TO_BOX,         // QP prio. of the AO
+        box_to_box_QueueSto,        // event queue storage
+        Q_DIM(box_to_box_QueueSto), // queue length [events]
+        (void *) 0,                 // stack storage (not used in QK)
+        0U,                         // stack size [bytes] (not used in QK)
+        (void *) 0);                // no initialization param
+
+    static QEvt const *DirectorQueueSto[10];
+    Director_ctor();
+    QACTIVE_START(
+        AO_Director,
+        AO_PRIO_DIRECTOR,        // QP prio. of the AO
+        DirectorQueueSto,        // event queue storage
+        Q_DIM(DirectorQueueSto), // queue length [events]
         (void *) 0,
         0U,          // no stack storage
         (void *) 0); // no initialization param
@@ -410,7 +423,7 @@ static void MX_FDCAN2_Init(void)
     /* USER CODE END FDCAN2_Init 1 */
     hfdcan2.Instance                  = FDCAN2;
     hfdcan2.Init.ClockDivider         = FDCAN_CLOCK_DIV1;
-    hfdcan2.Init.FrameFormat          = FDCAN_FRAME_CLASSIC;
+    hfdcan2.Init.FrameFormat          = FDCAN_FRAME_FD_NO_BRS;
     hfdcan2.Init.Mode                 = FDCAN_MODE_NORMAL;
     hfdcan2.Init.AutoRetransmission   = ENABLE;
     hfdcan2.Init.TransmitPause        = DISABLE;

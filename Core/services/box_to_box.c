@@ -2,7 +2,6 @@
 #include "bsp.h"
 #include "can_messages.h"
 #include "fault_manager.h"
-#include "flowsensor.h"
 // #include "pc_com.h"
 // #include "pressuresensor.h"
 #include "cli.h"
@@ -22,7 +21,7 @@
 typedef union
 {
     CAN_Msg_Test1_T test1;
-    CAN_Msg_Pressure_Flow_T box2_pressure_flow_msg;
+    CAN_Msg_Motor_Data_T motor_data_msg;
     CAN_Msg_TDS_T water_tds_msg;
     CAN_Msg_Water_Good_T water_good_msg;
 } CAN_Msgs_T;
@@ -90,6 +89,7 @@ static QState initial(Box_To_Box *const me, void const *const par)
 {
     Q_UNUSED_PAR(par);
 
+    QActive_subscribe((QActive *) me, PUBSUB_BOX_TO_BOX_STARTUP_SIG);
     QActive_subscribe((QActive *) me, PUBSUB_MOTOR_DATA_SIG);
     QActive_subscribe((QActive *) me, PUBSUB_FAULT_GENERATED_SIG);
 
@@ -172,31 +172,30 @@ static QState active(Box_To_Box *const me, QEvt const *const e)
             break;
         }
 
-            // case PUBSUB_PRESSURE_FLOW_UPDATE_SIG: {
-            //     float32_t pressure_PSI = Q_EVT_CAST(PressureFlowEvent_T)->pressure_PSI;
-            //     float32_t flow_Hz      = Q_EVT_CAST(PressureFlowEvent_T)->flow_Hz;
+        case PUBSUB_MOTOR_DATA_SIG: {
+            MotorDataEvent_T *evt = Q_EVT_CAST(MotorDataEvent_T);
 
-            //     can_msg.box2_pressure_flow_msg.id                = CAN_MSG_PRESSURE_FLOW_ID;
-            //     can_msg.box2_pressure_flow_msg.dlc               = CAN_MSG_PRESSURE_FLOW_DLC;
-            //     can_msg.box2_pressure_flow_msg.tick              = BSP_Get_Milliseconds_Tick();
-            //     can_msg.box2_pressure_flow_msg.box2_flow_Hz      = flow_Hz;
-            //     can_msg.box2_pressure_flow_msg.box2_pressure_PSI = pressure_PSI;
-            //     can_msg.box2_pressure_flow_msg.fault_status      = fault_bits;
+            can_msg.motor_data_msg.id          = CAN_MSG_MOTOR_DATA_ID;
+            can_msg.motor_data_msg.dlc         = CAN_MSG_MOTOR_DATA_DLC;
+            can_msg.motor_data_msg.tick        = BSP_Get_Milliseconds_Tick();
+            can_msg.motor_data_msg.temperature = evt->temperature;
+            can_msg.motor_data_msg.pressure    = evt->pressure;
+            can_msg.motor_data_msg.tachometer  = evt->tachometer;
 
-            //     retval = BSP_CAN_Write_Msg((CAN_Message_T *) &can_msg.box2_pressure_flow_msg);
+            retval = BSP_CAN_Write_Msg((CAN_Message_T *) &can_msg.motor_data_msg);
 
-            //     // TX mailbox full, this means box1 didn't ACK last 3 messages
-            //     if (retval)
-            //     {
-            //         status = Q_TRAN(&bus_error);
-            //     }
-            //     else
-            //     {
-            //         status = Q_HANDLED();
-            //     }
+            // TX mailbox full, this means box1 didn't ACK last 3 messages
+            if (retval)
+            {
+                status = Q_TRAN(&bus_error);
+            }
+            else
+            {
+                status = Q_HANDLED();
+            }
 
-            //     break;
-            // }
+            break;
+        }
 
         case POSTED_CAN_MESSAGE_RECEIVED_SIG: {
             handle_can_message_received(me, e);

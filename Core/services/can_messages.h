@@ -4,7 +4,7 @@
 * Test Message 1
 \**************************************************************************************************/
 #define CAN_MSG_TEST1_ID  1U
-#define CAN_MSG_TEST1_DLC 0x8U
+#define CAN_MSG_TEST1_DLC FDCAN_DLC_BYTES_8
 
 typedef struct
 {
@@ -16,20 +16,20 @@ typedef struct
 } __attribute__((packed, aligned(1))) CAN_Msg_Test1_T;
 
 /**************************************************************************************************\
-* Pressure + flow message
+* Motor Data
 \**************************************************************************************************/
-#define CAN_MSG_PRESSURE_FLOW_ID  2U
-#define CAN_MSG_PRESSURE_FLOW_DLC FDCAN_DLC_BYTES_16
+#define CAN_MSG_MOTOR_DATA_ID  2U
+#define CAN_MSG_MOTOR_DATA_DLC FDCAN_DLC_BYTES_16
 
 typedef struct
 {
-    uint32_t id;
-    uint32_t dlc;
+    uint32_t id;  // unique message ID
+    uint32_t dlc; // Data Length Code
     uint32_t tick;
-    float32_t box2_flow_Hz;
-    float32_t box2_pressure_PSI;
-    uint32_t fault_status;
-} __attribute__((packed, aligned(1))) CAN_Msg_Pressure_Flow_T;
+    int16_t temperature;
+    int16_t pressure;
+    int16_t tachometer;
+} __attribute__((packed, aligned(1))) CAN_Msg_Motor_Data_T;
 
 /**************************************************************************************************\
 * Water salinity + temperature message
@@ -39,8 +39,8 @@ typedef struct
 
 typedef struct
 {
-    uint32_t id;
-    uint32_t dlc;
+    uint32_t id;  // unique message ID
+    uint32_t dlc; // Data Length Code
     uint32_t tick;
     float32_t water_temperature_C;
     float32_t water_salinity_PPM;

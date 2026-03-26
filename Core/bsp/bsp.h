@@ -41,6 +41,8 @@ uint32_t BSP_Get_Milliseconds_Tick(void);
  **************************************************************************************************/
 void BSP_LED_On(void);
 void BSP_LED_Off(void);
+void BSP_LED_Toggle(void);
+void BSP_LED2_Toggle(void);
 // void BSP_debug_gpio_on(void);
 // void BSP_debug_gpio_off(void);
 // void BSP_debug_gpio_toggle(void);

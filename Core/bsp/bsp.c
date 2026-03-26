@@ -400,6 +400,16 @@ void BSP_LED_Off()
     HAL_GPIO_WritePin(FW_LED_GPIO_Port, FW_LED_Pin, 0);
 }
 //............................................................................
+void BSP_LED_Toggle()
+{
+    HAL_GPIO_TogglePin(FW_LED_GPIO_Port, FW_LED_Pin);
+}
+//............................................................................
+void BSP_LED2_Toggle()
+{
+    HAL_GPIO_TogglePin(FW_LED_2_GPIO_Port, FW_LED_2_Pin);
+}
+//............................................................................
 void BSP_terminate(int16_t result)
 {
     Q_UNUSED_PAR(result);
