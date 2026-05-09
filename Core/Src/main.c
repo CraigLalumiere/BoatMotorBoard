@@ -28,6 +28,7 @@
 #include "bsp.h"
 #include "cli.h"
 #include "director.h"
+#include "log_com.h"
 #include "posted_signals.h"
 #include "pressure_sensor.h"
 #include "qpc.h"
@@ -53,6 +54,7 @@ typedef enum
     AO_RESERVED = 0U,
     AO_PRIO_BLINKY,
     AO_PRIO_APP_CLI,
+    AO_PRIO_LOG_COM,
     AO_PRIO_DIRECTOR,
     AO_PRIO_LMT01,
     AO_PRIO_PRESSURE,
@@ -275,6 +277,17 @@ int main(void)
         AO_PRIO_APP_CLI,         // QP prio. of the AO
         app_cli_QueueSto,        // event queue storage
         Q_DIM(app_cli_QueueSto), // queue length [events]
+        (void *) 0,              // stack storage (not used in QK)
+        0U,                      // stack size [bytes] (not used in QK)
+        (void *) 0);             // no initialization param
+
+    static QEvt const *log_com_QueueSto[20];
+    LogCom_ctor(BSP_Get_Serial_IO_Interface_USB1());
+    QACTIVE_START(
+        AO_LogCom,
+        AO_PRIO_LOG_COM,         // QP prio. of the AO
+        log_com_QueueSto,        // event queue storage
+        Q_DIM(log_com_QueueSto), // queue length [events]
         (void *) 0,              // stack storage (not used in QK)
         0U,                      // stack size [bytes] (not used in QK)
         (void *) 0);             // no initialization param

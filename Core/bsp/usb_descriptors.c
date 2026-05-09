@@ -80,6 +80,8 @@ enum
 {
     ITF_NUM_CDC_0 = 0,
     ITF_NUM_CDC_0_DATA,
+    ITF_NUM_CDC_1,
+    ITF_NUM_CDC_1_DATA,
     ITF_NUM_TOTAL
 };
 
@@ -136,8 +138,11 @@ uint8_t const desc_fs_configuration[] = {
     // 1st CDC: Interface number, string index, EP notification address and size, EP data address
     // (out, in) and size.
     // NOTE: USB packet size limited to 64 bytes for full speed
-    TUD_CDC_DESCRIPTOR(
-        ITF_NUM_CDC_0, 4, EPNUM_CDC_0_NOTIF, 8, EPNUM_CDC_0_OUT, EPNUM_CDC_0_IN, 64)};
+    TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_0, 4, EPNUM_CDC_0_NOTIF, 8, EPNUM_CDC_0_OUT, EPNUM_CDC_0_IN, 64),
+
+    // 2nd CDC: dedicated logging interface
+    TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_1, 5, EPNUM_CDC_1_NOTIF, 8, EPNUM_CDC_1_OUT, EPNUM_CDC_1_IN, 64),
+};
 
 #if TUD_OPT_HIGH_SPEED
 // Per USB specs: high speed capable device must report device_qualifier and
@@ -228,10 +233,11 @@ enum
 // array of pointer to string descriptors
 char const *string_desc_arr[] = {
     (const char[]) {0x09, 0x04}, // 0: is supported language is English (0x0409)
-    "Purafy",                    // 1: Manufacturer
-    "Portage",                   // 2: Product
+    "Craig",                     // 1: Manufacturer
+    "Motor PCB",                 // 2: Product
     NULL,                        // 3: Serials will use unique ID if possible
-    "PortageCOM",                // 4: CDC Interface 0 -- used in TUD_CDC_DESCRIPTOR above
+    "Portage CLI",               // 4: CDC Interface 0 -- used in TUD_CDC_DESCRIPTOR above
+    "Portage Log",               // 5: CDC Interface 1 -- used in TUD_CDC_DESCRIPTOR above
 };
 
 static uint16_t _desc_str[32 + 1];

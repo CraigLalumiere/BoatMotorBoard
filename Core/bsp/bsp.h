@@ -52,6 +52,7 @@ void BSP_LED2_Toggle(void);
  * @brief   Retrieve Serial IO interface for the USB Interface serial comms channels
  **************************************************************************************************/
 const Serial_IO_T *BSP_Get_Serial_IO_Interface_USB0();
+const Serial_IO_T *BSP_Get_Serial_IO_Interface_USB1();
 
 /**
  ***************************************************************************************************
