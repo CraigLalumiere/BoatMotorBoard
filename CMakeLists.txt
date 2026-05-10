@@ -86,6 +86,8 @@ set(sources_SRCS
     ${PROJ_PATH}/Core/services/cli/cli.c
     ${PROJ_PATH}/Core/services/fault_manager.c
     ${PROJ_PATH}/Core/services/blinky.c
+    ${PROJ_PATH}/Core/services/config.c
+    ${PROJ_PATH}/Core/services/fram.c
     ${PROJ_PATH}/Core/services/reset.c
     ${PROJ_PATH}/Core/services/reset_reason_print.c
     ${PROJ_PATH}/Core/services/log_com.c

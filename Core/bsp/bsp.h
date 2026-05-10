@@ -72,6 +72,8 @@ int32_t BSP_CAN_Write_Msg(const CAN_Message_T *msg);
  **************************************************************************************************/
 I2C_Write BSP_Get_I2C_Write_Pressure();
 I2C_Read BSP_Get_I2C_Read_Pressure();
+I2C_Write BSP_Get_I2C_Write_FRAM();
+I2C_MemoryRead BSP_Get_I2C_Memory_Read_FRAM();
 
 /**
  ***************************************************************************************************

@@ -1,5 +1,6 @@
 #include "director.h"
 #include "bsp.h"
+#include "config.h"
 #include "flowsensor.h"
 #include "private_signal_ranges.h"
 #include "pubsub_signals.h"
@@ -17,6 +18,8 @@ Q_DEFINE_THIS_MODULE("Director")
 
 #define TACH_LAMBDA 0.9
 #define VBAT_LAMBDA 0.99
+#define ENGINE_RUNNING_RPM_THRESHOLD 1.0f
+#define ENGINE_MINUTE_PERIOD_MS      60000U
 
 /**************************************************************************************************\
 * Private type definitions
@@ -25,17 +28,20 @@ Q_DEFINE_THIS_MODULE("Director")
 enum PressureSignals
 {
     WAIT_TIMEOUT_SIG = PRIVATE_SIGNAL_DIRECTOR_START,
+    ENGINE_MINUTE_TIMEOUT_SIG,
 };
 
 typedef struct
 {
     QActive super; // inherit QActive
     QTimeEvt timer_evt;
+    QTimeEvt engine_minute_evt;
 
     float pressure;
     float temperature;
     float vbat_volts;
     float tachometer;
+    bool config_ready;
 } Director;
 
 /**************************************************************************************************\
@@ -69,6 +75,7 @@ void Director_ctor()
 
     QActive_ctor(&me->super, Q_STATE_CAST(&initial));
     QTimeEvt_ctorX(&me->timer_evt, &me->super, WAIT_TIMEOUT_SIG, 0U);
+    QTimeEvt_ctorX(&me->engine_minute_evt, &me->super, ENGINE_MINUTE_TIMEOUT_SIG, 0U);
 }
 
 /**************************************************************************************************\
@@ -85,11 +92,16 @@ static QState initial(Director *const me, void const *const par)
 
     QActive_subscribe((QActive *) me, PUBSUB_PRESSURE_SIG);
     QActive_subscribe((QActive *) me, PUBSUB_TEMPERATURE_SIG);
+    QActive_subscribe((QActive *) me, PUBSUB_CONFIG_READY_SIG);
 
     // BSP_Tach_Capture_Timer_Enable();
 
     // Start update loop of 100hz
     QTimeEvt_armX(&me->timer_evt, BSP_TICKS_PER_SEC / 100, BSP_TICKS_PER_SEC / 100);
+    QTimeEvt_armX(
+        &me->engine_minute_evt,
+        MILLISECONDS_TO_TICKS(ENGINE_MINUTE_PERIOD_MS),
+        MILLISECONDS_TO_TICKS(ENGINE_MINUTE_PERIOD_MS));
 
     return Q_TRAN(&running);
 }
@@ -119,6 +131,11 @@ static QState top(Director *const me, QEvt const *const e)
             const FloatEvent_T *event = Q_EVT_CAST(FloatEvent_T);
             me->temperature           = event->num;
             status                    = Q_HANDLED();
+            break;
+        }
+        case PUBSUB_CONFIG_READY_SIG: {
+            me->config_ready = true;
+            status           = Q_HANDLED();
             break;
         }
         // case PUBSUB_TACH_SIG: {
@@ -172,6 +189,20 @@ static QState running(Director *const me, QEvt const *const e)
             event->pressure         = me->pressure;
             event->tachometer       = me->tachometer;
             QACTIVE_PUBLISH(&event->super, &me->super);
+
+            status = Q_HANDLED();
+            break;
+        }
+        case ENGINE_MINUTE_TIMEOUT_SIG: {
+            if (me->config_ready && (me->tachometer > ENGINE_RUNNING_RPM_THRESHOLD))
+            {
+                uint32_t engine_minutes = Config_Read_U32(CFG_ID_ENGINE_MINUTES);
+                if (engine_minutes < UINT32_MAX)
+                {
+                    Config_Write_U32(CFG_ID_ENGINE_MINUTES, engine_minutes + 1U);
+                    Config_Save();
+                }
+            }
 
             status = Q_HANDLED();
             break;

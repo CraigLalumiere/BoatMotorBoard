@@ -68,6 +68,24 @@ static I2C_Return_T BSP_I2C_Read_Pressure(
     I2C_Error_Callback error_cb,
     void *cb_data);
 
+static I2C_Return_T BSP_I2C_Write_FRAM(
+    uint8_t address,
+    uint8_t *tx_buffer,
+    const uint16_t data_len,
+    I2C_Complete_Callback complete_cb,
+    I2C_Error_Callback error_cb,
+    void *cb_data);
+
+static I2C_Return_T BSP_I2C_Memory_Read_FRAM(
+    uint8_t address,
+    uint16_t mem_address,
+    uint8_t mem_address_size,
+    uint8_t *rx_buffer,
+    const uint16_t data_len,
+    I2C_Complete_Callback complete_cb,
+    I2C_Error_Callback error_cb,
+    void *cb_data);
+
 /**************************************************************************************************\
 * Private memory declarations
 \**************************************************************************************************/
@@ -123,6 +141,16 @@ I2C_Write BSP_Get_I2C_Write_Pressure()
 I2C_Read BSP_Get_I2C_Read_Pressure()
 {
     return BSP_I2C_Read_Pressure;
+}
+
+I2C_Write BSP_Get_I2C_Write_FRAM()
+{
+    return BSP_I2C_Write_FRAM;
+}
+
+I2C_MemoryRead BSP_Get_I2C_Memory_Read_FRAM()
+{
+    return BSP_I2C_Memory_Read_FRAM;
 }
 
 /**
@@ -537,6 +565,40 @@ static I2C_Return_T BSP_I2C_Read_Pressure(
     //     I2C_BUS_ID_2, address, rx_buffer, data_len, complete_cb, error_cb, cb_data);
     return SharedI2C_Read(
         &SharedI2C_Bus2, address, rx_buffer, data_len, complete_cb, error_cb, cb_data);
+}
+
+static I2C_Return_T BSP_I2C_Write_FRAM(
+    uint8_t address,
+    uint8_t *tx_buffer,
+    const uint16_t data_len,
+    I2C_Complete_Callback complete_cb,
+    I2C_Error_Callback error_cb,
+    void *cb_data)
+{
+    return SharedI2C_Write(
+        &SharedI2C_Bus2, address, tx_buffer, data_len, complete_cb, error_cb, cb_data);
+}
+
+static I2C_Return_T BSP_I2C_Memory_Read_FRAM(
+    uint8_t address,
+    uint16_t mem_address,
+    uint8_t mem_address_size,
+    uint8_t *rx_buffer,
+    const uint16_t data_len,
+    I2C_Complete_Callback complete_cb,
+    I2C_Error_Callback error_cb,
+    void *cb_data)
+{
+    return SharedI2C_MemoryRead(
+        &SharedI2C_Bus2,
+        address,
+        mem_address,
+        mem_address_size,
+        rx_buffer,
+        data_len,
+        complete_cb,
+        error_cb,
+        cb_data);
 }
 
 /**

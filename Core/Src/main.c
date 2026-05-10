@@ -27,7 +27,9 @@
 #include "box_to_box.h"
 #include "bsp.h"
 #include "cli.h"
+#include "config.h"
 #include "director.h"
+#include "fram.h"
 #include "log_com.h"
 #include "posted_signals.h"
 #include "pressure_sensor.h"
@@ -54,6 +56,8 @@ typedef enum
     AO_RESERVED = 0U,
     AO_PRIO_BLINKY,
     AO_PRIO_APP_CLI,
+    AO_PRIO_CONFIG,
+    AO_PRIO_FRAM,
     AO_PRIO_LOG_COM,
     AO_PRIO_DIRECTOR,
     AO_PRIO_LMT01,
@@ -79,6 +83,8 @@ typedef struct
     {
         QEvt someMultipleQEvt[4];
         DebugForceFaultEvent_T fault_event;
+        FramReadReqEvent_T fram_read_req_event;
+        ConfigEntryChangedEvent_T config_entry_changed_event;
     } medium_messages;
 } MediumMessageUnion_T;
 typedef struct
@@ -87,6 +93,8 @@ typedef struct
     {
         QEvt base_event;
         FaultGeneratedEvent_T fault_event;
+        FramReadRespEvent_T fram_read_resp_event;
+        FramWriteReqEvent_T fram_write_req_event;
     } large_messages;
 } LongMessageUnion_T;
 
@@ -258,6 +266,28 @@ int main(void)
         (void *) 0,                 // stack storage (not used in QK)
         0U,                         // stack size [bytes] (not used in QK)
         (void *) 0);                // no initialization param
+
+    static QEvt const *config_QueueSto[10];
+    Config_ctor();
+    QACTIVE_START(
+        AO_Config,
+        AO_PRIO_CONFIG,         // QP prio. of the AO
+        config_QueueSto,        // event queue storage
+        Q_DIM(config_QueueSto), // queue length [events]
+        (void *) 0,
+        0U,
+        (void *) 0);
+
+    static QEvt const *fram_QueueSto[10];
+    Fram_ctor(BSP_Get_I2C_Write_FRAM(), BSP_Get_I2C_Memory_Read_FRAM());
+    QACTIVE_START(
+        AO_Fram,
+        AO_PRIO_FRAM,         // QP prio. of the AO
+        fram_QueueSto,        // event queue storage
+        Q_DIM(fram_QueueSto), // queue length [events]
+        (void *) 0,
+        0U,
+        (void *) 0);
 
     static QEvt const *DirectorQueueSto[10];
     Director_ctor();
