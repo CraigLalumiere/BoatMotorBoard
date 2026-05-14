@@ -36,6 +36,7 @@ QActive *const AO_Blinky = &Blinky_inst.super;
 
 static QState Blinky_initial(Blinky *const me, void const *const par);
 static QState Blinky_running(Blinky *const me, QEvt const *const e);
+static QState Blinky_fault(Blinky *const me, QEvt const *const e);
 
 /**************************************************************************************************\
 * Public functions
@@ -76,18 +77,44 @@ QState Blinky_running(Blinky *const me, QEvt const *const e)
             status = Q_HANDLED();
             break;
         }
+        case PUBSUB_FAULT_GENERATED_SIG: {
+            status = Q_TRAN(&Blinky_fault);
+            break;
+        }
+        default: {
+            status = Q_SUPER(&QHsm_top);
+            break;
+        }
+    }
+    return status;
+}
+
+QState Blinky_fault(Blinky *const me, QEvt const *const e)
+{
+    QState status;
+    switch (e->sig)
+    {
+        case Q_ENTRY_SIG: {
+            QTimeEvt_armX(&me->timeEvt2, BSP_TICKS_PER_SEC / 5U, BSP_TICKS_PER_SEC / 5U);
+            status = Q_HANDLED();
+            break;
+        }
+        case Q_EXIT_SIG: {
+            QTimeEvt_disarm(&me->timeEvt2);
+            status = Q_HANDLED();
+            break;
+        }
         case BLINKY_FAULT_TIMEOUT_SIG: {
             BSP_LED2_Toggle();
             status = Q_HANDLED();
             break;
         }
         case PUBSUB_FAULT_GENERATED_SIG: {
-            QTimeEvt_armX(&me->timeEvt2, BSP_TICKS_PER_SEC / 5U, BSP_TICKS_PER_SEC / 5U);
             status = Q_HANDLED();
             break;
         }
         default: {
-            status = Q_SUPER(&QHsm_top);
+            status = Q_SUPER(&Blinky_running);
             break;
         }
     }

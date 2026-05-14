@@ -1,8 +1,10 @@
 #include "LMT01.h"
 #include "bsp.h"
+#include "fault_manager.h"
 #include "private_signal_ranges.h"
 #include "pubsub_signals.h"
 #include "stm32g4xx_hal.h"
+#include <stdbool.h>
 
 #ifdef Q_SPY
 Q_DEFINE_THIS_MODULE("LMT01")
@@ -13,6 +15,11 @@ Q_DEFINE_THIS_MODULE("LMT01")
 \**************************************************************************************************/
 
 #define LAMBDA 0.95
+#define LMT01_POLL_TICKS              (BSP_TICKS_PER_SEC / 100U)
+#define LMT01_NO_PULSE_TIMEOUT_MS     1000U
+#define LMT01_NO_PULSE_TIMEOUT_COUNTS \
+    (MILLISECONDS_TO_TICKS(LMT01_NO_PULSE_TIMEOUT_MS) / LMT01_POLL_TICKS)
+#define LMT01_INVALID_TEMPERATURE_C (-999.0f)
 
 /**************************************************************************************************\
 * Private type definitions
@@ -28,7 +35,9 @@ typedef struct
     QActive super; // inherit QActive
     QTimeEvt timer_evt;
     uint16_t lmt01_counter;
-    int16_t temperature;
+    float temperature;
+    uint16_t no_pulse_counts;
+    bool no_pulse_fault_reported;
 } LMT01;
 
 /**************************************************************************************************\
@@ -62,7 +71,10 @@ void LMT01_ctor()
     QActive_ctor(&me->super, Q_STATE_CAST(&initial));
     QTimeEvt_ctorX(&me->timer_evt, &me->super, WAIT_TIMEOUT_SIG, 0U);
 
-    me->temperature = -999;
+    me->lmt01_counter = 0U;
+    me->temperature = LMT01_INVALID_TEMPERATURE_C;
+    me->no_pulse_counts = 0U;
+    me->no_pulse_fault_reported = false;
 
     // Start the pulse-counter timer
     HAL_TIM_Base_Start_IT(&htim8);
@@ -81,7 +93,7 @@ static QState initial(LMT01 *const me, void const *const par)
     Q_UNUSED_PAR(par);
 
     // Conversion time of the LMT01 should be under 54ms
-    QTimeEvt_armX(&me->timer_evt, BSP_TICKS_PER_SEC / 100, BSP_TICKS_PER_SEC / 100);
+    QTimeEvt_armX(&me->timer_evt, LMT01_POLL_TICKS, LMT01_POLL_TICKS);
 
     return Q_TRAN(&running);
 }
@@ -100,6 +112,28 @@ static QState running(LMT01 *const me, QEvt const *const e)
             uint16_t prev_counter = me->lmt01_counter;
             me->lmt01_counter     = __HAL_TIM_GET_COUNTER(&htim8);
 
+            if (me->lmt01_counter == 0U)
+            {
+                if (me->no_pulse_counts < LMT01_NO_PULSE_TIMEOUT_COUNTS)
+                {
+                    me->no_pulse_counts++;
+                }
+
+                if (
+                    me->no_pulse_counts >= LMT01_NO_PULSE_TIMEOUT_COUNTS &&
+                    !me->no_pulse_fault_reported)
+                {
+                    Fault_Manager_Generate_Fault(
+                        &me->super, FAULT_ID_LMT01_NO_PULSES, "No LMT01 pulses detected");
+                    me->no_pulse_fault_reported = true;
+                }
+            }
+            else
+            {
+                me->no_pulse_counts = 0U;
+                me->no_pulse_fault_reported = false;
+            }
+
             if (prev_counter > 0 && prev_counter == me->lmt01_counter)
             {
                 __HAL_TIM_SET_COUNTER(&htim8, 0); // reset the timer
@@ -107,10 +141,10 @@ static QState running(LMT01 *const me, QEvt const *const e)
                 // deglitching
                 if (me->lmt01_counter > 10)
                 {
-                    int16_t new_temperature = (me->lmt01_counter * 0.0625f) -
+                    float new_temperature = (me->lmt01_counter * 0.0625f) -
                         50; // temperature in degrees C
 
-                    if (me->temperature == -999)
+                    if (me->temperature == LMT01_INVALID_TEMPERATURE_C)
                         me->temperature = new_temperature;
                     else
                         me->temperature = LAMBDA * me->temperature + (1 - LAMBDA) * new_temperature;

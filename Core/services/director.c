@@ -188,6 +188,7 @@ static QState running(Director *const me, QEvt const *const e)
             event->temperature      = me->temperature;
             event->pressure         = me->pressure;
             event->tachometer       = me->tachometer;
+            event->engine_minutes   = Config_Read_U32(CFG_ID_ENGINE_MINUTES);
             QACTIVE_PUBLISH(&event->super, &me->super);
 
             status = Q_HANDLED();

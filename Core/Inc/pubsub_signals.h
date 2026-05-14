@@ -46,6 +46,7 @@ typedef struct
     float pressure;
     float tachometer;
     float vbat;
+    uint32_t engine_minutes;
     bool start;
     bool neutral;
     bool buzzer;
