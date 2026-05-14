@@ -1,10 +1,10 @@
 #include "log_com.h"
 #include "bsp.h"
-#include "private_signal_ranges.h"
 #include "posted_signals.h"
+#include "private_signal_ranges.h"
 #include "pubsub_signals.h"
-#include <stdbool.h>
 #include <stdarg.h>
+#include <stdbool.h>
 #include <stdio.h>
 
 enum LogComSignals
@@ -30,6 +30,7 @@ typedef struct
 static QState LogCom_initial(LogCom *const me, void const *const par);
 static QState LogCom_active(LogCom *const me, QEvt const *const e);
 static void LogCom_WriteEvent(LogCom *const me, const PrintEvent_T *const print_event);
+static void LogCom_WriteTimestampedText(LogCom *const me, uint32_t milliseconds, const char *msg);
 static void LogCom_WriteLine(LogCom *const me, const char *msg);
 static void LogCom_LogMotorData(LogCom *const me, const MotorDataEvent_T *const motor_data_event);
 
@@ -118,7 +119,7 @@ static QState LogCom_active(LogCom *const me, QEvt const *const e)
             }
 
             me->received_motor_data_since_timeout = false;
-            status                               = Q_HANDLED();
+            status                                = Q_HANDLED();
             break;
         }
 
@@ -133,13 +134,18 @@ static QState LogCom_active(LogCom *const me, QEvt const *const e)
 
 static void LogCom_WriteEvent(LogCom *const me, const PrintEvent_T *const print_event)
 {
-    char buffer[PRINT_EVENT_MAX_MSG_LENGTH + 24];
+    LogCom_WriteTimestampedText(me, print_event->milliseconds, print_event->msg);
+}
+
+static void LogCom_WriteTimestampedText(LogCom *const me, uint32_t milliseconds, const char *msg)
+{
+    char buffer[120];
     int line_length = snprintf(
         buffer,
         sizeof(buffer),
         "[%lu] %s\r\n",
-        (unsigned long) print_event->milliseconds,
-        print_event->msg);
+        (unsigned long) milliseconds,
+        msg);
 
     if (line_length <= 0)
     {
@@ -168,14 +174,12 @@ static void LogCom_WriteLine(LogCom *const me, const char *msg)
 
 static void LogCom_LogMotorData(LogCom *const me, const MotorDataEvent_T *const motor_data_event)
 {
-    PrintEvent_T print_event = {
-        .milliseconds = BSP_Get_Milliseconds_Tick(),
-    };
-
-    snprintf(
-        print_event.msg,
-        sizeof(print_event.msg),
-        "rpm=%.0f vb=%.2f t=%.1f p=%.1f n=%u s=%u tg=%u pg=%u b=%u",
+    char motor_msg[96];
+    int msg_length = snprintf(
+        motor_msg,
+        sizeof(motor_msg),
+        "RPM:%5.0f VBat:%5.2f Temp:%4.1fC\r\n"
+        "Press:%4.1f N:%u St:%u TG:%u PG:%u Bz:%u",
         motor_data_event->tachometer,
         motor_data_event->vbat,
         motor_data_event->temperature,
@@ -185,7 +189,12 @@ static void LogCom_LogMotorData(LogCom *const me, const MotorDataEvent_T *const 
         motor_data_event->temp_good ? 1U : 0U,
         motor_data_event->pres_good ? 1U : 0U,
         motor_data_event->buzzer ? 1U : 0U);
-    print_event.msg[PRINT_EVENT_MAX_MSG_LENGTH - 1] = 0;
 
-    LogCom_WriteEvent(me, &print_event);
+    if (msg_length <= 0)
+    {
+        return;
+    }
+
+    motor_msg[sizeof(motor_msg) - 1] = 0;
+    LogCom_WriteTimestampedText(me, BSP_Get_Milliseconds_Tick(), motor_msg);
 }
