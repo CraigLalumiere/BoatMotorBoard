@@ -1,0 +1,22 @@
+{
+    "folders": [
+        {
+            "path": "motor"
+        },
+        {
+            "path": "."
+        }
+    ],
+    "settings": {
+        "cmake.useCMakePresets": "always",
+        "files.associations": {
+            "qpc.h": "c",
+            "cli.h": "c",
+            "usb.h": "c",
+            "cli_commands.h": "c"
+        },
+        "files.exclude": {
+            "**/gauge": true
+        }
+    }
+}

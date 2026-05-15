@@ -1,0 +1,12 @@
+{
+    "editor.rulers": [
+        100
+    ],
+
+    "[c]": {
+        "editor.formatOnSave": true
+    },
+    "[cpp]": {
+        "editor.formatOnSave": true
+    },    
+}

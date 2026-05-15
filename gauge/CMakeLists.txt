@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.22)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-project(BoatMotorBoard)
+project(BoatGaugeBoard)
 enable_language(C ASM)
 
 message("Build type: " ${CMAKE_BUILD_TYPE})
@@ -90,14 +90,8 @@ set(sources_SRCS
     ${PROJ_PATH}/src/services/cli/cli_manual_commands.c
     ${PROJ_PATH}/src/services/cli/cli.c
     ${PROJ_PATH}/src/services/blinky.c
-    ${PROJ_PATH}/src/services/config.c
     ${PROJ_PATH}/src/services/director.c
     ${PROJ_PATH}/src/services/fault_manager.c
-    ${PROJ_PATH}/src/services/flowsensor.c
-    ${PROJ_PATH}/src/services/fram.c
-    ${PROJ_PATH}/src/services/LMT01.c
-    ${PROJ_PATH}/src/services/log_com.c
-    ${PROJ_PATH}/src/services/pressure_sensor.c
 
     ${SHARED_PATH}/services/box_to_box.c
     ${SHARED_PATH}/services/reset.c
@@ -152,7 +146,7 @@ set(include_path_DIRS
 set(symbols_SYMB
     USE_HAL_DRIVER
     CFG_TUSB_MCU=OPT_MCU_STM32G4
-    BOARD_MOTOR
+    BOARD_GAUGE
 )
 
 add_executable(${EXECUTABLE} ${sources_SRCS})

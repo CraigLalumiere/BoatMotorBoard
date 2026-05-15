@@ -90,8 +90,10 @@ static QState initial(Box_To_Box *const me, void const *const par)
     Q_UNUSED_PAR(par);
 
     QActive_subscribe((QActive *) me, PUBSUB_BOX_TO_BOX_STARTUP_SIG);
-    QActive_subscribe((QActive *) me, PUBSUB_MOTOR_DATA_SIG);
     QActive_subscribe((QActive *) me, PUBSUB_FAULT_GENERATED_SIG);
+#ifdef BOARD_MOTOR
+    QActive_subscribe((QActive *) me, PUBSUB_MOTOR_DATA_SIG);
+#endif
 
     // for testing
     return Q_TRAN(&uinitialized);
@@ -133,8 +135,9 @@ static QState active(Box_To_Box *const me, QEvt const *const e)
         case Q_ENTRY_SIG: {
             BSP_CAN_Bus_Init();
 
-            // send test messages
+#ifdef BOARD_MOTOR
             QTimeEvt_armX(&me->testEvt, MILLISECONDS_TO_TICKS(50), MILLISECONDS_TO_TICKS(50));
+#endif
             status = Q_HANDLED();
             break;
         }
@@ -173,6 +176,7 @@ static QState active(Box_To_Box *const me, QEvt const *const e)
         }
 
         case PUBSUB_MOTOR_DATA_SIG: {
+#ifdef BOARD_MOTOR
             MotorDataEvent_T *evt = Q_EVT_CAST(MotorDataEvent_T);
 
             can_msg.motor_data_msg.id          = CAN_MSG_MOTOR_DATA_ID;
@@ -195,6 +199,10 @@ static QState active(Box_To_Box *const me, QEvt const *const e)
             }
 
             break;
+#else
+            status = Q_SUPER(&QHsm_top);
+            break;
+#endif
         }
 
         case POSTED_CAN_MESSAGE_RECEIVED_SIG: {
@@ -242,14 +250,33 @@ void handle_can_message_received(Box_To_Box *const me, QEvt const *const e)
 
     can_msg = (CAN_Msgs_T *) &msg_received_evt->msg;
 
-    // switch (msg_received_evt->msg.id)
-    // {
-    //     case CAN_MSG_WATER_GOOD_ID: {
-    //         if (can_msg->water_good_msg.water_good)
-    //             BSP_Blue_LED_On();
-    //         else
-    //             BSP_Blue_LED_Off();
-    //         break;
-    //     }
-    // }
+#ifdef BOARD_GAUGE
+    switch (msg_received_evt->msg.id)
+    {
+        case CAN_MSG_TEST1_ID: {
+            break;
+        }
+        case CAN_MSG_MOTOR_DATA_ID: {
+            CAN_Msg_Motor_Data_T motor_data = can_msg->motor_data_msg;
+
+            MotorDataEvent_T *event = Q_NEW(MotorDataEvent_T, PUBSUB_MOTOR_DATA_SIG);
+            event->neutral          = false;
+            event->start            = false;
+            event->temp_good        = true;
+            event->pres_good        = true;
+            event->buzzer           = true;
+            event->vbat             = 0.0f;
+            event->temperature      = (float) motor_data.temperature;
+            event->pressure         = (float) motor_data.pressure;
+            event->tachometer       = (float) motor_data.tachometer;
+            QACTIVE_PUBLISH(&event->super, &me->super);
+            break;
+        }
+        default: {
+            break;
+        }
+    }
+#else
+    Q_UNUSED_PAR(can_msg);
+#endif
 }
