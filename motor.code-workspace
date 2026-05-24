@@ -1,14 +1,17 @@
 {
     "folders": [
         {
+            "name": "motor",
             "path": "motor"
         },
         {
+            "name": "repo",
             "path": "."
         }
     ],
     "settings": {
         "cmake.useCMakePresets": "always",
+        "cmake.sourceDirectory": "${workspaceFolder:motor}",
         "files.associations": {
             "qpc.h": "c",
             "cli.h": "c",

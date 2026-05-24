@@ -1,14 +1,17 @@
 {
     "folders": [
         {
+            "name": "gauge",
             "path": "gauge"
         },
         {
+            "name": "repo",
             "path": "."
         }
     ],
     "settings": {
         "cmake.useCMakePresets": "always",
+        "cmake.sourceDirectory": "${workspaceFolder:gauge}",
         "files.associations": {
             "qpc.h": "c",
             "cli.h": "c",
