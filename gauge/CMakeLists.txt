@@ -88,10 +88,10 @@ set(sources_SRCS
 
     ${PROJ_PATH}/src/services/cli/cli_commands.c
     ${PROJ_PATH}/src/services/cli/cli_manual_commands.c
-    ${PROJ_PATH}/src/services/cli/cli.c
     ${PROJ_PATH}/src/services/blinky.c
     ${PROJ_PATH}/src/services/director.c
     ${PROJ_PATH}/src/services/fault_manager.c
+    ${PROJ_PATH}/src/services/log_com.c
 
     ${SHARED_PATH}/services/box_to_box.c
     ${SHARED_PATH}/services/reset.c
@@ -99,6 +99,7 @@ set(sources_SRCS
     ${SHARED_PATH}/services/usb.c
     ${SHARED_PATH}/services/pc_com/crc16.c
     ${SHARED_PATH}/services/pc_com/hdlc.c
+    ${SHARED_PATH}/services/pc_com/pc_com.c
 
     ${PROJ_PATH}/src/bsp/bsp.c
     ${PROJ_PATH}/src/bsp/bsp_manual.c

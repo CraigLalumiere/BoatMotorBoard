@@ -16,7 +16,8 @@ Q_DEFINE_THIS_MODULE("bsp.c")
 * Private macros
 \**************************************************************************************************/
 
-#define USB_INTERFACE                       0
+#define USB_INTERFACE_PC_COM                0
+#define USB_INTERFACE_LOG                   1
 #define SHARED_I2C_BUS_2_DEFERRED_QUEUE_LEN 3
 #define AVREF                               2.895
 
@@ -31,6 +32,9 @@ Q_DEFINE_THIS_MODULE("bsp.c")
 static uint16_t USB0_TransmitData(const uint8_t *data_ptr, const uint16_t data_len);
 static uint16_t USB0_ReceiveData(uint8_t *data_ptr, const uint16_t max_data_len);
 static void USB0_RegisterDataReadyCB(Serial_IO_Data_Ready_Callback cb, void *cb_data);
+static uint16_t USB1_TransmitData(const uint8_t *data_ptr, const uint16_t data_len);
+static uint16_t USB1_ReceiveData(uint8_t *data_ptr, const uint16_t max_data_len);
+static void USB1_RegisterDataReadyCB(Serial_IO_Data_Ready_Callback cb, void *cb_data);
 
 static uint16_t volts_to_code12(float volts);
 
@@ -49,11 +53,19 @@ bool input_capture_found;
 
 static Serial_IO_Data_Ready_Callback s_usb0_data_ready_cb = 0;
 static void *s_usb0_data_ready_cb_data                    = 0;
+static Serial_IO_Data_Ready_Callback s_usb1_data_ready_cb = 0;
+static void *s_usb1_data_ready_cb_data                    = 0;
 
 const Serial_IO_T s_bsp_serial_io_usb0 = {
     .tx_func          = USB0_TransmitData,
     .rx_func          = USB0_ReceiveData,
     .register_cb_func = USB0_RegisterDataReadyCB,
+};
+
+const Serial_IO_T s_bsp_serial_io_usb1 = {
+    .tx_func          = USB1_TransmitData,
+    .rx_func          = USB1_ReceiveData,
+    .register_cb_func = USB1_RegisterDataReadyCB,
 };
 
 /**************************************************************************************************\
@@ -399,6 +411,11 @@ const Serial_IO_T *BSP_Get_Serial_IO_Interface_USB0()
     return &s_bsp_serial_io_usb0;
 }
 
+const Serial_IO_T *BSP_Get_Serial_IO_Interface_USB1()
+{
+    return &s_bsp_serial_io_usb1;
+}
+
 /**************************************************************************************************\
 * Private functions
 \**************************************************************************************************/
@@ -409,8 +426,8 @@ const Serial_IO_T *BSP_Get_Serial_IO_Interface_USB0()
  **************************************************************************************************/
 static uint16_t USB0_TransmitData(const uint8_t *data_ptr, const uint16_t data_len)
 {
-    uint16_t n_written = tud_cdc_n_write(USB_INTERFACE, data_ptr, data_len);
-    tud_cdc_n_write_flush(USB_INTERFACE);
+    uint16_t n_written = tud_cdc_n_write(USB_INTERFACE_PC_COM, data_ptr, data_len);
+    tud_cdc_n_write_flush(USB_INTERFACE_PC_COM);
 
     return n_written;
 }
@@ -418,9 +435,9 @@ static uint16_t USB0_TransmitData(const uint8_t *data_ptr, const uint16_t data_l
 static uint16_t USB0_ReceiveData(uint8_t *data_ptr, const uint16_t max_data_len)
 {
     uint32_t count = 0;
-    if (tud_cdc_n_available(USB_INTERFACE))
+    if (tud_cdc_n_available(USB_INTERFACE_PC_COM))
     {
-        count = tud_cdc_n_read(USB_INTERFACE, data_ptr, max_data_len);
+        count = tud_cdc_n_read(USB_INTERFACE_PC_COM, data_ptr, max_data_len);
     }
 
     return count;
@@ -432,11 +449,40 @@ static void USB0_RegisterDataReadyCB(Serial_IO_Data_Ready_Callback cb, void *cb_
     s_usb0_data_ready_cb_data = cb_data;
 }
 
+static uint16_t USB1_TransmitData(const uint8_t *data_ptr, const uint16_t data_len)
+{
+    uint16_t n_written = tud_cdc_n_write(USB_INTERFACE_LOG, data_ptr, data_len);
+    tud_cdc_n_write_flush(USB_INTERFACE_LOG);
+
+    return n_written;
+}
+
+static uint16_t USB1_ReceiveData(uint8_t *data_ptr, const uint16_t max_data_len)
+{
+    uint32_t count = 0;
+    if (tud_cdc_n_available(USB_INTERFACE_LOG))
+    {
+        count = tud_cdc_n_read(USB_INTERFACE_LOG, data_ptr, max_data_len);
+    }
+
+    return count;
+}
+
+static void USB1_RegisterDataReadyCB(Serial_IO_Data_Ready_Callback cb, void *cb_data)
+{
+    s_usb1_data_ready_cb      = cb;
+    s_usb1_data_ready_cb_data = cb_data;
+}
+
 void tud_cdc_rx_cb(uint8_t itf)
 {
-    if (itf == USB_INTERFACE && s_usb0_data_ready_cb != 0)
+    if (itf == USB_INTERFACE_PC_COM && s_usb0_data_ready_cb != 0)
     {
         s_usb0_data_ready_cb(s_usb0_data_ready_cb_data);
+    }
+    else if (itf == USB_INTERFACE_LOG && s_usb1_data_ready_cb != 0)
+    {
+        s_usb1_data_ready_cb(s_usb1_data_ready_cb_data);
     }
     else
     {

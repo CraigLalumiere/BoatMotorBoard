@@ -8,6 +8,7 @@
 #include "interfaces/gpio.h"
 #include "interfaces/i2c_bus.h"
 #include "posted_signals.h"
+#include "reset.h"
 #include "qpc.h"
 #include "qsafe.h"
 // #include "services/config.h"
@@ -33,6 +34,7 @@ static void on_cli_config_list(EmbeddedCli *cli, char *args, void *context);
 static void on_cli_config_read(EmbeddedCli *cli, char *args, void *context);
 static void on_cli_config_set(EmbeddedCli *cli, char *args, void *context);
 static void on_cli_config_save(EmbeddedCli *cli, char *args, void *context);
+static void on_bootloader(EmbeddedCli *cli, char *args, void *context);
 static bool is_numeric(const char *s);
 static bool is_positive_numeric(const char *s);
 static void lowercase(const char *src, char *dst, unsigned max_len);
@@ -105,6 +107,14 @@ static CliCommandBinding cli_cmd_list[] = {
         NULL,
         on_cli_config_save,
     },
+
+    (CliCommandBinding) {
+        "bootloader",
+        "Enter STM32 USB DFU bootloader",
+        false,
+        NULL,
+        on_bootloader,
+    },
 };
 
 void AppCLI_AddCommandsToCLI(EmbeddedCli *cli)
@@ -113,6 +123,15 @@ void AppCLI_AddCommandsToCLI(EmbeddedCli *cli)
     {
         embeddedCliAddBinding(cli, cli_cmd_list[i]);
     }
+}
+
+static void on_bootloader(EmbeddedCli *cli, char *args, void *context)
+{
+    (void) args;
+    (void) context;
+
+    embeddedCliPrint(cli, "Bootloader command received, rebooting into USB DFU...");
+    Reset_RequestBootloader();
 }
 
 static void on_fault(EmbeddedCli *cli, char *args, void *context)

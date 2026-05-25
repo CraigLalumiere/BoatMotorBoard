@@ -26,7 +26,7 @@
 #include "blinky.h"
 #include "box_to_box.h"
 #include "bsp.h"
-#include "cli.h"
+#include "pc_com.h"
 #include "config.h"
 #include "director.h"
 #include "fram.h"
@@ -55,7 +55,7 @@ typedef enum
 {
     AO_RESERVED = 0U,
     AO_PRIO_BLINKY,
-    AO_PRIO_APP_CLI,
+    AO_PRIO_PC_COM,
     AO_PRIO_CONFIG,
     AO_PRIO_FRAM,
     AO_PRIO_LOG_COM,
@@ -82,6 +82,8 @@ typedef struct
     union
     {
         QEvt someMultipleQEvt[4];
+        PCCOMPrintEvent_T pc_com_print_event;
+        PCCOMCliDataEvent_T pc_com_cli_data_event;
         DebugForceFaultEvent_T fault_event;
         FramReadReqEvent_T fram_read_req_event;
         ConfigEntryChangedEvent_T config_entry_changed_event;
@@ -151,6 +153,7 @@ static void MX_FDCAN2_Init(void);
 int main(void)
 {
     /* USER CODE BEGIN 1 */
+    Reset_JumpToBootloaderIfRequested();
     Reset_Init();
     QF_init(); // initialize the framework and the underlying RT kernel
     /* USER CODE END 1 */
@@ -300,16 +303,16 @@ int main(void)
         0U,          // no stack storage
         (void *) 0); // no initialization param
 
-    static QEvt const *app_cli_QueueSto[10];
-    AppCLI_ctor(BSP_Get_Serial_IO_Interface_USB0());
+    static QEvt const *pc_com_QueueSto[10];
+    PC_COM_ctor(BSP_Get_Serial_IO_Interface_USB0());
     QACTIVE_START(
-        AO_AppCLI,
-        AO_PRIO_APP_CLI,         // QP prio. of the AO
-        app_cli_QueueSto,        // event queue storage
-        Q_DIM(app_cli_QueueSto), // queue length [events]
-        (void *) 0,              // stack storage (not used in QK)
-        0U,                      // stack size [bytes] (not used in QK)
-        (void *) 0);             // no initialization param
+        AO_PC_COM,
+        AO_PRIO_PC_COM,         // QP prio. of the AO
+        pc_com_QueueSto,        // event queue storage
+        Q_DIM(pc_com_QueueSto), // queue length [events]
+        (void *) 0,             // stack storage (not used in QK)
+        0U,                     // stack size [bytes] (not used in QK)
+        (void *) 0);            // no initialization param
 
     static QEvt const *log_com_QueueSto[20];
     LogCom_ctor(BSP_Get_Serial_IO_Interface_USB1());

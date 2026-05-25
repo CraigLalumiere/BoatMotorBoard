@@ -25,7 +25,8 @@
 #include "blinky.h"
 #include "box_to_box.h"
 #include "bsp.h"
-#include "cli.h"
+#include "log_com.h"
+#include "pc_com.h"
 #include "director.h"
 #include "posted_signals.h"
 #include "qpc.h"
@@ -50,7 +51,8 @@ typedef enum
 {
     AO_RESERVED = 0U,
     AO_PRIO_BLINKY,
-    AO_PRIO_APP_CLI,
+    AO_PRIO_PC_COM,
+    AO_PRIO_LOG_COM,
     AO_PRIO_DIRECTOR,
     // AO_PRIO_SHARED_I2C2,
     AO_PRIO_BOX_TO_BOX,
@@ -72,6 +74,8 @@ typedef struct
     union
     {
         QEvt someMultipleQEvt[4];
+        PCCOMPrintEvent_T pc_com_print_event;
+        PCCOMCliDataEvent_T pc_com_cli_data_event;
         DebugForceFaultEvent_T fault_event;
     } medium_messages;
 } MediumMessageUnion_T;
@@ -141,6 +145,7 @@ static void MX_OPAMP1_Init(void);
 int main(void)
 {
     /* USER CODE BEGIN 1 */
+    Reset_JumpToBootloaderIfRequested();
     Reset_Init();
     QF_init(); // initialize the framework and the underlying RT kernel
     /* USER CODE END 1 */
@@ -214,13 +219,24 @@ int main(void)
         0U,          // no stack storage
         (void *) 0); // no initialization param
 
-    static QEvt const *app_cli_QueueSto[10];
-    AppCLI_ctor(BSP_Get_Serial_IO_Interface_USB0());
+    static QEvt const *pc_com_QueueSto[10];
+    PC_COM_ctor(BSP_Get_Serial_IO_Interface_USB0());
     QACTIVE_START(
-        AO_AppCLI,
-        AO_PRIO_APP_CLI,         // QP prio. of the AO
-        app_cli_QueueSto,        // event queue storage
-        Q_DIM(app_cli_QueueSto), // queue length [events]
+        AO_PC_COM,
+        AO_PRIO_PC_COM,         // QP prio. of the AO
+        pc_com_QueueSto,        // event queue storage
+        Q_DIM(pc_com_QueueSto), // queue length [events]
+        (void *) 0,             // stack storage (not used in QK)
+        0U,                     // stack size [bytes] (not used in QK)
+        (void *) 0);            // no initialization param
+
+    static QEvt const *log_com_QueueSto[20];
+    LogCom_ctor(BSP_Get_Serial_IO_Interface_USB1());
+    QACTIVE_START(
+        AO_LogCom,
+        AO_PRIO_LOG_COM,         // QP prio. of the AO
+        log_com_QueueSto,        // event queue storage
+        Q_DIM(log_com_QueueSto), // queue length [events]
         (void *) 0,              // stack storage (not used in QK)
         0U,                      // stack size [bytes] (not used in QK)
         (void *) 0);             // no initialization param

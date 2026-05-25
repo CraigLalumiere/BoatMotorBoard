@@ -33,6 +33,7 @@ typedef enum
     RESET_REASON_MEM_MANAGE_FAULT,
     RESET_REASON_BUS_FAULT,
     RESET_REASON_USAGE_FAULT,
+    RESET_REASON_BOOTLOADER_REQUEST,
     RESET_REASON_UNKNOWN // keep last
 } Reset_Reason_T;
 
@@ -80,6 +81,17 @@ _Noreturn void Reset_DoResetWithReason(
  *************************************************************************************************/
 _Noreturn void Reset_DoResetWithReasonWithStr(
     Reset_Reason_T reason, const char *id1_2_string, uint32_t id3, uint32_t id4);
+
+/************************************************************************************************
+ * @brief   Request the STM32 ROM USB DFU bootloader on the next reset.
+ *************************************************************************************************/
+_Noreturn void Reset_RequestBootloader();
+
+/************************************************************************************************
+ * @brief   If Reset_RequestBootloader() was called before the last reset, jump into STM32 system
+ *          memory bootloader. Call before HAL_Init()/QF_init().
+ *************************************************************************************************/
+void Reset_JumpToBootloaderIfRequested();
 
 /************************************************************************************************
  * @brief   Reset_ArgsToString is a helper method which reconstructs arg1 and arg2 into

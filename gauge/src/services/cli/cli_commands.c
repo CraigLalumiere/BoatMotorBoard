@@ -2,11 +2,12 @@
 #include "blinky.h"
 #include "bsp.h"
 #include "bsp_manual.h"
-#include "cli.h"
+#include "pc_com.h"
 #include "cli_manual_commands.h"
 #include "interfaces/gpio.h"
 #include "interfaces/i2c_bus.h"
 #include "posted_signals.h"
+#include "reset.h"
 #include "qpc.h"
 #include "qsafe.h"
 // #include "services/config.h"
@@ -25,6 +26,7 @@ Q_DEFINE_THIS_MODULE("app_cli_commands")
 // Command Functions
 static void on_cli_toggle_led(EmbeddedCli *cli, char *args, void *context);
 static void on_fault(EmbeddedCli *cli, char *args, void *context);
+static void on_bootloader(EmbeddedCli *cli, char *args, void *context);
 void on_cli_digital_out_set(EmbeddedCli *cli, char *args, void *context);
 void on_cli_digital_in_read(EmbeddedCli *cli, char *args, void *context);
 // void on_cli_spi(EmbeddedCli *cli, char *args, void *context);
@@ -89,6 +91,14 @@ static CliCommandBinding cli_cmd_list[] = {
         NULL,                                             // optional pointer to any application context
         on_cli_motor_data_publish                         // binding function
     },
+
+    (CliCommandBinding) {
+        "bootloader",
+        "Enter STM32 USB DFU bootloader",
+        false,
+        NULL,
+        on_bootloader,
+    },
 };
 
 void CLI_AddCommands(EmbeddedCli *cli)
@@ -99,13 +109,22 @@ void CLI_AddCommands(EmbeddedCli *cli)
     }
 }
 
+static void on_bootloader(EmbeddedCli *cli, char *args, void *context)
+{
+    (void) args;
+    (void) context;
+
+    embeddedCliPrint(cli, "Bootloader command received, rebooting into USB DFU...");
+    Reset_RequestBootloader();
+}
+
 static void on_cli_toggle_led(EmbeddedCli *cli, char *args, void *context)
 {
     // statically allocated and const event to post to the Blinky active object
     static QEvt const ToggleLEDEvent = QEVT_INITIALIZER(POSTED_BLINKY_TOGGLE_USER_LED);
 
     // send (post) the event to the Blinky active object
-    QACTIVE_POST(AO_Blinky, &ToggleLEDEvent, AO_AppCLI);
+    QACTIVE_POST(AO_Blinky, &ToggleLEDEvent, AO_PC_COM);
 }
 
 static void on_fault(EmbeddedCli *cli, char *args, void *context)

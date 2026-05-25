@@ -1,6 +1,7 @@
 #include "reset.h"
 #include "bsp.h"
 #include "qsafe.h"
+#include "stm32g4xx_hal.h"
 #include <assert.h>
 #include <string.h>
 
@@ -9,6 +10,8 @@ Q_DEFINE_THIS_MODULE("reset")
 static bool m_InitCalled                                           = false;
 static uint32_t m_RccCsr                                           = 0;
 static uint32_t m_BackupRamCache[RESET_BACKUP_RAM_NUM_OF_ELEMENTS] = {0};
+static const uint32_t BOOTLOADER_MAGIC                             = 0x12345678U;
+static const uint32_t STM32G4_SYSTEM_MEMORY_BASE                   = 0x1FFF0000U;
 static_assert(
     RESET_BACKUP_RAM_NUM_OF_ELEMENTS <= 32,
     "We are using STM RTC BKP Registers. Only 32 are available");
@@ -63,6 +66,12 @@ static_assert(
 #define RCC_CSR_LPWRRSTF_Msk (0x1UL << RCC_CSR_LPWRRSTF_Pos) /*!< 0x80000000 */
 #define RCC_CSR_LPWRRSTF     RCC_CSR_LPWRRSTF_Msk
 
+#endif
+
+#ifndef RCC_CSR_PORRSTF
+#define RCC_CSR_PORRSTF_Pos (27U)
+#define RCC_CSR_PORRSTF_Msk (0x1UL << RCC_CSR_PORRSTF_Pos)
+#define RCC_CSR_PORRSTF     RCC_CSR_PORRSTF_Msk
 #endif
 
 // BORRSTF, PINRSTF, and PORRSTF will be high by default
@@ -213,6 +222,47 @@ _Noreturn void Reset_DoResetWithReasonWithStr(
     }
 
     Reset_DoResetWithReason(reason, id1, id2, id3, id4);
+}
+
+_Noreturn void Reset_RequestBootloader()
+{
+    BSP_Backup_RAM_Write(RESET_BACKUP_RAM_REASON_INDEX, RESET_REASON_BOOTLOADER_REQUEST);
+    BSP_Backup_RAM_Write(RESET_BACKUP_RAM_ARG_4_INDEX, BOOTLOADER_MAGIC);
+    BSP_SystemReset();
+}
+
+void Reset_JumpToBootloaderIfRequested()
+{
+    uint32_t bootloader_request = 0U;
+
+    (void) BSP_Backup_RAM_Read(RESET_BACKUP_RAM_ARG_4_INDEX, &bootloader_request);
+    if (bootloader_request != BOOTLOADER_MAGIC)
+    {
+        return;
+    }
+
+    BSP_Backup_RAM_Write(RESET_BACKUP_RAM_ARG_4_INDEX, 0U);
+
+    __disable_irq();
+    __HAL_RCC_SYSCFG_CLK_ENABLE();
+    HAL_PWR_EnableBkUpAccess();
+
+    __HAL_RCC_USB_CLK_DISABLE();
+    __HAL_RCC_USB_FORCE_RESET();
+    __HAL_RCC_USB_RELEASE_RESET();
+
+    SYSCFG->MEMRMP = 0x01U;
+    SCB->VTOR      = STM32G4_SYSTEM_MEMORY_BASE;
+
+    __set_MSP(*(uint32_t *) STM32G4_SYSTEM_MEMORY_BASE);
+
+    void (*SysMemBootJump)(void);
+    SysMemBootJump = (void (*)(void))(*((uint32_t *) (STM32G4_SYSTEM_MEMORY_BASE + 4U)));
+    SysMemBootJump();
+
+    while (true)
+    {
+    }
 }
 
 void Reset_ArgsToString(uint32_t arg1, uint32_t arg2, char *outStr, size_t outStrBufferSize)
