@@ -24,6 +24,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     tzdata \
     gcovr \
     wget \
+    ca-certificates \
+    gnupg \
     clang-format-14 \
     clang-tidy-14 \
     pkg-config \
@@ -58,6 +60,14 @@ WORKDIR /workspaces/BoatMotorBoard
 RUN ln -s /usr/bin/clang-format-14 /usr/local/bin/clang-format
 RUN ln -s /usr/bin/clang-tidy-14 /usr/local/bin/clang-tidy
 
+# Install Node.js/npm and Codex CLI
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends nodejs && \
+    npm install -g @openai/codex@latest && \
+    npm cache clean --force && \
+    rm -rf /var/lib/apt/lists/*
+
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Protobuf tools
 RUN pip install protobuf==3.20.1  grpcio-tools==1.44.0
@@ -75,6 +85,17 @@ ARG USERNAME
 RUN groupadd --gid 1000 $USERNAME && \
         useradd --uid 1000 --gid 1000 -G plugdev,dialout --shell /bin/bash -m $USERNAME && \
         echo "$USERNAME ALL=(ALL:ALL) NOPASSWD:ALL" > /etc/sudoers.d/$USERNAME
+
+# Configure Codex defaults inside the dev container.
+RUN mkdir -p /home/$USERNAME/.codex && \
+    printf '%s\n' \
+        'model = "gpt-5.5"' \
+        'model_reasoning_effort = "high"' \
+        '' \
+        '[projects."/workspaces/BoatMotorBoard"]' \
+        'trust_level = "trusted"' \
+        > /home/$USERNAME/.codex/config.toml && \
+    chown -R $USERNAME:$USERNAME /home/$USERNAME/.codex
 
 # run as that user in the container by default, instead of root
 USER $USERNAME

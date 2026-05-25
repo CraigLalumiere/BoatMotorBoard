@@ -7,6 +7,7 @@
       }
     },
     "runArgs": ["--platform=linux/amd64"],
+    "postCreateCommand": "bash .devcontainer/setup-codex.sh",
     "customizations": {
       "vscode": {
         "settings": {
@@ -17,7 +18,8 @@
             "ms-vscode.cmake-tools",
             "ms-vscode.cpptools-extension-pack",            
             "cschlosser.doxdocgen",
-            "jebbs.plantuml"
+            "jebbs.plantuml",
+            "openai.chatgpt"
         ]
       }
     }
