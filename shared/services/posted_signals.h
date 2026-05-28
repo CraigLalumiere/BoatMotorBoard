@@ -5,20 +5,25 @@
 #include "qp.h"
 
 // These are signals that are directly posted from one Active Object to another
-//  and do not traverse the Pub Sub framework
+// and do not traverse the Pub Sub framework.
 enum PostedSignals
 {
     POSTED_FIRST_SIG = PUBSUB_MAX_SIG,
-    POSTED_BLINKY_TOGGLE_USER_LED,
     POSTED_APP_CLI_PRINT_SIG,
     POSTED_PC_COM_PRINT_SIG,
     POSTED_PC_COM_CLI_DATA_SIG,
     POSTED_LOG_COM_PRINT_SIG,
+    POSTED_CONFIG_SAVE_TO_NVM_REQ_SIG,
+    POSTED_FRAM_READ_REQ_SIG,
+    POSTED_FRAM_READ_RESP_SIG,
+    POSTED_FRAM_WRITE_REQ_SIG,
+    POSTED_FRAM_WRITE_COMPLETE_SIG,
     POSTED_CAN_MESSAGE_RECEIVED_SIG,
+    POSTED_BLINKY_TOGGLE_USER_LED,
     POSTED_MAX_SIG
 };
 
-// These are signals that are directly dispatched from an Active Object to a component
+// These are signals that are directly dispatched from an Active Object to a component.
 enum DispatchedSignals
 {
     DISPATCHED_FIRST_SIG = POSTED_MAX_SIG,
@@ -34,10 +39,6 @@ typedef struct
     uint32_t milliseconds;
     char msg[PRINT_EVENT_MAX_MSG_LENGTH];
 } PrintEvent_T;
-
-/**************************************************************************************************\
-* Debug/misc events
-\**************************************************************************************************/
 
 typedef struct
 {

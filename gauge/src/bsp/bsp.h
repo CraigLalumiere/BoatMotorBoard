@@ -98,6 +98,8 @@ void BSP_Set_Backlight(bool x);
  **************************************************************************************************/
 const Serial_IO_T *BSP_Get_Serial_IO_Interface_USB0();
 const Serial_IO_T *BSP_Get_Serial_IO_Interface_USB1();
+I2C_Write BSP_Get_I2C_Write_FRAM(void);
+I2C_MemoryRead BSP_Get_I2C_Memory_Read_FRAM(void);
 
 /**
  ***************************************************************************************************

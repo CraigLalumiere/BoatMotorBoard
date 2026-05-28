@@ -35,6 +35,25 @@ static void USB0_RegisterDataReadyCB(Serial_IO_Data_Ready_Callback cb, void *cb_
 static uint16_t USB1_TransmitData(const uint8_t *data_ptr, const uint16_t data_len);
 static uint16_t USB1_ReceiveData(uint8_t *data_ptr, const uint16_t max_data_len);
 static void USB1_RegisterDataReadyCB(Serial_IO_Data_Ready_Callback cb, void *cb_data);
+static void BSP_Init_I2C(void);
+
+static I2C_Return_T BSP_I2C_Write_FRAM(
+    uint8_t address,
+    uint8_t *tx_buffer,
+    const uint16_t data_len,
+    I2C_Complete_Callback complete_cb,
+    I2C_Error_Callback error_cb,
+    void *cb_data);
+
+static I2C_Return_T BSP_I2C_Memory_Read_FRAM(
+    uint8_t address,
+    uint16_t mem_address,
+    uint8_t mem_address_size,
+    uint8_t *rx_buffer,
+    const uint16_t data_len,
+    I2C_Complete_Callback complete_cb,
+    I2C_Error_Callback error_cb,
+    void *cb_data);
 
 static uint16_t volts_to_code12(float volts);
 
@@ -48,6 +67,11 @@ extern DAC_HandleTypeDef hdac3;
 extern OPAMP_HandleTypeDef hopamp1;
 extern TIM_HandleTypeDef htim8;
 extern FDCAN_HandleTypeDef hfdcan2; // defined in main.c by cubeMX
+static I2C_Bus_T s_i2c_bus2;
+
+static SharedI2C_T SharedI2C_Bus2;
+const QActive *AO_SharedI2C2 = &(SharedI2C_Bus2.super);
+QEvt const *i2c_bus_2_deferred_queue_storage[SHARED_I2C_BUS_2_DEFERRED_QUEUE_LEN];
 
 bool input_capture_found;
 
@@ -142,6 +166,16 @@ bool BSP_Get_Backlight(void)
 void BSP_Set_Backlight(bool x)
 {
     HAL_GPIO_WritePin(BACKLIGHT_EN_GPIO_Port, BACKLIGHT_EN_Pin, x);
+}
+
+I2C_Write BSP_Get_I2C_Write_FRAM()
+{
+    return BSP_I2C_Write_FRAM;
+}
+
+I2C_MemoryRead BSP_Get_I2C_Memory_Read_FRAM()
+{
+    return BSP_I2C_Memory_Read_FRAM;
 }
 
 /**
@@ -294,6 +328,34 @@ void BSP_CAN_Bus_Init(void)
     Q_ASSERT(retval == HAL_OK);
 }
 
+static void BSP_Init_I2C(void)
+{
+    HAL_StatusTypeDef retval;
+
+    I2C_HandleTypeDef *p_hi2c2 = STM32_GetI2CHandle(I2C_BUS_ID_2);
+
+    p_hi2c2->Instance              = I2C2;
+    p_hi2c2->Init.Timing           = 0x50916E9F;
+    p_hi2c2->Init.OwnAddress1      = 0;
+    p_hi2c2->Init.AddressingMode   = I2C_ADDRESSINGMODE_7BIT;
+    p_hi2c2->Init.DualAddressMode  = I2C_DUALADDRESS_DISABLE;
+    p_hi2c2->Init.OwnAddress2      = 0;
+    p_hi2c2->Init.OwnAddress2Masks = I2C_OA2_NOMASK;
+    p_hi2c2->Init.GeneralCallMode  = I2C_GENERALCALL_DISABLE;
+    p_hi2c2->Init.NoStretchMode    = I2C_NOSTRETCH_DISABLE;
+
+    retval = HAL_I2C_Init(p_hi2c2);
+    Q_ASSERT(retval == HAL_OK);
+
+    retval = HAL_I2CEx_ConfigAnalogFilter(p_hi2c2, I2C_ANALOGFILTER_ENABLE);
+    Q_ASSERT(retval == HAL_OK);
+
+    retval = HAL_I2CEx_ConfigDigitalFilter(p_hi2c2, 0);
+    Q_ASSERT(retval == HAL_OK);
+
+    I2C_Bus_Init(&s_i2c_bus2, I2C_BUS_ID_2);
+}
+
 //............................................................................
 void BSP_Init(void)
 {
@@ -319,6 +381,13 @@ void BSP_Init(void)
     // -- Start TIM8 for TACH PFM output --
     retval = HAL_TIM_PWM_Start(&htim8, TIM_CHANNEL_1);
     Q_ASSERT(retval == HAL_OK);
+
+    BSP_Init_I2C();
+    SharedI2C_ctor(
+        &SharedI2C_Bus2,
+        I2C_BUS_ID_2,
+        i2c_bus_2_deferred_queue_storage,
+        SHARED_I2C_BUS_2_DEFERRED_QUEUE_LEN);
 }
 
 //............................................................................
@@ -419,6 +488,40 @@ const Serial_IO_T *BSP_Get_Serial_IO_Interface_USB1()
 /**************************************************************************************************\
 * Private functions
 \**************************************************************************************************/
+
+static I2C_Return_T BSP_I2C_Write_FRAM(
+    uint8_t address,
+    uint8_t *tx_buffer,
+    const uint16_t data_len,
+    I2C_Complete_Callback complete_cb,
+    I2C_Error_Callback error_cb,
+    void *cb_data)
+{
+    return SharedI2C_Write(
+        &SharedI2C_Bus2, address, tx_buffer, data_len, complete_cb, error_cb, cb_data);
+}
+
+static I2C_Return_T BSP_I2C_Memory_Read_FRAM(
+    uint8_t address,
+    uint16_t mem_address,
+    uint8_t mem_address_size,
+    uint8_t *rx_buffer,
+    const uint16_t data_len,
+    I2C_Complete_Callback complete_cb,
+    I2C_Error_Callback error_cb,
+    void *cb_data)
+{
+    return SharedI2C_MemoryRead(
+        &SharedI2C_Bus2,
+        address,
+        mem_address,
+        mem_address_size,
+        rx_buffer,
+        data_len,
+        complete_cb,
+        error_cb,
+        cb_data);
+}
 
 /**
  ***************************************************************************************************

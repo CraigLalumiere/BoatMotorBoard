@@ -1,0 +1,36 @@
+syntax = "proto2";
+
+message ConfigValue {
+    oneof value {
+        bool value_bool = 1;
+        uint32 value_uint32 = 2;
+        int32 value_int32 = 3;
+        float value_float32  = 4;
+    } 
+}
+
+message ConfigDBSetEntryReq {
+    required uint32 entry_id = 1;
+    required ConfigValue value = 2;    
+}
+
+message ConfigDBGetEntryReq {
+    required uint32 entry_id = 1;  
+}
+
+message ConfigDBSetEntryToDefaultReq {
+    required uint32 entry_id = 1;  
+}
+
+message ConfigEntryDataResp {
+    required uint32 entry_id = 1;
+    required ConfigValue value = 2;
+    required ConfigValue default_value = 3;
+    required string name = 4;
+}
+
+message ConfigDBInfoResp {
+    required uint32 num_elements = 1;
+    required uint32 version = 2;
+}
+

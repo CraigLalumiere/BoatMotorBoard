@@ -25,9 +25,11 @@
 #include "blinky.h"
 #include "box_to_box.h"
 #include "bsp.h"
+#include "config.h"
 #include "log_com.h"
 #include "pc_com.h"
 #include "director.h"
+#include "fram.h"
 #include "posted_signals.h"
 #include "qpc.h"
 #include "reset.h"
@@ -52,9 +54,11 @@ typedef enum
     AO_RESERVED = 0U,
     AO_PRIO_BLINKY,
     AO_PRIO_PC_COM,
+    AO_PRIO_CONFIG,
+    AO_PRIO_FRAM,
     AO_PRIO_LOG_COM,
     AO_PRIO_DIRECTOR,
-    // AO_PRIO_SHARED_I2C2,
+    AO_PRIO_SHARED_I2C2,
     AO_PRIO_BOX_TO_BOX,
     AO_PRIO_USB,
 } AO_Priority_T;
@@ -77,6 +81,8 @@ typedef struct
         PCCOMPrintEvent_T pc_com_print_event;
         PCCOMCliDataEvent_T pc_com_cli_data_event;
         DebugForceFaultEvent_T fault_event;
+        FramReadReqEvent_T fram_read_req_event;
+        ConfigEntryChangedEvent_T config_entry_changed_event;
     } medium_messages;
 } MediumMessageUnion_T;
 typedef struct
@@ -86,6 +92,8 @@ typedef struct
         QEvt base_event;
         FaultGeneratedEvent_T fault_event;
         CAN_Message_Received_Event_T can_event;
+        FramReadRespEvent_T fram_read_resp_event;
+        FramWriteReqEvent_T fram_write_req_event;
     } large_messages;
 } LongMessageUnion_T;
 
@@ -219,6 +227,16 @@ int main(void)
         0U,          // no stack storage
         (void *) 0); // no initialization param
 
+    static QEvt const *shared_i2c2_QueueSto[10];
+    QACTIVE_START(
+        AO_SharedI2C2,
+        AO_PRIO_SHARED_I2C2,         // QP prio. of the AO
+        shared_i2c2_QueueSto,        // event queue storage
+        Q_DIM(shared_i2c2_QueueSto), // queue length [events]
+        (void *) 0,                  // stack storage (not used in QK)
+        0U,                          // stack size [bytes] (not used in QK)
+        (void *) 0);                 // no initialization param
+
     static QEvt const *pc_com_QueueSto[10];
     PC_COM_ctor(BSP_Get_Serial_IO_Interface_USB0());
     QACTIVE_START(
@@ -240,6 +258,28 @@ int main(void)
         (void *) 0,              // stack storage (not used in QK)
         0U,                      // stack size [bytes] (not used in QK)
         (void *) 0);             // no initialization param
+
+    static QEvt const *config_QueueSto[10];
+    Config_ctor();
+    QACTIVE_START(
+        AO_Config,
+        AO_PRIO_CONFIG,         // QP prio. of the AO
+        config_QueueSto,        // event queue storage
+        Q_DIM(config_QueueSto), // queue length [events]
+        (void *) 0,
+        0U,
+        (void *) 0);
+
+    static QEvt const *fram_QueueSto[10];
+    Fram_ctor(BSP_Get_I2C_Write_FRAM(), BSP_Get_I2C_Memory_Read_FRAM());
+    QACTIVE_START(
+        AO_Fram,
+        AO_PRIO_FRAM,         // QP prio. of the AO
+        fram_QueueSto,        // event queue storage
+        Q_DIM(fram_QueueSto), // queue length [events]
+        (void *) 0,
+        0U,
+        (void *) 0);
 
     static QEvt const *box_to_box_QueueSto[20];
     Box_To_Box_ctor();

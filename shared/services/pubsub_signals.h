@@ -9,30 +9,36 @@ enum PubSubSignals
 {
     PUBSUB_FIRST_SIG = Q_USER_SIG,
     PUBSUB_FAULT_GENERATED_SIG,
-    PUBSUB_BOX_TO_BOX_STARTUP_SIG,
+    PUBSUB_PRESSURE_SIG,
+    PUBSUB_TEMPERATURE_SIG,
     PUBSUB_MOTOR_DATA_SIG,
+    PUBSUB_FRAM_READY_SIG,
+    PUBSUB_CONFIG_READY_SIG,
+    PUBSUB_CONFIG_ENTRY_CHANGED_SIG,
+    PUBSUB_BOX_TO_BOX_STARTUP_SIG,
     PUBSUB_MAX_SIG
 };
 
 typedef struct
 {
     QEvt super;
-    float num; // size of the buffer 'instructions', which should be >= actual size
+    float num;
 } FloatEvent_T;
 
 typedef struct
 {
     QEvt super;
-    int16_t num; // size of the buffer 'instructions', which should be >= actual size
+    int16_t num;
 } Int16Event_T;
 
 typedef struct
 {
     QEvt super;
-    float temperature; // degrees C
-    float pressure;    // PSI
-    float tachometer;  // RPM
-    float vbat;        // volts
+    float temperature;
+    float pressure;
+    float tachometer;
+    float vbat;
+    uint32_t engine_minutes;
     bool start;
     bool neutral;
     bool buzzer;

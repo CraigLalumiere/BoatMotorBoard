@@ -1,0 +1,6 @@
+syntax = "proto2";
+
+// A CLI data message
+message CLIData {
+  required bytes msg = 1;
+}

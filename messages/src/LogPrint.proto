@@ -1,0 +1,7 @@
+syntax = "proto2";
+
+// A log print message
+message LogPrint {
+  required uint32 milliseconds_tick = 1;
+  required string msg = 2;
+}

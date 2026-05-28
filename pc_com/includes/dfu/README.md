@@ -1,0 +1,1 @@
+This dfu library is from [Link](https://pypi.org/project/pyfu-usb/) with some additions and modifications.

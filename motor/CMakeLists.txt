@@ -16,6 +16,9 @@ set(ROOT_PATH                       ${CMAKE_CURRENT_SOURCE_DIR}/..)
 set(SHARED_PATH                     ${ROOT_PATH}/shared)
 set(LIBRARY_PATH                    ${ROOT_PATH}/library)
 set(MIDDLEWARES_PATH                ${ROOT_PATH}/Middlewares)
+set(MESSAGES_PATH                   ${ROOT_PATH}/messages/generated/c)
+
+include(${ROOT_PATH}/messages/fetch_nanopb.cmake)
 
 set(CPU_PARAMETERS
     -mthumb
@@ -74,6 +77,13 @@ set(tinyusb_SRCS
     ${LIBRARY_PATH}/tinyusb-0.17.0/src/portable/st/stm32_fsdev/dcd_stm32_fsdev.c
 )
 
+set(messages_SRCS
+    ${MESSAGES_PATH}/CLIData.pb.c
+    ${MESSAGES_PATH}/ConfigDB.pb.c
+    ${MESSAGES_PATH}/LogPrint.pb.c
+    ${MESSAGES_PATH}/MessageType.pb.c
+)
+
 set(sources_SRCS
     ${PROJ_PATH}/src/bsp/device/startup_stm32g474xx.s
 
@@ -91,9 +101,9 @@ set(sources_SRCS
     ${PROJ_PATH}/src/services/blinky.c
     ${PROJ_PATH}/src/services/config.c
     ${PROJ_PATH}/src/services/director.c
-    ${PROJ_PATH}/src/services/fault_manager.c
+    ${SHARED_PATH}/services/fault_manager.c
     ${PROJ_PATH}/src/services/flowsensor.c
-    ${PROJ_PATH}/src/services/fram.c
+    ${SHARED_PATH}/services/fram.c
     ${PROJ_PATH}/src/services/LMT01.c
     ${PROJ_PATH}/src/services/log_com.c
     ${PROJ_PATH}/src/services/pressure_sensor.c
@@ -104,7 +114,7 @@ set(sources_SRCS
     ${SHARED_PATH}/services/usb.c
     ${SHARED_PATH}/services/pc_com/crc16.c
     ${SHARED_PATH}/services/pc_com/hdlc.c
-    ${SHARED_PATH}/services/pc_com/pc_com.c
+    ${PROJ_PATH}/src/services/pc_com.c
 
     ${PROJ_PATH}/src/bsp/bsp.c
     ${PROJ_PATH}/src/bsp/bsp_manual.c
@@ -119,6 +129,8 @@ set(sources_SRCS
 
     ${hal_SRCS}
     ${tinyusb_SRCS}
+    ${nanopb_SRCS}
+    ${messages_SRCS}
 
     ${LIBRARY_PATH}/SEGGER_RTT_V810k/RTT/SEGGER_RTT.c
     ${LIBRARY_PATH}/SEGGER_RTT_V810k/RTT/SEGGER_RTT_printf.c
@@ -134,6 +146,9 @@ set(include_path_DIRS
     ${SHARED_PATH}/bsp/interfaces
     ${SHARED_PATH}/services
     ${SHARED_PATH}/services/pc_com
+    ${ROOT_PATH}/messages/generated
+    ${ROOT_PATH}/messages/generated/c
+    ${nanopb_SOURCE_DIR}
 
     ${LIBRARY_PATH}/embedded-cli
     ${LIBRARY_PATH}/qpc/include

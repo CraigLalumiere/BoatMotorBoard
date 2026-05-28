@@ -1,4 +1,3 @@
-
 #ifndef FAULT_MANAGER_H_
 #define FAULT_MANAGER_H_
 
@@ -49,12 +48,9 @@ typedef struct
 \**************************************************************************************************/
 
 void Fault_Manager_Generate_Fault(QActive *sender, Fault_ID_T id, const char *msg);
-
 const char *Fault_Manager_Get_Description(Fault_ID_T id);
-
 uint16_t Fault_Manager_Get_Code(Fault_ID_T id);
-
-Active_Fault_T *Fault_Manager_Get_Active_Fault_List();
+Active_Fault_T *Fault_Manager_Get_Active_Fault_List(void);
 
 #ifdef __cplusplus
 }

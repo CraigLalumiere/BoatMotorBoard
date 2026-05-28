@@ -1,0 +1,23 @@
+syntax = "proto2";
+
+enum MessageType {
+    // Log Print
+    LOG_PRINT = 1;
+
+    // CLI Data
+    CLI_DATA = 2;    
+
+    // ConfigDB database requests
+    CONFIG_DB_SAVE_TO_NVM_REQ = 11;
+    CONFIG_DB_REQ_DATABASE_INFO_REQ = 12;
+    CONFIG_DB_SET_ALL_TO_DEFAULT_REQ = 13;
+
+    // ConfigDB entry requests
+    CONFIG_DB_GET_ENTRY_REQ = 14;
+    CONFIG_DB_SET_ENTRY_REQ = 15;
+    CONFIG_DB_SET_ENTRY_TO_DEFAULT_REQ = 16;
+
+    // Config db responses
+    CONFIG_DB_INFO_RESP = 17;    
+    CONFIG_DB_ENTRY_DATA_RESP = 18;   
+}

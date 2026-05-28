@@ -35,6 +35,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     protobuf-compiler \
     libprotobuf-dev \
     python3-pip \
+    bubblewrap \
     && rm -rf /var/lib/apt/lists/*
 
 # get the toolchain

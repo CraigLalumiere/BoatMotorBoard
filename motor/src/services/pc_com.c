@@ -1,12 +1,9 @@
 #include "pc_com.h"
 #include "bsp.h"
 #include "c/CLIData.pb.h"
-#include "c/ConfigDB.pb.h"
 #include "c/LogPrint.pb.h"
-#include "c/Log_EC.pb.h"
 #include "c/MessageType.pb.h"
 #include "cli_commands.h"
-#include "config.h"
 #include "crc16.h"
 #include "hdlc.h"
 #include "pb_decode.h"
@@ -17,6 +14,9 @@
 #include "safe_strncpy.h"
 #include "stdio.h"
 #include <string.h>
+
+#include "c/ConfigDB.pb.h"
+#include "config.h"
 
 #define EMBEDDED_CLI_IMPL
 #include "embedded_cli.h"
@@ -46,8 +46,6 @@ typedef union
 {
     uint8_t LogPrint_max[LOGPRINT_PB_H_MAX_SIZE];
     uint8_t CLIData_max[CLIDATA_PB_H_MAX_SIZE];
-    uint8_t LogT_VI_max[Log_VI_size];
-    uint8_t Log_DPV_max[Log_DPV_size];
     uint8_t ConfigDBInfoResp_max[ConfigDBInfoResp_size];
     uint8_t ConfigEntryDataResp_max[ConfigEntryDataResp_size];
 } TX_Message_Buffer_T;
@@ -124,7 +122,6 @@ static void handle_config_get_entry_req(PC_COM *const me);
 static void handle_config_set_entry_req(PC_COM *const me);
 static void handle_config_db_save_to_nvm_req(PC_COM *const me);
 
-static void DoForcedFault(PC_COM *const me, const PCCOMForceFaultEvent_T *pEvt);
 static void send_db_entry_data_resp_msg(PC_COM *const me, uint32_t id);
 
 static void cli_write_char(EmbeddedCli *embeddedCli, char c);
@@ -158,7 +155,7 @@ void PC_COM_ctor(const Serial_IO_T *const serial_io_interface)
     me->embedded_cli->writeChar = cli_write_char;
 
     // add commands from command table
-    CLI_AddCommands(me->embedded_cli);
+    AppCLI_AddCommandsToCLI(me->embedded_cli);
 
     // initialize the HDLC frame unpacker by pointing it to the receive buffer
     hdlc_unpacker_init(
@@ -206,8 +203,6 @@ static QState initial(PC_COM *const me, void const *const par)
 {
     Q_UNUSED_PAR(par);
 
-    QActive_subscribe((QActive *) me, PUBSUB_PLOT_VI_SIG);
-    QActive_subscribe((QActive *) me, PUBSUB_PLOT_DPV_SIG);
     QActive_subscribe((QActive *) me, PUBSUB_CONFIG_ENTRY_CHANGED_SIG);
 
     // Process CLI  every 25ms
@@ -229,12 +224,6 @@ static QState active(PC_COM *const me, QEvt const *const e)
     switch (e->sig)
     {
         case Q_ENTRY_SIG: {
-            status = Q_HANDLED();
-            break;
-        }
-
-        case POSTED_FORCE_FAULT_SIG: {
-            DoForcedFault(me, (const PCCOMForceFaultEvent_T *const) e);
             status = Q_HANDLED();
             break;
         }
@@ -314,77 +303,6 @@ static QState active(PC_COM *const me, QEvt const *const e)
             safe_strncpy(message.msg, Q_EVT_CAST(PCCOMPrintEvent_T)->msg, sizeof(message.msg));
 
             bool ok = pb_encode(&stream, LogPrint_fields, &message);
-            Q_ASSERT(ok);
-
-            // calculate CRC and transmit
-            calculate_crc_and_send_packet(me, stream.bytes_written);
-            status = Q_HANDLED();
-            break;
-        }
-
-        case PUBSUB_PLOT_VI_SIG: {
-            // set message type
-            me->tx_packet.type = MessageType_LOG_VI;
-
-            // create pb message
-            Log_VI message = Log_VI_init_zero;
-
-            // populate message and encode it
-            pb_ostream_t stream = pb_ostream_from_buffer(
-                ((uint8_t *) &me->tx_packet.message), sizeof(TX_Message_Buffer_T));
-
-            const Plot_IV_Event_T *event = Q_EVT_CAST(Plot_IV_Event_T);
-
-            message.message_num = event->message_num;
-            message.t_interval  = event->t_interval;
-
-            memcpy(message.volts, event->volts, event->data_len * sizeof(event->volts[0]));
-            message.volts_count = event->data_len;
-
-            memcpy(message.amps, event->amps, event->data_len * sizeof(event->amps[0]));
-            message.amps_count = event->data_len;
-
-            bool ok = pb_encode(&stream, Log_VI_fields, &message);
-            Q_ASSERT(ok);
-
-            // calculate CRC and transmit
-            calculate_crc_and_send_packet(me, stream.bytes_written);
-            status = Q_HANDLED();
-            break;
-        }
-
-        case PUBSUB_PLOT_DPV_SIG: {
-            // set message type
-            me->tx_packet.type = MessageType_LOG_DPV;
-
-            // create pb message
-            Log_DPV message = Log_DPV_init_zero;
-
-            // populate message and encode it
-            pb_ostream_t stream = pb_ostream_from_buffer(
-                ((uint8_t *) &me->tx_packet.message), sizeof(TX_Message_Buffer_T));
-
-            const Plot_DPV_Event_T *event = Q_EVT_CAST(Plot_DPV_Event_T);
-
-            message.message_num = event->message_num;
-            message.t_interval  = event->t_interval;
-
-            memcpy(message.volts, event->volts, event->data_len * sizeof(event->volts[0]));
-            message.volts_count = event->data_len;
-
-            memcpy(
-                message.amps_reverse,
-                event->amps_reverse,
-                event->data_len / 2 * sizeof(event->amps_reverse[0]));
-            message.amps_reverse_count = event->data_len / 2;
-
-            memcpy(
-                message.amps_forward,
-                event->amps_forward,
-                event->data_len / 2 * sizeof(event->amps_forward[0]));
-            message.amps_forward_count = event->data_len / 2;
-
-            bool ok = pb_encode(&stream, Log_DPV_fields, &message);
             Q_ASSERT(ok);
 
             // calculate CRC and transmit
@@ -740,54 +658,6 @@ static void handle_config_set_entry_req(PC_COM *const me)
     }
 
     send_db_entry_data_resp_msg(me, entry_id);
-}
-
-static void DoForcedFault(PC_COM *const me, const PCCOMForceFaultEvent_T *pEvt)
-{
-    switch (pEvt->desiredFault)
-    {
-        case RESET_REASON_Q_ASSERT:
-            Q_ASSERT(false == true);
-            break;
-
-        case RESET_REASON_HARD_FAULT: {
-            // https://interrupt.memfault.com/blog/cortex-m-hardfault-debug#bad-pc-mpu-fault
-            int (*bad_instruction)(void) = (void *) 0xE0000000;
-            bad_instruction();
-            break;
-        }
-
-        case RESET_REASON_MEM_MANAGE_FAULT: {
-            // access a null pointer. If the MPU is enabled, this will
-            // generate a memory management fault. If not enabled, it might
-            // do nothing or generate a hard fault.
-            volatile int *bad_addr = NULL;
-            volatile int fault     = *bad_addr;
-            *bad_addr              = 0x343234;
-            Q_UNUSED_PAR(fault);
-            Q_UNUSED_PAR(bad_addr);
-            break;
-        }
-
-        case RESET_REASON_BUS_FAULT: {
-            typedef void (*fn_t)();
-            fn_t foo = (fn_t) (0x8004000);
-            foo();
-            break;
-        }
-
-        case RESET_REASON_USAGE_FAULT: {
-            volatile int r;
-            volatile unsigned int a    = 1;
-            volatile unsigned int zero = 0;
-            r                          = a / zero;
-            Q_UNUSED_PAR(r);
-            break;
-        }
-        default:
-            embeddedCliPrint(me->embedded_cli, "Unhandled reset reason");
-            break;
-    }
 }
 
 static void send_db_entry_data_resp_msg(PC_COM *const me, uint32_t id)
