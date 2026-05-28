@@ -40,6 +40,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python-is-python3 \
     python3-pip \
     bubblewrap \
+    usbutils \
+    libgl1 \
+    libegl1 \
+    libfontconfig1 \
+    libfreetype6 \
+    libdbus-1-3 \
+    libxkbcommon-x11-0 \
+    libxcb-cursor0 \
+    libxcb-icccm4 \
+    libxcb-keysyms1 \
+    libxcb-shape0 \
     && rm -rf /var/lib/apt/lists/*
 
 # Set default Git editor for all users in the container.
@@ -98,7 +109,7 @@ RUN groupadd --gid 1000 $USERNAME && \
 RUN mkdir -p /home/$USERNAME/.codex && \
     printf '%s\n' \
         'model = "gpt-5.5"' \
-        'model_reasoning_effort = "high"' \
+        'model_reasoning_effort = "low"' \
         '' \
         '[projects."/workspaces/BoatMotorBoard"]' \
         'trust_level = "trusted"' \

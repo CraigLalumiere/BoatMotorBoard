@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+PROJECT_NAME="boatmotorboard"
+PROJECT_PATH="/workspaces/BoatMotorBoard"
+
+container_id="$(
+  docker ps --format '{{.ID}} {{.Image}} {{.Names}}' \
+    | grep -i "$PROJECT_NAME" \
+    | head -n 1 \
+    | awk '{print $1}'
+)"
+
+if [[ -z "${container_id}" ]]; then
+  echo "No running Docker container found matching: $PROJECT_NAME" >&2
+  echo
+  echo "Running containers:" >&2
+  docker ps --format 'table {{.ID}}\t{{.Image}}\t{{.Names}}'
+  exit 1
+fi
+
+echo "Using container: $container_id"
+echo "Opening Codex in: $PROJECT_PATH"
+
+exec docker exec -it "$container_id" bash -lc "cd '$PROJECT_PATH' && codex -c 'service_tier=\"flex\"'"

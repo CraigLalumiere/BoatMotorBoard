@@ -6,7 +6,13 @@
         "USERNAME": "${localEnv:USER}"
       }
     },
-    "runArgs": ["--platform=linux/amd64"],
+    "runArgs": [
+      "--platform=linux/amd64",
+      "--volume=/dev:/dev",
+      "--device-cgroup-rule=c 166:* rmw",
+      "--device-cgroup-rule=c 188:* rmw",
+      "--device-cgroup-rule=c 189:* rmw"
+    ],
     "postCreateCommand": "bash .devcontainer/setup-codex.sh",
     "customizations": {
       "vscode": {

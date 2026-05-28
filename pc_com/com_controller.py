@@ -33,7 +33,8 @@ def get_com_ports():
     if ports is None:
         return []
     else:
-        return [port.name for port in ports]
+        # Use full device path on POSIX (e.g. /dev/ttyACM0) and COMx on Windows.
+        return [port.device for port in ports]
 
 
 class ComController:

@@ -21,6 +21,7 @@ from main_window import Ui_MainWindow
 from config_window import Ui_ConfigWindow
 from com_controller import ComController, get_com_ports
 import json
+import signal
 # from com_controller_fake import ComControllerFake
 
 import time
@@ -482,6 +483,13 @@ def main():
     app = QtWidgets.QApplication(sys.argv)
     application = ApplicationWindow()
     application.show()
+
+    # Allow Ctrl+C (SIGINT) from terminal to quit the Qt event loop cleanly.
+    signal.signal(signal.SIGINT, lambda *_: app.quit())
+    app._sigint_timer = QtCore.QTimer()
+    app._sigint_timer.timeout.connect(lambda: None)
+    app._sigint_timer.start(200)
+
     sys.exit(app.exec())
 
 

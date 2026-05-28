@@ -5,7 +5,8 @@ mkdir -p "$HOME/.codex" /workspaces/BoatMotorBoard/.codex
 
 cat > "$HOME/.codex/config.toml" <<'EOF'
 model = "gpt-5.5"
-model_reasoning_effort = "high"
+model_reasoning_effort = "medium"
+service_tier = "flex"
 
 [projects."/workspaces/BoatMotorBoard"]
 trust_level = "trusted"
