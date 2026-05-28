@@ -31,12 +31,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     pkg-config \
     cpputest \
     git \
+    nano \
     gdb \
     protobuf-compiler \
     libprotobuf-dev \
     python3-pip \
     bubblewrap \
     && rm -rf /var/lib/apt/lists/*
+
+# Set default Git editor for all users in the container.
+RUN git config --system core.editor "nano"
 
 # get the toolchain
 RUN wget https://developer.arm.com/-/media/Files/downloads/gnu-rm/10-2020q4/gcc-arm-none-eabi-10-2020-q4-major-x86_64-linux.tar.bz2 -O gcc-arm-none-eabi.tar.bz2
