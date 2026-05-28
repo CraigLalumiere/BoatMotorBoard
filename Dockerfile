@@ -35,6 +35,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gdb \
     protobuf-compiler \
     libprotobuf-dev \
+    python3 \
+    python3-venv \
+    python-is-python3 \
     python3-pip \
     bubblewrap \
     && rm -rf /var/lib/apt/lists/*
