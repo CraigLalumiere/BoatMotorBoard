@@ -144,8 +144,8 @@ static void LogCom_WriteEvent(LogCom *const me, const PrintEvent_T *const print_
 static void LogCom_WriteTimestampedText(LogCom *const me, uint32_t milliseconds, const char *msg)
 {
     char buffer[144];
-    int line_length = snprintf(
-        buffer, sizeof(buffer), "[%lu] %s\r\n", (unsigned long) milliseconds, msg);
+    int line_length =
+        snprintf(buffer, sizeof(buffer), "[%lu] %s\r\n", (unsigned long) milliseconds, msg);
 
     if (line_length <= 0)
     {
@@ -178,10 +178,12 @@ static void LogCom_LogMotorData(LogCom *const me, const MotorDataEvent_T *const 
     int msg_length = snprintf(
         motor_msg,
         sizeof(motor_msg),
-        "RPM:%5.0f VBat:%5.2fV Temp:%4.1fC Press:%4.1f Neutral:%u Start:%u TG:%u PG:%u Bz:%u",
+        "RPM:%5.0f VBat:%5.2fV Temp:%4.1fC EngMin:%lu\r\n"
+        "Press:%4.1f Neutral:%u Start:%u TG:%u PG:%u Bz:%u",
         motor_data_event->tachometer,
         motor_data_event->vbat,
         motor_data_event->temperature,
+        (unsigned long) motor_data_event->engine_minutes,
         motor_data_event->pressure,
         motor_data_event->neutral ? 1U : 0U,
         motor_data_event->start ? 1U : 0U,

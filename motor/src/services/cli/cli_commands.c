@@ -2,7 +2,6 @@
 #include "blinky.h"
 #include "bsp.h"
 #include "bsp_manual.h"
-#include "cli.h"
 #include "cli_manual_commands.h"
 #include "config.h"
 #include "interfaces/gpio.h"
@@ -117,7 +116,7 @@ static CliCommandBinding cli_cmd_list[] = {
     },
 };
 
-void AppCLI_AddCommandsToCLI(EmbeddedCli *cli)
+void CLI_AddCommands(EmbeddedCli *cli)
 {
     for (unsigned i = 0; i < DIMENSION_OF(cli_cmd_list); i++)
     {

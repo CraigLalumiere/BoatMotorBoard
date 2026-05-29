@@ -4,7 +4,6 @@
 #include "fault_manager.h"
 // #include "pc_com.h"
 // #include "pressuresensor.h"
-#include "cli.h"
 #include "private_signal_ranges.h"
 #include <stdio.h>
 #include <string.h>
@@ -269,6 +268,7 @@ void handle_can_message_received(Box_To_Box *const me, QEvt const *const e)
             event->temperature      = (float) motor_data.temperature;
             event->pressure         = (float) motor_data.pressure;
             event->tachometer       = (float) motor_data.tachometer;
+            event->engine_minutes   = 0U;
             QACTIVE_PUBLISH(&event->super, &me->super);
             break;
         }

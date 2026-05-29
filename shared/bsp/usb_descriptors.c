@@ -41,6 +41,20 @@
 #define USB_VID 0xCafe
 #define USB_BCD 0x0200
 
+#if defined(BOARD_MOTOR)
+#define USB_MANUFACTURER_STR "Craig"
+#define USB_PRODUCT_STR      "Motor PCB"
+#define USB_CDC0_STR         "Portage CLI"
+#elif defined(BOARD_GAUGE)
+#define USB_MANUFACTURER_STR "Purafy"
+#define USB_PRODUCT_STR      "Portage"
+#define USB_CDC0_STR         "Portage PC"
+#else
+#error "BOARD_MOTOR or BOARD_GAUGE must be defined"
+#endif
+
+#define USB_CDC1_STR "Portage Log"
+
 //--------------------------------------------------------------------+
 // Device Descriptors
 //--------------------------------------------------------------------+
@@ -233,11 +247,11 @@ enum
 // array of pointer to string descriptors
 char const *string_desc_arr[] = {
     (const char[]) {0x09, 0x04}, // 0: is supported language is English (0x0409)
-    "Craig",                     // 1: Manufacturer
-    "Motor PCB",                 // 2: Product
+    USB_MANUFACTURER_STR,        // 1: Manufacturer
+    USB_PRODUCT_STR,             // 2: Product
     NULL,                        // 3: Serials will use unique ID if possible
-    "Portage CLI",               // 4: CDC Interface 0 -- used in TUD_CDC_DESCRIPTOR above
-    "Portage Log",               // 5: CDC Interface 1 -- used in TUD_CDC_DESCRIPTOR above
+    USB_CDC0_STR,                // 4: CDC Interface 0 -- used in TUD_CDC_DESCRIPTOR above
+    USB_CDC1_STR,                // 5: CDC Interface 1 -- used in TUD_CDC_DESCRIPTOR above
 };
 
 static uint16_t _desc_str[32 + 1];

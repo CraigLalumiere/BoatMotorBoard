@@ -137,12 +137,13 @@ void on_cli_gauge_set(EmbeddedCli *cli, char *args, void *context)
 
 #define HELP_FULL_MOTOR_DATA_PUBLISH \
     "\r\n\
- Usage: motor-data-publish TEMP_C PRESSURE_PSI RPM VBAT START NEUTRAL BUZZER TEMP_GOOD PRES_GOOD\r\n\
+ Usage: motor-data-publish TEMP_C PRESSURE_PSI RPM VBAT ENGINE_MIN START NEUTRAL BUZZER TEMP_GOOD PRES_GOOD\r\n\
  \r\n\
  TEMP_C        Floating-point temperature in degrees C\r\n\
  PRESSURE_PSI  Floating-point pressure in PSI\r\n\
  RPM           Floating-point engine speed in RPM\r\n\
  VBAT          Floating-point battery voltage\r\n\
+ ENGINE_MIN    Engine runtime in minutes\r\n\
  START         0 or 1\r\n\
  NEUTRAL       0 or 1\r\n\
  BUZZER        0 or 1\r\n\
@@ -153,7 +154,7 @@ void on_cli_motor_data_publish(EmbeddedCli *cli, char *args, void *context)
 {
     (void) context;
 
-    if (embeddedCliGetTokenCount(args) != 9)
+    if (embeddedCliGetTokenCount(args) != 10)
     {
         embeddedCliPrint(cli, HELP_FULL_MOTOR_DATA_PUBLISH);
         return;
@@ -164,11 +165,12 @@ void on_cli_motor_data_publish(EmbeddedCli *cli, char *args, void *context)
     const char *arg_pressure_psi = embeddedCliGetToken(args, 2);
     const char *arg_rpm          = embeddedCliGetToken(args, 3);
     const char *arg_vbat         = embeddedCliGetToken(args, 4);
-    const char *arg_start        = embeddedCliGetToken(args, 5);
-    const char *arg_neutral      = embeddedCliGetToken(args, 6);
-    const char *arg_buzzer       = embeddedCliGetToken(args, 7);
-    const char *arg_temp_good    = embeddedCliGetToken(args, 8);
-    const char *arg_pres_good    = embeddedCliGetToken(args, 9);
+    const char *arg_engine_min   = embeddedCliGetToken(args, 5);
+    const char *arg_start        = embeddedCliGetToken(args, 6);
+    const char *arg_neutral      = embeddedCliGetToken(args, 7);
+    const char *arg_buzzer       = embeddedCliGetToken(args, 8);
+    const char *arg_temp_good    = embeddedCliGetToken(args, 9);
+    const char *arg_pres_good    = embeddedCliGetToken(args, 10);
 
     float temperature = strtof(arg_temp_c, &arg_end);
     if ((arg_end == arg_temp_c) || (*arg_end != '\0'))
@@ -202,6 +204,14 @@ void on_cli_motor_data_publish(EmbeddedCli *cli, char *args, void *context)
         return;
     }
 
+    uint32_t engine_minutes = (uint32_t) strtoul(arg_engine_min, &arg_end, 10);
+    if ((arg_end == arg_engine_min) || (*arg_end != '\0'))
+    {
+        embeddedCliPrint(cli, " ENGINE_MIN must be an unsigned integer\r\n");
+        embeddedCliPrint(cli, HELP_FULL_MOTOR_DATA_PUBLISH);
+        return;
+    }
+
     bool start;
     bool neutral;
     bool buzzer;
@@ -222,6 +232,7 @@ void on_cli_motor_data_publish(EmbeddedCli *cli, char *args, void *context)
     event->pressure         = pressure;
     event->tachometer       = tachometer;
     event->vbat             = vbat;
+    event->engine_minutes   = engine_minutes;
     event->start            = start;
     event->neutral          = neutral;
     event->buzzer           = buzzer;

@@ -33,7 +33,7 @@ set(CPU_PARAMETERS
 
 add_compile_options(${CPU_PARAMETERS})
 
-set(linker_script_SRC               ${PROJ_PATH}/src/bsp/device/stm32g474cetx_flash.ld)
+set(linker_script_SRC               ${SHARED_PATH}/bsp/device/stm32g474cetx_flash.ld)
 set(EXECUTABLE                      ${CMAKE_PROJECT_NAME})
 
 set(QPC_CFG_KERNEL qk)
@@ -85,16 +85,16 @@ set(messages_SRCS
 )
 
 set(sources_SRCS
-    ${PROJ_PATH}/src/bsp/device/startup_stm32g474xx.s
+    ${SHARED_PATH}/bsp/device/startup_stm32g474xx.s
 
     ${PROJ_PATH}/src/stm32g4xx_it.c
-    ${PROJ_PATH}/src/syscalls.c
-    ${PROJ_PATH}/src/sysmem.c
-    ${PROJ_PATH}/src/system_stm32g4xx.c
+    ${SHARED_PATH}/syscalls.c
+    ${SHARED_PATH}/sysmem.c
+    ${SHARED_PATH}/system_stm32g4xx.c
     ${PROJ_PATH}/src/stm32g4xx_hal_msp.c
     ${PROJ_PATH}/src/main.c
     ${PROJ_PATH}/src/interrupts.c
-    ${PROJ_PATH}/src/safe_strncpy.c
+    ${SHARED_PATH}/services/safe_strncpy.c
 
     ${PROJ_PATH}/src/services/cli/cli_commands.c
     ${PROJ_PATH}/src/services/cli/cli_manual_commands.c
@@ -105,7 +105,7 @@ set(sources_SRCS
     ${PROJ_PATH}/src/services/flowsensor.c
     ${SHARED_PATH}/services/fram.c
     ${PROJ_PATH}/src/services/LMT01.c
-    ${PROJ_PATH}/src/services/log_com.c
+    ${SHARED_PATH}/services/log_com.c
     ${PROJ_PATH}/src/services/pressure_sensor.c
 
     ${SHARED_PATH}/services/box_to_box.c
@@ -114,11 +114,11 @@ set(sources_SRCS
     ${SHARED_PATH}/services/usb.c
     ${SHARED_PATH}/services/pc_com/crc16.c
     ${SHARED_PATH}/services/pc_com/hdlc.c
-    ${PROJ_PATH}/src/services/pc_com.c
+    ${SHARED_PATH}/services/pc_com/pc_com.c
 
     ${PROJ_PATH}/src/bsp/bsp.c
-    ${PROJ_PATH}/src/bsp/bsp_manual.c
-    ${PROJ_PATH}/src/bsp/usb_descriptors.c
+    ${SHARED_PATH}/bsp/bsp_manual.c
+    ${SHARED_PATH}/bsp/usb_descriptors.c
 
     ${SHARED_PATH}/bsp/bsp_backup_ram.c
     ${SHARED_PATH}/bsp/gpio_stm32.c
