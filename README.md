@@ -31,6 +31,18 @@ Both projects now also support the config-manager protobuf path:
 3. Select a build profile (`Debug`).
 4. Ensure your ARM toolchain is available (`arm-none-eabi`).
 
+For a fresh clone with host-test dependencies:
+
+```bash
+git clone --recurse-submodules <repo-url>
+```
+
+For an existing checkout after pulling changes:
+
+```bash
+git submodule update --init --recursive
+```
+
 ## Build Firmware (VS Code)
 
 Primary workflow is the VS Code build/debug buttons:
@@ -40,6 +52,17 @@ Primary workflow is the VS Code build/debug buttons:
 3. Click the Build button (or press `Ctrl+Shift+B`).
 4. Click Debug/Run to flash with your configured debugger.
 
+## Host C/C++ Tests
+
+Host unit tests use CppUTest plus the QP test harness:
+
+```bash
+cmake --preset hostUnitTests
+cmake --build --preset host-unit-tests
+```
+
+The host test tree covers shared protocol helpers, PC COM protobuf packet emission, and the
+motor/gauge box-to-box motor data path.
 
 ## Generate Protobuf/Nanopb Messages
 

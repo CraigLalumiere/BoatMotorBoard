@@ -26,7 +26,9 @@ Q_DEFINE_THIS_MODULE("pc_com")
 /**************************************************************************************************\
 * Private macros
 \**************************************************************************************************/
+#ifndef CLI_BUFFER_SIZE
 #define CLI_BUFFER_SIZE 1024
+#endif
 
 /**************************************************************************************************\
 * Private type definitions
@@ -396,6 +398,8 @@ static void Serial_Data_Ready(void *cb_data)
  **************************************************************************************************/
 static void cli_write_char(EmbeddedCli *embeddedCli, char c)
 {
+    Q_UNUSED_PAR(embeddedCli);
+
     cli_data_event->msg[cli_data_event->msg_size] = c;
     cli_data_event->msg_size++;
 
@@ -498,6 +502,8 @@ static void handle_config_db_info_req(PC_COM *const me)
 
 static void handle_config_db_save_to_nvm_req(PC_COM *const me)
 {
+    Q_UNUSED_PAR(me);
+
     static QEvt const event = QEVT_INITIALIZER(POSTED_CONFIG_SAVE_TO_NVM_REQ_SIG);
     QACTIVE_POST(AO_Config, &event, &me);
 }

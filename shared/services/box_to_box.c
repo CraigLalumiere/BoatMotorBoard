@@ -251,6 +251,8 @@ static QState bus_error(Box_To_Box *const me, QEvt const *const e)
 
 void handle_can_message_received(Box_To_Box *const me, QEvt const *const e)
 {
+    Q_UNUSED_PAR(me);
+
     CAN_Msgs_T *can_msg;
 
     const CAN_Message_Received_Event_T *msg_received_evt = Q_EVT_CAST(CAN_Message_Received_Event_T);

@@ -1,0 +1,22 @@
+{
+    "version": 3,
+    "configurePresets": [
+        {
+            "name": "hostUnitTests",
+            "displayName": "Host Unit Tests",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/hostUnitTests/debug",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+                "CMAKE_HOST_UNIT_TESTS": true
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "host-unit-tests",
+            "configurePreset": "hostUnitTests"
+        }
+    ]
+}

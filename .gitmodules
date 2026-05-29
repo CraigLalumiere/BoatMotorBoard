@@ -1,0 +1,3 @@
+[submodule "library/cpputest-for-qpc"]
+	path = library/cpputest-for-qpc
+	url = https://github.com/covemountainsoftware/cpputest-for-qpc.git
