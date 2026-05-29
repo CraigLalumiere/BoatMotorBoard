@@ -9,6 +9,7 @@ from PySide6 import QtCore, QtGui, QtWidgets
 from PySide6.QtCore import Qt
 from .messages.CLIData_pb2 import CLIData
 from .messages.LogPrint_pb2 import LogPrint
+from .messages.MotorData_pb2 import MotorData
 
 from . import packets
 from .main_window import Ui_MainWindow
@@ -195,6 +196,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.recording = False
         self.outfile = None
         self.outfile_errors = None
+        self.last_motor_data_log_time = 0.0
 
         self.data_folder = os.path.dirname(os.path.normpath(__file__))
         self.ui.txt_data_dir.setText(self.data_folder)
@@ -269,6 +271,32 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         if isinstance(message, LogPrint):
             msg_string = "{0} {1}".format(message.milliseconds_tick, message.msg)
             self.ui.txt_log.append(msg_string)
+
+            if self.recording:
+                self.outfile.write(msg_string + '\n')
+
+        if isinstance(message, MotorData):
+            msg_string = (
+                "{0} RPM:{1:5.0f} VBat:{2:5.2f}V Temp:{3:4.1f}C "
+                "Press:{4:4.1f} EngMin:{5} Neutral:{6} Start:{7} TG:{8} PG:{9} Bz:{10}"
+            ).format(
+                message.milliseconds_tick,
+                message.tachometer,
+                message.vbat,
+                message.temperature,
+                message.pressure,
+                message.engine_minutes,
+                int(message.neutral),
+                int(message.start),
+                int(message.temp_good),
+                int(message.pres_good),
+                int(message.buzzer),
+            )
+
+            now = time.monotonic()
+            if (now - self.last_motor_data_log_time) >= 0.5:
+                self.last_motor_data_log_time = now
+                self.ui.txt_log.append(msg_string)
 
             if self.recording:
                 self.outfile.write(msg_string + '\n')

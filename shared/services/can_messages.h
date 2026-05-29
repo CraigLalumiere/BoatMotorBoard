@@ -19,7 +19,7 @@ typedef struct
 * Motor Data
 \**************************************************************************************************/
 #define CAN_MSG_MOTOR_DATA_ID  2U
-#define CAN_MSG_MOTOR_DATA_DLC FDCAN_DLC_BYTES_16
+#define CAN_MSG_MOTOR_DATA_DLC FDCAN_DLC_BYTES_32
 
 typedef struct
 {
@@ -29,6 +29,14 @@ typedef struct
     float temperature; // degrees C
     float pressure;    // PSI
     float tachometer;  // RPM
+    float vbat;        // volts
+    uint32_t engine_minutes;
+    bool start;
+    bool neutral;
+    bool buzzer;
+    bool temp_good;
+    bool pres_good;
+    uint8_t reserved[3];
 } __attribute__((packed, aligned(1))) CAN_Msg_Motor_Data_T;
 
 /**************************************************************************************************\

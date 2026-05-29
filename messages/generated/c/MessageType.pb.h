@@ -25,7 +25,9 @@ typedef enum _MessageType {
     MessageType_CONFIG_DB_SET_ENTRY_TO_DEFAULT_REQ = 16,
     /* Config db responses */
     MessageType_CONFIG_DB_INFO_RESP = 17,
-    MessageType_CONFIG_DB_ENTRY_DATA_RESP = 18
+    MessageType_CONFIG_DB_ENTRY_DATA_RESP = 18,
+    /* Motor telemetry */
+    MessageType_MOTOR_DATA = 19
 } MessageType;
 
 #ifdef __cplusplus
@@ -34,8 +36,8 @@ extern "C" {
 
 /* Helper constants for enums */
 #define _MessageType_MIN MessageType_LOG_PRINT
-#define _MessageType_MAX MessageType_CONFIG_DB_ENTRY_DATA_RESP
-#define _MessageType_ARRAYSIZE ((MessageType)(MessageType_CONFIG_DB_ENTRY_DATA_RESP+1))
+#define _MessageType_MAX MessageType_MOTOR_DATA
+#define _MessageType_ARRAYSIZE ((MessageType)(MessageType_MOTOR_DATA+1))
 
 
 #ifdef __cplusplus

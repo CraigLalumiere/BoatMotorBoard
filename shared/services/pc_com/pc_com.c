@@ -4,6 +4,7 @@
 #include "c/ConfigDB.pb.h"
 #include "c/LogPrint.pb.h"
 #include "c/MessageType.pb.h"
+#include "c/MotorData.pb.h"
 #include "cli_commands.h"
 #include "config.h"
 #include "crc16.h"
@@ -47,6 +48,7 @@ typedef union
     uint8_t CLIData_max[CLIDATA_PB_H_MAX_SIZE];
     uint8_t ConfigDBInfoResp_max[ConfigDBInfoResp_size];
     uint8_t ConfigEntryDataResp_max[ConfigEntryDataResp_size];
+    uint8_t MotorData_max[MotorData_size];
 } TX_Message_Buffer_T;
 
 typedef union
@@ -203,6 +205,7 @@ static QState initial(PC_COM *const me, void const *const par)
     Q_UNUSED_PAR(par);
 
     QActive_subscribe((QActive *) me, PUBSUB_CONFIG_ENTRY_CHANGED_SIG);
+    QActive_subscribe((QActive *) me, PUBSUB_MOTOR_DATA_SIG);
 
     // Process CLI  every 25ms
     QTimeEvt_armX(
@@ -313,6 +316,35 @@ static QState active(PC_COM *const me, QEvt const *const e)
         case PUBSUB_CONFIG_ENTRY_CHANGED_SIG: {
             const ConfigEntryChangedEvent_T *evt = Q_EVT_CAST(ConfigEntryChangedEvent_T);
             send_db_entry_data_resp_msg(me, evt->id);
+            status = Q_HANDLED();
+            break;
+        }
+
+        case PUBSUB_MOTOR_DATA_SIG: {
+            const MotorDataEvent_T *evt = Q_EVT_CAST(MotorDataEvent_T);
+
+            me->tx_packet.type = MessageType_MOTOR_DATA;
+
+            MotorData message = MotorData_init_zero;
+            pb_ostream_t stream = pb_ostream_from_buffer(
+                ((uint8_t *) &me->tx_packet.message), sizeof(TX_Message_Buffer_T));
+
+            message.milliseconds_tick = BSP_Get_Milliseconds_Tick();
+            message.temperature       = evt->temperature;
+            message.pressure          = evt->pressure;
+            message.tachometer        = evt->tachometer;
+            message.vbat              = evt->vbat;
+            message.engine_minutes    = evt->engine_minutes;
+            message.start             = evt->start;
+            message.neutral           = evt->neutral;
+            message.buzzer            = evt->buzzer;
+            message.temp_good         = evt->temp_good;
+            message.pres_good         = evt->pres_good;
+
+            bool ok = pb_encode(&stream, MotorData_fields, &message);
+            Q_ASSERT(ok);
+
+            calculate_crc_and_send_packet(me, stream.bytes_written);
             status = Q_HANDLED();
             break;
         }

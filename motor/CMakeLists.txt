@@ -82,6 +82,7 @@ set(messages_SRCS
     ${MESSAGES_PATH}/ConfigDB.pb.c
     ${MESSAGES_PATH}/LogPrint.pb.c
     ${MESSAGES_PATH}/MessageType.pb.c
+    ${MESSAGES_PATH}/MotorData.pb.c
 )
 
 set(sources_SRCS

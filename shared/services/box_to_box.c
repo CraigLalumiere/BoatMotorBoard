@@ -176,14 +176,22 @@ static QState active(Box_To_Box *const me, QEvt const *const e)
 
         case PUBSUB_MOTOR_DATA_SIG: {
 #ifdef BOARD_MOTOR
-            MotorDataEvent_T *evt = Q_EVT_CAST(MotorDataEvent_T);
+            const MotorDataEvent_T *evt = Q_EVT_CAST(MotorDataEvent_T);
 
-            can_msg.motor_data_msg.id          = CAN_MSG_MOTOR_DATA_ID;
-            can_msg.motor_data_msg.dlc         = CAN_MSG_MOTOR_DATA_DLC;
-            can_msg.motor_data_msg.tick        = BSP_Get_Milliseconds_Tick();
-            can_msg.motor_data_msg.temperature = evt->temperature;
-            can_msg.motor_data_msg.pressure    = evt->pressure;
-            can_msg.motor_data_msg.tachometer  = evt->tachometer;
+            can_msg.motor_data_msg.id             = CAN_MSG_MOTOR_DATA_ID;
+            can_msg.motor_data_msg.dlc            = CAN_MSG_MOTOR_DATA_DLC;
+            can_msg.motor_data_msg.tick           = BSP_Get_Milliseconds_Tick();
+            can_msg.motor_data_msg.temperature    = evt->temperature;
+            can_msg.motor_data_msg.pressure       = evt->pressure;
+            can_msg.motor_data_msg.tachometer     = evt->tachometer;
+            can_msg.motor_data_msg.vbat           = evt->vbat;
+            can_msg.motor_data_msg.engine_minutes = evt->engine_minutes;
+            can_msg.motor_data_msg.start          = evt->start;
+            can_msg.motor_data_msg.neutral        = evt->neutral;
+            can_msg.motor_data_msg.buzzer         = evt->buzzer;
+            can_msg.motor_data_msg.temp_good      = evt->temp_good;
+            can_msg.motor_data_msg.pres_good      = evt->pres_good;
+            memset(can_msg.motor_data_msg.reserved, 0, sizeof(can_msg.motor_data_msg.reserved));
 
             retval = BSP_CAN_Write_Msg((CAN_Message_T *) &can_msg.motor_data_msg);
 
@@ -259,16 +267,16 @@ void handle_can_message_received(Box_To_Box *const me, QEvt const *const e)
             CAN_Msg_Motor_Data_T motor_data = can_msg->motor_data_msg;
 
             MotorDataEvent_T *event = Q_NEW(MotorDataEvent_T, PUBSUB_MOTOR_DATA_SIG);
-            event->neutral          = false;
-            event->start            = false;
-            event->temp_good        = true;
-            event->pres_good        = true;
-            event->buzzer           = true;
-            event->vbat             = 0.0f;
+            event->neutral          = motor_data.neutral;
+            event->start            = motor_data.start;
+            event->temp_good        = motor_data.temp_good;
+            event->pres_good        = motor_data.pres_good;
+            event->buzzer           = motor_data.buzzer;
+            event->vbat             = motor_data.vbat;
             event->temperature      = (float) motor_data.temperature;
             event->pressure         = (float) motor_data.pressure;
             event->tachometer       = (float) motor_data.tachometer;
-            event->engine_minutes   = 0U;
+            event->engine_minutes   = motor_data.engine_minutes;
             QACTIVE_PUBLISH(&event->super, &me->super);
             break;
         }

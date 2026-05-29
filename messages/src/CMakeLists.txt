@@ -6,6 +6,7 @@ set(PROTO_FILES
         LogPrint.proto
         CLIData.proto
         ConfigDB.proto
+        MotorData.proto
 )
 
 

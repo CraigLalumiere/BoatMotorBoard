@@ -20,7 +20,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   syntax='proto2',
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n\x11MessageType.proto*\xae\x02\n\x0bMessageType\x12\r\n\tLOG_PRINT\x10\x01\x12\x0c\n\x08\x43LI_DATA\x10\x02\x12\x1d\n\x19\x43ONFIG_DB_SAVE_TO_NVM_REQ\x10\x0b\x12#\n\x1f\x43ONFIG_DB_REQ_DATABASE_INFO_REQ\x10\x0c\x12$\n CONFIG_DB_SET_ALL_TO_DEFAULT_REQ\x10\r\x12\x1b\n\x17\x43ONFIG_DB_GET_ENTRY_REQ\x10\x0e\x12\x1b\n\x17\x43ONFIG_DB_SET_ENTRY_REQ\x10\x0f\x12&\n\"CONFIG_DB_SET_ENTRY_TO_DEFAULT_REQ\x10\x10\x12\x17\n\x13\x43ONFIG_DB_INFO_RESP\x10\x11\x12\x1d\n\x19\x43ONFIG_DB_ENTRY_DATA_RESP\x10\x12'
+  serialized_pb=b'\n\x11MessageType.proto*\xbe\x02\n\x0bMessageType\x12\r\n\tLOG_PRINT\x10\x01\x12\x0c\n\x08\x43LI_DATA\x10\x02\x12\x1d\n\x19\x43ONFIG_DB_SAVE_TO_NVM_REQ\x10\x0b\x12#\n\x1f\x43ONFIG_DB_REQ_DATABASE_INFO_REQ\x10\x0c\x12$\n CONFIG_DB_SET_ALL_TO_DEFAULT_REQ\x10\r\x12\x1b\n\x17\x43ONFIG_DB_GET_ENTRY_REQ\x10\x0e\x12\x1b\n\x17\x43ONFIG_DB_SET_ENTRY_REQ\x10\x0f\x12&\n\"CONFIG_DB_SET_ENTRY_TO_DEFAULT_REQ\x10\x10\x12\x17\n\x13\x43ONFIG_DB_INFO_RESP\x10\x11\x12\x1d\n\x19\x43ONFIG_DB_ENTRY_DATA_RESP\x10\x12\x12\x0e\n\nMOTOR_DATA\x10\x13'
 )
 
 _MESSAGETYPE = _descriptor.EnumDescriptor(
@@ -80,11 +80,16 @@ _MESSAGETYPE = _descriptor.EnumDescriptor(
       serialized_options=None,
       type=None,
       create_key=_descriptor._internal_create_key),
+    _descriptor.EnumValueDescriptor(
+      name='MOTOR_DATA', index=10, number=19,
+      serialized_options=None,
+      type=None,
+      create_key=_descriptor._internal_create_key),
   ],
   containing_type=None,
   serialized_options=None,
   serialized_start=22,
-  serialized_end=324,
+  serialized_end=340,
 )
 _sym_db.RegisterEnumDescriptor(_MESSAGETYPE)
 
@@ -99,6 +104,7 @@ CONFIG_DB_SET_ENTRY_REQ = 15
 CONFIG_DB_SET_ENTRY_TO_DEFAULT_REQ = 16
 CONFIG_DB_INFO_RESP = 17
 CONFIG_DB_ENTRY_DATA_RESP = 18
+MOTOR_DATA = 19
 
 
 DESCRIPTOR.enum_types_by_name['MessageType'] = _MESSAGETYPE

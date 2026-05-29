@@ -1,0 +1,15 @@
+syntax = "proto2";
+
+message MotorData {
+    required uint32 milliseconds_tick = 1;
+    required float temperature = 2;
+    required float pressure = 3;
+    required float tachometer = 4;
+    required float vbat = 5;
+    required uint32 engine_minutes = 6;
+    required bool start = 7;
+    required bool neutral = 8;
+    required bool buzzer = 9;
+    required bool temp_good = 10;
+    required bool pres_good = 11;
+}
