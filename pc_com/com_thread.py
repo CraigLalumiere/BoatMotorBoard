@@ -54,7 +54,9 @@ class COMThread(threading.Thread):
             if self.serial_port:
                 self.serial_port.close()
 
-            self.serial_port = serial.Serial(**self.serial_arg)
+            serial_arg = dict(self.serial_arg)
+            port_url = serial_arg.pop("port")
+            self.serial_port = serial.serial_for_url(port_url, **serial_arg)
             self.serial_port.reset_input_buffer()
 
             while self.alive.is_set():
@@ -83,7 +85,7 @@ class COMThread(threading.Thread):
             if self.serial_port:
                 self.serial_port.close()
 
-        except serial.SerialException as e:
+        except (serial.SerialException, OSError, TypeError) as e:
             # clean up
             if self.serial_port:
                 self.serial_port.close()

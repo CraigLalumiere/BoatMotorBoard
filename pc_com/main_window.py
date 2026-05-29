@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'main_window.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.9.1
+## Created by: Qt User Interface Compiler version 6.9.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -15,13 +15,12 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QGridLayout, QGroupBox, QHBoxLayout,
-    QLabel, QLineEdit, QMainWindow, QPushButton,
-    QSizePolicy, QSpacerItem, QStatusBar, QTabWidget,
-    QTextEdit, QToolButton, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QApplication, QGroupBox, QHBoxLayout, QLabel,
+    QLineEdit, QMainWindow, QPushButton, QSizePolicy,
+    QSpacerItem, QStatusBar, QTextEdit, QToolButton,
+    QVBoxLayout, QWidget)
 
-from pyqtgraph import GraphicsLayoutWidget
-from .terminal import Terminal
+from pc_com.terminal import Terminal
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -244,32 +243,14 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout.addWidget(self.gb_left_controls)
 
-        self.tabWidget = QTabWidget(self.centralwidget)
-        self.tabWidget.setObjectName(u"tabWidget")
-        self.tab_5 = QWidget()
-        self.tab_5.setObjectName(u"tab_5")
-        self.gridLayout = QGridLayout(self.tab_5)
-        self.gridLayout.setObjectName(u"gridLayout")
-        self.plot_1 = GraphicsLayoutWidget(self.tab_5)
-        self.plot_1.setObjectName(u"plot_1")
-        self.plot_1.setMinimumSize(QSize(0, 200))
+        self.dashboard_host = QWidget(self.centralwidget)
+        self.dashboard_host.setObjectName(u"dashboard_host")
+        self.dashboard_host.setMinimumSize(QSize(520, 0))
+        self.dashboard_host_layout = QVBoxLayout(self.dashboard_host)
+        self.dashboard_host_layout.setObjectName(u"dashboard_host_layout")
+        self.dashboard_host_layout.setContentsMargins(0, 0, 0, 0)
 
-        self.gridLayout.addWidget(self.plot_1, 0, 0, 1, 1)
-
-        self.tabWidget.addTab(self.tab_5, "")
-        self.tab_6 = QWidget()
-        self.tab_6.setObjectName(u"tab_6")
-        self.gridLayout_2 = QGridLayout(self.tab_6)
-        self.gridLayout_2.setObjectName(u"gridLayout_2")
-        self.plot_2 = GraphicsLayoutWidget(self.tab_6)
-        self.plot_2.setObjectName(u"plot_2")
-        self.plot_2.setMinimumSize(QSize(0, 200))
-
-        self.gridLayout_2.addWidget(self.plot_2, 0, 0, 1, 1)
-
-        self.tabWidget.addTab(self.tab_6, "")
-
-        self.horizontalLayout.addWidget(self.tabWidget)
+        self.horizontalLayout.addWidget(self.dashboard_host)
 
 
         self.verticalLayout_2.addLayout(self.horizontalLayout)
@@ -283,7 +264,6 @@ class Ui_MainWindow(object):
 
         self.btn_open_config.setDefault(False)
         self.btn_bootloader_clicked.setDefault(False)
-        self.tabWidget.setCurrentIndex(0)
 
 
         QMetaObject.connectSlotsByName(MainWindow)
@@ -315,6 +295,5 @@ class Ui_MainWindow(object):
 "li.checked::marker { content: \"\\2612\"; }\n"
 "</style></head><body style=\" font-family:'Consolas'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
 "<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p></body></html>", None))
-        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_5), QCoreApplication.translate("MainWindow", u"Output", None))
-        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_6), QCoreApplication.translate("MainWindow", u"Raw Data", None))
     # retranslateUi
+

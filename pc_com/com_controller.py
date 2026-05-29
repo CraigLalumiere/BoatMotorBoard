@@ -41,10 +41,17 @@ def get_com_ports():
 
 def get_com_port_options():
     ports = serial.tools.list_ports.comports() or []
-    return [
+    port_options = [
         ComPortOption(device=port.device, label=format_com_port_label(port))
         for port in ports
     ]
+    port_options.append(
+        ComPortOption(
+            device="socket://127.0.0.1:7777",
+            label="MotorData simulator: socket://127.0.0.1:7777",
+        )
+    )
+    return port_options
 
 
 def format_com_port_label(port):

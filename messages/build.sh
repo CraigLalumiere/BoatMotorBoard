@@ -17,3 +17,6 @@ rm -rf ../pc_com/messages/*
 # build the protobufs
 cmake -S . -B build/messages -DCMAKE_MAKE_PROGRAM=ninja -G "Ninja"
 cmake --build build/messages --target messages
+
+# Keep generated Python modules importable as the pc_com.messages package.
+touch ../pc_com/messages/__init__.py

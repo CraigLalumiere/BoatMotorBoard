@@ -57,6 +57,17 @@ def build_packet_cli_data(data: bytes):
     return packet
 
 
+def build_packet_motor_data(motor_data: MotorData):
+    packet_id = struct.pack('<B', MessageType.MOTOR_DATA)
+    message_bytes = motor_data.SerializeToString()
+
+    packet_id_and_data = packet_id + message_bytes
+    packet_crc = struct.pack('<H', calculate_crc(packet_id_and_data))
+    packet = packet_crc + packet_id_and_data
+
+    return packet
+
+
 def build_packet_config_db_info_req():
     packet_id = struct.pack('<B', MessageType.CONFIG_DB_REQ_DATABASE_INFO_REQ)
 
@@ -98,5 +109,4 @@ def build_packet_config_db_set_entry_req(msg_config_db_get_entry_req):
     packet = packet_crc + packet_id_and_data
 
     return packet
-
 

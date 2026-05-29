@@ -1,4 +1,7 @@
-call .venv\Scripts\activate.bat
-pyside6-uic main_window.ui -o main_window.py
-pyside6-uic bootloader_window.ui -o bootloader_window.py
-pyside6-uic config_window.ui -o config_window.py
+@echo off
+set SCRIPT_DIR=%~dp0
+set REPO_ROOT=%SCRIPT_DIR%..
+call "%REPO_ROOT%\.venv\Scripts\activate.bat"
+pyside6-uic --from-imports "%SCRIPT_DIR%main_window.ui" -o "%SCRIPT_DIR%main_window.py"
+pyside6-uic --from-imports "%SCRIPT_DIR%bootloader_window.ui" -o "%SCRIPT_DIR%bootloader_window.py"
+pyside6-uic --from-imports "%SCRIPT_DIR%config_window.ui" -o "%SCRIPT_DIR%config_window.py"

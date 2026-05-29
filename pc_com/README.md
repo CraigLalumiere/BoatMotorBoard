@@ -43,6 +43,15 @@ This updates `pc_com/messages/*.py`.
 3. Use CLI tab/console for direct commands.
 4. Use config manager controls to sync settings with firmware.
 
+## MotorData Simulator
+
+To preview the dashboard without STM32 hardware, start the fake MotorData stream in a second terminal:
+
+```powershell
+python -m pc_com.motor_data_simulator
+```
+
+Then launch the app, click **Select Port**, choose `MotorData simulator: socket://127.0.0.1:7777`, and connect.
 
 ## GUI Editing
 

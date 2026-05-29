@@ -516,45 +516,28 @@ li.checked::marker { content: &quot;\2612&quot;; }
        </widget>
       </item>
       <item>
-       <widget class="QTabWidget" name="tabWidget">
-        <property name="currentIndex">
-         <number>0</number>
+       <widget class="QWidget" name="dashboard_host" native="true">
+        <property name="minimumSize">
+         <size>
+          <width>520</width>
+          <height>0</height>
+         </size>
         </property>
-        <widget class="QWidget" name="tab_5">
-         <attribute name="title">
-          <string>Output</string>
-         </attribute>
-         <layout class="QGridLayout" name="gridLayout">
-          <item row="0" column="0">
-           <widget class="GraphicsLayoutWidget" name="plot_1" native="true">
-            <property name="minimumSize">
-             <size>
-              <width>0</width>
-              <height>200</height>
-             </size>
-            </property>
-           </widget>
-          </item>
-         </layout>
+        <layout class="QVBoxLayout" name="dashboard_host_layout">
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+        </layout>
         </widget>
-        <widget class="QWidget" name="tab_6">
-         <attribute name="title">
-          <string>Raw Data</string>
-         </attribute>
-         <layout class="QGridLayout" name="gridLayout_2">
-          <item row="0" column="0">
-           <widget class="GraphicsLayoutWidget" name="plot_2" native="true">
-            <property name="minimumSize">
-             <size>
-              <width>0</width>
-              <height>200</height>
-             </size>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </widget>
       </item>
      </layout>
     </item>
@@ -566,13 +549,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
   <customwidget>
    <class>Terminal</class>
    <extends>QWidget</extends>
-   <header>terminal.h</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>GraphicsLayoutWidget</class>
-   <extends>QWidget</extends>
-   <header>pyqtgraph</header>
+   <header>pc_com.terminal</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

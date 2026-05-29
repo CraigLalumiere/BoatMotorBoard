@@ -1,30 +1,25 @@
 import sys
 import os
 from PySide6 import QtWidgets
-from PySide6.QtWidgets import QFileDialog, QMessageBox, QApplication
-from .plot_manager import PlotManager
+from PySide6.QtWidgets import QFileDialog, QMessageBox
 from . import config_manager
 from .config_manager import ConfigManager
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtWidgets
 from PySide6.QtCore import Qt
 from .messages.CLIData_pb2 import CLIData
 from .messages.LogPrint_pb2 import LogPrint
 from .messages.MotorData_pb2 import MotorData
 
-from . import packets
 from .main_window import Ui_MainWindow
 from .bootloader_window import Ui_bootloader_window
 from .messages.ConfigDB_pb2 import ConfigEntryDataResp, ConfigDBInfoResp
-import datetime
-import typing
 from .config_window import Ui_ConfigWindow
 from .com_controller import ComController, get_com_port_options
-import json
+from .motor_dashboard import MotorDashboard
 import signal
 # from com_controller_fake import ComControllerFake
 
 import time
-import subprocess
 import usb.backend.libusb1
 import libusb_package
 import usb.core
@@ -192,6 +187,8 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
         self.config_manager = ConfigManager(self.controller, self.ui.txt_log)  
         self.config_window = ConfigWindow(self.config_manager) 
+        self.dashboard = MotorDashboard(self.ui.dashboard_host)
+        self.ui.dashboard_host_layout.addWidget(self.dashboard)
 
         self.recording = False
         self.outfile = None
@@ -215,8 +212,6 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.console_test_timer.timeout.connect(self.on_console_test_timer)
         # self.console_test_timer.start(3000)
         self.console_test_int = 64
-
-        self.plot_manager = PlotManager(self.ui.plot_1, self.ui.plot_2)        
 
         self._setup_ui_signals()
 
@@ -260,9 +255,6 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             # print(type(msg))
             self.handle_controller_msg_received(msg)
 
-        # redraw plots
-        self.plot_manager.update_plot()
-
     def handle_controller_msg_received(self, message):
         if isinstance(message, CLIData):
             # print("Receive CLI data: {0}".format(message.msg))
@@ -276,6 +268,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
                 self.outfile.write(msg_string + '\n')
 
         if isinstance(message, MotorData):
+            self.dashboard.update_motor_data(message)
             msg_string = (
                 "{0} RPM:{1:5.0f} VBat:{2:5.2f}V Temp:{3:4.1f}C "
                 "Press:{4:4.1f} EngMin:{5} Neutral:{6} Start:{7} TG:{8} PG:{9} Bz:{10}"
@@ -321,7 +314,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.update_interface_state()
 
         elif evt['event'] == 'connection_status_changed':
-            self.plot_manager.reset_plots()   
+            pass
 
     def on_btn_browse_clicked(self):
         folder = QFileDialog.getExistingDirectory(None,
