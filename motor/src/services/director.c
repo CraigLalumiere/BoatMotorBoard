@@ -76,6 +76,12 @@ void Director_ctor()
     QActive_ctor(&me->super, Q_STATE_CAST(&initial));
     QTimeEvt_ctorX(&me->timer_evt, &me->super, WAIT_TIMEOUT_SIG, 0U);
     QTimeEvt_ctorX(&me->engine_minute_evt, &me->super, ENGINE_MINUTE_TIMEOUT_SIG, 0U);
+
+    me->pressure     = 0.0f;
+    me->temperature  = 0.0f;
+    me->vbat_volts   = 0.0f;
+    me->tachometer   = 0.0f;
+    me->config_ready = false;
 }
 
 /**************************************************************************************************\

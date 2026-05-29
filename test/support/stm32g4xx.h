@@ -1,6 +1,7 @@
 #ifndef STM32G4XX_H_
 #define STM32G4XX_H_
 
+#include "stm32g4xx_hal.h"
 #include <stdint.h>
 
 #define FDCAN_DLC_BYTES_5  5U

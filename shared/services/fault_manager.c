@@ -41,7 +41,10 @@ void Fault_Manager_Generate_Fault(QActive *sender, Fault_ID_T fault_id, const ch
     if (num_active_faults < FAULT_MANAGER_BUFFER_LENGTH)
     {
         active_faults[num_active_faults].id = fault_id;
-        memcpy(active_faults[num_active_faults].msg, msg, FAULT_GEN_EVENT_MAX_MSG_LENGTH);
+        safe_strncpy(
+            active_faults[num_active_faults].msg,
+            msg,
+            sizeof(active_faults[num_active_faults].msg));
         num_active_faults++;
     }
 

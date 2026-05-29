@@ -9,7 +9,12 @@
 extern "C" {
 #endif
 
-typedef uint32_t ConfigID_T;
+typedef enum
+{
+    CFG_ID_ENGINE_MINUTES,
+    CFG_ID_NUM_IDS,
+    CFG_ID_INVALID = CFG_ID_NUM_IDS
+} ConfigID_T;
 
 typedef struct
 {
@@ -35,6 +40,7 @@ const char *Config_GetName(ConfigID_T id);
 uint32_t Config_Read_U32(ConfigID_T id);
 uint32_t Config_Read_Default_U32(ConfigID_T id);
 void Config_Write_U32(ConfigID_T id, uint32_t value);
+void Config_Save(void);
 
 int32_t Config_Read_I32(ConfigID_T id);
 int32_t Config_Read_Default_I32(ConfigID_T id);
