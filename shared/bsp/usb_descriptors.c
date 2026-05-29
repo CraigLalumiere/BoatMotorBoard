@@ -43,17 +43,17 @@
 
 #if defined(BOARD_MOTOR)
 #define USB_MANUFACTURER_STR "Craig"
-#define USB_PRODUCT_STR      "Motor PCB"
-#define USB_CDC0_STR         "Portage CLI"
+#define USB_PRODUCT_STR      "Boat Motor Controller"
+#define USB_CDC0_STR         "Motor PC Config CLI"
 #elif defined(BOARD_GAUGE)
-#define USB_MANUFACTURER_STR "Purafy"
-#define USB_PRODUCT_STR      "Portage"
-#define USB_CDC0_STR         "Portage PC"
+#define USB_MANUFACTURER_STR "Craig"
+#define USB_PRODUCT_STR      "Boat Gauge Cluster"
+#define USB_CDC0_STR         "Gauge PC Config CLI"
 #else
 #error "BOARD_MOTOR or BOARD_GAUGE must be defined"
 #endif
 
-#define USB_CDC1_STR "Portage Log"
+#define USB_CDC1_STR "Diagnostic Log"
 
 //--------------------------------------------------------------------+
 // Device Descriptors
