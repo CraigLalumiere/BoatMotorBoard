@@ -7,6 +7,9 @@ __pycache__/
 .pytest_cache/
 *.egg-info/
 
+# Firmware build artifacts
+*.bin
+
 #Python virtual environment
 .venv/
 

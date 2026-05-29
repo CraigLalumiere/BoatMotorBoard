@@ -77,6 +77,15 @@ static_assert(
 // BORRSTF, PINRSTF, and PORRSTF will be high by default
 static const uint32_t DEFAULT_RCC_CSR = RCC_CSR_BORRSTF | RCC_CSR_PINRSTF | RCC_CSR_PORRSTF;
 
+void Reset_BootloaderSafeStartup()
+{
+    __HAL_RCC_USB_CLK_DISABLE();
+    __HAL_RCC_USB_FORCE_RESET();
+    __HAL_RCC_USB_RELEASE_RESET();
+
+    SCB->VTOR = FLASH_BASE;
+}
+
 void Reset_Init()
 {
     m_InitCalled = true;

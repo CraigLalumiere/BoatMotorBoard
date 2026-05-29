@@ -153,6 +153,7 @@ static void MX_FDCAN2_Init(void);
 int main(void)
 {
     /* USER CODE BEGIN 1 */
+    Reset_BootloaderSafeStartup();
     Reset_JumpToBootloaderIfRequested();
     Reset_Init();
     QF_init(); // initialize the framework and the underlying RT kernel

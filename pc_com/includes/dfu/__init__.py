@@ -75,6 +75,42 @@ def _get_dfu_devices(
     return list(usb.core.find(find_all=True, custom_match=FilterDFU()))
 
 
+def wait_for_dfu_device(
+    vid: Optional[int] = None,
+    pid: Optional[int] = None,
+    timeout: float = 8.0,
+) -> usb.core.Device:
+    """Wait for a USB DFU device to enumerate."""
+    deadline = time.time() + timeout
+    last_devices = []
+
+    while time.time() < deadline:
+        last_devices = _get_dfu_devices(vid=vid, pid=pid)
+        if last_devices:
+            return last_devices[0]
+
+        time.sleep(0.1)
+
+    raise RuntimeError(f"No DFU devices found after {timeout:.1f} seconds")
+
+
+def wait_for_no_dfu_device(
+    vid: Optional[int] = None,
+    pid: Optional[int] = None,
+    timeout: float = 8.0,
+) -> None:
+    """Wait for a USB DFU device to disappear after a detach/jump command."""
+    deadline = time.time() + timeout
+
+    while time.time() < deadline:
+        if not _get_dfu_devices(vid=vid, pid=pid):
+            return
+
+        time.sleep(0.1)
+
+    raise RuntimeError(f"DFU device was still present after {timeout:.1f} seconds")
+
+
 def _dfuse_download(
     dev: usb.core.Device,
     interface: int,
@@ -261,12 +297,36 @@ def dfuse_exit(address: int,
     # Claim the interface
     dfu.claim_interface(dev, interface)
 
-    logger.debug("Setting jump address to 0x%X", address)
-    dfuse.set_address(dev, interface, address)
     try:
-        dfu.download(dev, interface, 0, None)
-    except usb.core.USBError as err:
-        logger.warning("Ignoring USB error when exiting DFU: %s", err)
+        logger.debug("Setting jump address to 0x%X", address)
+        dfuse.set_address(dev, interface, address)
+        try:
+            dev.ctrl_transfer(
+                bmRequestType=0x21,
+                bRequest=0x01,
+                wValue=0,
+                wIndex=interface,
+                data_or_wLength=b"",
+                timeout=1000,
+            )
+            try:
+                dev.ctrl_transfer(
+                    bmRequestType=0xA1,
+                    bRequest=0x03,
+                    wValue=0,
+                    wIndex=interface,
+                    data_or_wLength=6,
+                    timeout=1000,
+                )
+            except usb.core.USBError as err:
+                logger.warning("Ignoring USB error while manifesting DFU exit: %s", err)
+        except usb.core.USBError as err:
+            logger.warning("Ignoring USB error when exiting DFU: %s", err)
+    finally:
+        try:
+            dfu.release_interface(dev)
+        except usb.core.USBError as err:
+            logger.warning("Ignoring USB error while releasing DFU interface: %s", err)
 
 def _dfuse_download_with_retry(
     dev: usb.core.Device,

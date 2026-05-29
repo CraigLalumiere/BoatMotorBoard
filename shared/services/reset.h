@@ -11,6 +11,13 @@ extern "C" {
 #endif
 
 /************************************************************************************************
+ * @brief   Restore startup state that may be left dirty when the STM32 ROM bootloader jumps
+ *          directly back into the application instead of performing a full hardware reset.
+ *          Call before Reset_JumpToBootloaderIfRequested(), HAL_Init(), and QF_init().
+ *************************************************************************************************/
+void Reset_BootloaderSafeStartup();
+
+/************************************************************************************************
  * @brief   Initialize the reset module. Should be called only once and as early as
  *          possible in main().
  *
