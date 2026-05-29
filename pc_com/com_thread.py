@@ -1,8 +1,11 @@
 import serial
 import threading
 import queue
+import logging
 
 from .hdlc import (HDLC, HDLCStatus)
+
+log = logging.getLogger(__name__)
 
 
 def get_all_from_queue(q):
@@ -56,8 +59,10 @@ class COMThread(threading.Thread):
 
             serial_arg = dict(self.serial_arg)
             port_url = serial_arg.pop("port")
+            log.info("Opening serial URL %s", port_url)
             self.serial_port = serial.serial_for_url(port_url, **serial_arg)
             self.serial_port.reset_input_buffer()
+            log.info("Serial URL open")
 
             while self.alive.is_set():
                 # send the command packets in queue
@@ -84,8 +89,10 @@ class COMThread(threading.Thread):
             # clean up
             if self.serial_port:
                 self.serial_port.close()
+                log.info("Serial URL closed")
 
         except (serial.SerialException, OSError, TypeError) as e:
+            log.exception("Serial thread error")
             # clean up
             if self.serial_port:
                 self.serial_port.close()

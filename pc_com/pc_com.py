@@ -1,5 +1,6 @@
 import sys
 import os
+import logging
 from PySide6 import QtWidgets
 from PySide6.QtWidgets import QFileDialog, QMessageBox
 from . import config_manager
@@ -24,6 +25,8 @@ import usb.backend.libusb1
 import libusb_package
 import usb.core
 from .includes.dfu import download, dfuse_exit, dfuse_upload, dfuse_upload_block, wait_for_dfu_device, wait_for_no_dfu_device
+
+log = logging.getLogger(__name__)
 
 
 class PortSelectDialog(QtWidgets.QDialog):
@@ -502,15 +505,18 @@ class BootloaderWindow(QDialog):
         self.ui.btn_bl_disconnect.clicked.connect(self.on_btn_bl_disconnect_clicked)
 
     def on_btn_bl_disconnect_clicked(self):
+        log.info("Bootloader disconnect clicked")
         self.ui.boot_txt_log.append("Exiting DFU and jumping to application...")
         try:
             start_addr = 0x08000000
+            log.info("Sending DFU exit to 0x%08X", start_addr)
             dfuse_exit(address=start_addr, vid=0x0483)
             self.ui.boot_txt_log.append("DFU exit command sent. Waiting for device to leave DFU...")
             QtWidgets.QApplication.processEvents()
             wait_for_no_dfu_device(vid=0x0483, timeout=8.0)
             self.ui.boot_txt_log.append("DFU device disconnected. Reconnect the serial port after the board restarts.")
         except Exception as exc:
+            log.exception("Bootloader disconnect failed")
             self.ui.boot_txt_log.append(f"[ERROR] {exc}")
             self.ui.boot_txt_log.append("The board still appears to be in DFU mode.")
 
@@ -528,10 +534,12 @@ class BootloaderWindow(QDialog):
     def on_btn_boot_mode_clicked(self):
         
         if self.main_window.controller.connected:
+            log.info("Bootloader connect clicked; sending bootloader CLI command on %s", self.main_window.ui.txt_port.text())
             self.main_window.controller.transmit_cli_data(b"bootloader\n")  
             self.ui.boot_txt_log.append("Sent 'bootloader' command, entering bootloader, resetting device...")
             QtWidgets.QApplication.processEvents()
             time.sleep(0.25)
+            log.info("Releasing serial connection before waiting for DFU")
             self.main_window.controller.disconnect()
             self.main_window.update_interface_state()
             self.ui.boot_txt_log.append("Serial connection released. Waiting for STM32 DFU...")
@@ -541,17 +549,21 @@ class BootloaderWindow(QDialog):
                 wait_for_dfu_device(vid=0x0483, timeout=8.0)
                 self.ui.boot_txt_log.append("STM32 DFU device detected. Choose a .bin file, then click Flash.")
             except Exception as exc:
+                log.exception("STM32 DFU device was not detected")
                 self.ui.boot_txt_log.append(f"[ERROR] {exc}")
                 self.ui.boot_txt_log.append("If the board LED stopped, it may be in bootloader mode but not visible to PyUSB.")
         else:
+            log.info("Bootloader connect clicked while main controller is disconnected")
             self.ui.boot_txt_log.append("Please connect to device serial port first")
 
     def on_btn_flash_clicked(self):
+        log.info("Bootloader flash clicked")
         self.ui.boot_txt_log.append("Finding bin path...")
 
         bin_path = self.ui.bin_file_path.text()
 
         if bin_path:
+            log.info("Flashing %s", bin_path)
             self.ui.boot_txt_log.append("Bin path found, running script")
 
             try:
@@ -559,16 +571,20 @@ class BootloaderWindow(QDialog):
                 download(filename=bin_path, address=start_addr, vid=0x0483)
                 self.ui.boot_txt_log.append("Flash complete. Click Disconnect to jump back to the application.")
             except Exception as exc:
+                log.exception("Flash failed")
                 self.ui.boot_txt_log.append(f"[ERROR] Flash failed: {exc}")
         else:
+            log.info("Flash clicked without a bin path")
             self.ui.boot_txt_log.append("[ERROR] No bin path found")
 
            
     def on_btn_verify_clicked(self):
+        log.info("Bootloader verify clicked")
         self.ui.boot_txt_log.append("Verifying flash...")
         bin_path = self.ui.bin_file_path.text()
 
         if not bin_path:
+            log.info("Verify clicked without a bin path")
             self.ui.boot_txt_log.append("[ERROR] No binary file selected.")
             return
 
@@ -577,6 +593,7 @@ class BootloaderWindow(QDialog):
             bin_data = f.read()
 
         total_size = len(bin_data)
+        log.info("Verifying %s (%d bytes)", bin_path, total_size)
         self.ui.boot_txt_log.append(f"[INFO] Loaded {total_size} bytes from {bin_path}")
 
         start_addr = 0x08000000
@@ -584,6 +601,7 @@ class BootloaderWindow(QDialog):
         try:
             readback = dfuse_upload_block(address=start_addr, data_size=total_size, vid=0x0483)
         except Exception as exc:
+            log.exception("Verify failed")
             self.ui.boot_txt_log.append(f"[ERROR] Verify failed: {exc}")
             return
 
@@ -608,6 +626,10 @@ class BootloaderWindow(QDialog):
 
 
 def main():
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    )
     app = QtWidgets.QApplication(sys.argv)
     application = ApplicationWindow()
     application.show()

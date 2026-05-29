@@ -74,6 +74,7 @@ class ComController:
 
     def connect(self, port):
         if not self.connected:
+            log.info("Connecting to %s", port)
             self.com_thread = COMThread(
                 data_q=self.data_q,
                 event_q=self.event_q,
@@ -90,12 +91,13 @@ class ComController:
                 self.com_thread = None
 
             if self.com_thread is not None:
-                log.info("controller connected")
+                log.info("Controller connected to %s", port)
                 self.connected = True
                 self.event_q.put({'event': 'connection_status_changed'})                
 
     def disconnect(self):
         if self.connected:
+            log.info("Disconnecting controller")
             self.com_thread.join(0.01)
             self.com_thread = None
             self.connected = False

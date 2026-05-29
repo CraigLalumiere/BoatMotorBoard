@@ -1,5 +1,6 @@
 #include "bsp.h"
 #include "stm32g4xx.h"
+#include "stm32g4xx_hal.h"
 #include <assert.h>
 
 // compile time ensure we have the number of registers we think we have
@@ -28,6 +29,9 @@ bool BSP_Backup_RAM_Read(int index, uint32_t *output)
         return false;
     }
 
+    __HAL_RCC_PWR_CLK_ENABLE();
+    HAL_PWR_EnableBkUpAccess();
+
     *output = mBackupRegisters[index];
 
     return true;
@@ -36,6 +40,7 @@ bool BSP_Backup_RAM_Read(int index, uint32_t *output)
 void BSP_Backup_RAM_Write(int index, uint32_t value)
 {
     assert(index < NUM_OF_RTC_BACKUP_REGISTERS);
+    __HAL_RCC_PWR_CLK_ENABLE();
     HAL_PWR_EnableBkUpAccess();
     mBackupRegisters[index] = value;
     HAL_PWR_DisableBkUpAccess();

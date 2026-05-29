@@ -24,6 +24,15 @@ _BYTES_PER_KILOBYTE = 1024
 logger = logging.getLogger(__name__)
 
 
+def _describe_usb_device(device: usb.core.Device) -> str:
+    try:
+        bus = f"{device.bus}" if device.bus is not None else "?"
+        address = f"{device.address}" if device.address is not None else "?"
+        return f"bus={bus} address={address} vid=0x{device.idVendor:04X} pid=0x{device.idProduct:04X}"
+    except Exception:
+        return repr(device)
+
+
 def _make_progress_bar(progress: Progress, total: int) -> Optional[TaskID]:
     """Create task for rich progress bar, but only if logging level is not
     DEBUG since they would conflict on the output.
@@ -82,15 +91,17 @@ def wait_for_dfu_device(
 ) -> usb.core.Device:
     """Wait for a USB DFU device to enumerate."""
     deadline = time.time() + timeout
-    last_devices = []
+    logger.info("Waiting %.1f seconds for DFU device vid=%s pid=%s", timeout, vid, pid)
 
     while time.time() < deadline:
-        last_devices = _get_dfu_devices(vid=vid, pid=pid)
-        if last_devices:
-            return last_devices[0]
+        devices = _get_dfu_devices(vid=vid, pid=pid)
+        if devices:
+            logger.info("Found DFU device: %s", _describe_usb_device(devices[0]))
+            return devices[0]
 
         time.sleep(0.1)
 
+    logger.info("Timed out waiting for DFU device")
     raise RuntimeError(f"No DFU devices found after {timeout:.1f} seconds")
 
 
@@ -101,13 +112,16 @@ def wait_for_no_dfu_device(
 ) -> None:
     """Wait for a USB DFU device to disappear after a detach/jump command."""
     deadline = time.time() + timeout
+    logger.info("Waiting %.1f seconds for DFU device to disappear vid=%s pid=%s", timeout, vid, pid)
 
     while time.time() < deadline:
         if not _get_dfu_devices(vid=vid, pid=pid):
+            logger.info("DFU device is no longer present")
             return
 
         time.sleep(0.1)
 
+    logger.info("Timed out waiting for DFU device to disappear")
     raise RuntimeError(f"DFU device was still present after {timeout:.1f} seconds")
 
 
@@ -287,11 +301,13 @@ def dfuse_exit(address: int,
     vid: Optional[int] = None, pid: Optional[int] = None
 ) -> None:
     devices = _get_dfu_devices(vid, pid)
+    logger.info("DFU exit requested at address 0x%08X; devices found: %d", address, len(devices))
 
     if not devices:
         raise RuntimeError("No devices found in DFU mode")
     
     dev = devices[0]
+    logger.info("Using DFU device for exit: %s", _describe_usb_device(dev))
     interface = 0
 
     # Claim the interface
@@ -463,6 +479,7 @@ def download(
         data = fin.read()
 
     devices = _get_dfu_devices(vid=vid, pid=pid)
+    logger.info("DFU download requested for %s; devices found: %d", filename, len(devices))
 
     if not devices:
         raise RuntimeError("No devices found in DFU mode")
@@ -474,6 +491,7 @@ def download(
         )
 
     dev = devices[0]
+    logger.info("Using DFU device for download: %s", _describe_usb_device(dev))
 
     try:
         dfu.claim_interface(dev, interface)
