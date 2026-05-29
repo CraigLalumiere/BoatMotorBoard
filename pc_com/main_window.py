@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (QApplication, QGridLayout, QGroupBox, QHBoxLayout
     QTextEdit, QToolButton, QVBoxLayout, QWidget)
 
 from pyqtgraph import GraphicsLayoutWidget
-from terminal import Terminal
+from .terminal import Terminal
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -318,4 +318,3 @@ class Ui_MainWindow(object):
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_5), QCoreApplication.translate("MainWindow", u"Output", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_6), QCoreApplication.translate("MainWindow", u"Raw Data", None))
     # retranslateUi
-

@@ -1,8 +1,10 @@
 from PySide6.QtCore import (Qt, QRegularExpression)
 from PySide6.QtGui import QRegularExpressionValidator
 from PySide6.QtWidgets import (QFrame, QGridLayout, QVBoxLayout, QLabel, QTextEdit, QLineEdit, QScrollArea, QToolButton)
-from messages.ConfigDB_pb2 import ConfigEntryDataResp, ConfigDBInfoResp, ConfigDBSetEntryReq
-from com_controller import ComController
+from importlib import resources
+
+from .messages.ConfigDB_pb2 import ConfigEntryDataResp, ConfigDBInfoResp, ConfigDBSetEntryReq
+from .com_controller import ComController
 from enum import Enum, auto
 import json
 from PySide6.QtGui import QIcon
@@ -169,13 +171,13 @@ class ConfigManager:
             
             #Revert to previously committed button
             revert_bttn = QToolButton()
-            revert_bttn.setIcon(QIcon("icons/revert_icon.png"))
+            revert_bttn.setIcon(QIcon(str(resources.files("pc_com").joinpath("icons", "revert_icon.png"))))
             revert_bttn.setToolTip("revert to previous value")
             revert_bttn.clicked.connect(lambda _, eid=entry_id: self.on_revert_clicked(eid))
             
             #Revert to default value button
             default_bttn = QToolButton()
-            default_bttn.setIcon(QIcon("icons/default_icon.png"))
+            default_bttn.setIcon(QIcon(str(resources.files("pc_com").joinpath("icons", "default_icon.png"))))
             default_bttn.setToolTip("revert to default value")
             default_bttn.clicked.connect(lambda _, eid=entry_id: self.on_default_clicked(eid))
 
@@ -301,5 +303,3 @@ class ConfigManager:
                     self.state = ConfigManagerState.IDLE
                 else:
                     self.com_controller.transmit_config_db_get_entry_req(msg.entry_id + 1)
-
-

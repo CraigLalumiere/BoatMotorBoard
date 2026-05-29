@@ -2,24 +2,22 @@ import sys
 import os
 from PySide6 import QtWidgets
 from PySide6.QtWidgets import QFileDialog, QInputDialog, QMessageBox, QApplication
-from plot_manager import PlotManager
-import config_manager
-from config_manager import ConfigManager
+from .plot_manager import PlotManager
+from . import config_manager
+from .config_manager import ConfigManager
 from PySide6 import QtCore, QtGui, QtWidgets
 from PySide6.QtCore import Qt
-from messages.CLIData_pb2 import CLIData
-from messages.LogPrint_pb2 import LogPrint
+from .messages.CLIData_pb2 import CLIData
+from .messages.LogPrint_pb2 import LogPrint
 
-import packets
-from main_window import Ui_MainWindow
-from bootloader_window import Ui_bootloader_window
-from messages.ConfigDB_pb2 import ConfigEntryDataResp, ConfigDBInfoResp
+from . import packets
+from .main_window import Ui_MainWindow
+from .bootloader_window import Ui_bootloader_window
+from .messages.ConfigDB_pb2 import ConfigEntryDataResp, ConfigDBInfoResp
 import datetime
 import typing
-import packets
-from main_window import Ui_MainWindow
-from config_window import Ui_ConfigWindow
-from com_controller import ComController, get_com_ports
+from .config_window import Ui_ConfigWindow
+from .com_controller import ComController, get_com_ports
 import json
 import signal
 # from com_controller_fake import ComControllerFake
@@ -29,7 +27,7 @@ import subprocess
 import usb.backend.libusb1
 import libusb_package
 import usb.core
-from includes.dfu import download, dfuse_exit, dfuse_upload, dfuse_upload_block
+from .includes.dfu import download, dfuse_exit, dfuse_upload, dfuse_upload_block
 class ConfigWindow(QtWidgets.QMainWindow):
     def __init__(self, config_manager: ConfigManager):
         super(ConfigWindow, self).__init__()

@@ -1,2 +1,5 @@
+@echo off
+pushd "%~dp0\.."
 call .venv\Scripts\activate
-python pc_com.py
+python -m pc_com
+popd

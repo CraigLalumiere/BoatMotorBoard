@@ -3,6 +3,9 @@ build/
 
 # Compiled Python bytecode
 *.py[cod]
+__pycache__/
+.pytest_cache/
+*.egg-info/
 
 #Python virtual environment
 .venv/

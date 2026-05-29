@@ -1,9 +1,9 @@
 import struct
-from crc import calculate_crc
-from messages.CLIData_pb2 import CLIData
-from messages.LogPrint_pb2 import LogPrint
-from messages.ConfigDB_pb2 import ConfigDBSetEntryReq, ConfigDBGetEntryReq, ConfigDBSetEntryToDefaultReq, ConfigEntryDataResp, ConfigDBInfoResp
-from messages.MessageType_pb2 import MessageType
+from .crc import calculate_crc
+from .messages.CLIData_pb2 import CLIData
+from .messages.LogPrint_pb2 import LogPrint
+from .messages.ConfigDB_pb2 import ConfigDBSetEntryReq, ConfigDBGetEntryReq, ConfigDBSetEntryToDefaultReq, ConfigEntryDataResp, ConfigDBInfoResp
+from .messages.MessageType_pb2 import MessageType
 
 message_from_id = {MessageType.LOG_PRINT: LogPrint,
                    MessageType.CLI_DATA: CLIData,
@@ -96,7 +96,6 @@ def build_packet_config_db_set_entry_req(msg_config_db_get_entry_req):
     packet = packet_crc + packet_id_and_data
 
     return packet
-
 
 
 

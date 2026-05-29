@@ -2,7 +2,7 @@ import serial
 import threading
 import queue
 
-from hdlc import (HDLC, HDLCStatus)
+from .hdlc import (HDLC, HDLCStatus)
 
 
 def get_all_from_queue(q):

@@ -1,8 +1,8 @@
 import queue
 import logging
-from com_thread import COMThread
+from .com_thread import COMThread
 import serial.tools.list_ports
-import packets
+from . import packets
 
 
 log = logging.getLogger(__name__)
@@ -130,7 +130,7 @@ if __name__ == '__main__':
     import sys
     import msvcrt
     import time
-    from messages.LogPrint_pb2 import LogPrint
+    from .messages.LogPrint_pb2 import LogPrint
 
 
     log.setLevel('INFO')

@@ -19,8 +19,8 @@ It supports both `motor` and `gauge` boards over USB CDC and can:
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-pip install -r .\pc_com\requirements.txt
-python .\pc_com\pc_com.py
+python -m pip install -e ".[dev]"
+python -m pc_com
 ```
 
 ## Linux: Setup and Launch
@@ -38,8 +38,8 @@ sudo apt install python3-venv libgl1 libegl1 libfontconfig1 libfreetype6 libdbus
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r pc_com/requirements.txt
-python pc_com/pc_com.py
+python -m pip install -e ".[dev]"
+python -m pc_com
 ```
 
 ## Serial Ports in Linux Containers
@@ -95,7 +95,7 @@ This updates `pc_com/messages/*.py`.
 ## Typical Workflow
 
 1. Connect board via USB.
-2. Launch `python .\pc_com\pc_com.py` (PowerShell) or `python pc_com/pc_com.py` (Linux).
+2. Launch `python -m pc_com`.
 3. Use CLI tab/console for direct commands.
 4. Use config manager controls to sync settings with firmware.
 
@@ -103,8 +103,9 @@ This updates `pc_com/messages/*.py`.
 
 If packages change:
 
-```commandline
-pip freeze > pc_com\requirements.txt
+```toml
+# Edit dependency lists in pyproject.toml, then reinstall:
+python -m pip install -e ".[dev]"
 ```
 
 ## GUI Editing
