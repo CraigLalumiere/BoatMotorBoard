@@ -1,7 +1,7 @@
 import sys
 import os
 from PySide6 import QtWidgets
-from PySide6.QtWidgets import QFileDialog, QInputDialog, QMessageBox, QApplication
+from PySide6.QtWidgets import QFileDialog, QMessageBox, QApplication
 from .plot_manager import PlotManager
 from . import config_manager
 from .config_manager import ConfigManager
@@ -17,7 +17,7 @@ from .messages.ConfigDB_pb2 import ConfigEntryDataResp, ConfigDBInfoResp
 import datetime
 import typing
 from .config_window import Ui_ConfigWindow
-from .com_controller import ComController, get_com_ports
+from .com_controller import ComController, get_com_port_options
 import json
 import signal
 # from com_controller_fake import ComControllerFake
@@ -28,6 +28,83 @@ import usb.backend.libusb1
 import libusb_package
 import usb.core
 from .includes.dfu import download, dfuse_exit, dfuse_upload, dfuse_upload_block
+
+
+class PortSelectDialog(QtWidgets.QDialog):
+    def __init__(self, com_ports, current_port, parent=None):
+        super().__init__(parent)
+        self.selected_port = None
+        self.setWindowTitle("Select a port")
+        self.setMinimumWidth(420)
+
+        self.port_list = QtWidgets.QListWidget()
+        self.port_list.setFrameShape(QtWidgets.QFrame.NoFrame)
+        self.port_list.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.port_list.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
+        self.port_list.itemClicked.connect(self.on_port_clicked)
+        self.port_list.setStyleSheet("""
+            QListWidget {
+                background: #f6f8fa;
+                border: 1px solid #c9d1d9;
+                border-radius: 6px;
+                outline: 0;
+            }
+            QListWidget::item {
+                padding: 8px;
+                border-bottom: 1px solid #d8dee4;
+            }
+            QListWidget::item:selected {
+                background: #dbeafe;
+                color: #0f172a;
+            }
+            QListWidget::item:hover {
+                background: #eef2ff;
+            }
+        """)
+
+        for port in com_ports:
+            item = QtWidgets.QListWidgetItem()
+            item.setData(Qt.UserRole, port.device)
+            item.setSizeHint(QtCore.QSize(0, 54))
+            self.port_list.addItem(item)
+            self.port_list.setItemWidget(item, self._build_port_row(port))
+
+            if port.device == current_port:
+                item.setSelected(True)
+                self.port_list.setCurrentItem(item)
+
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.setContentsMargins(10, 10, 10, 10)
+        layout.addWidget(self.port_list)
+
+    def _build_port_row(self, port):
+        description = port.label
+        prefix = f"{port.device}: "
+        if description.startswith(prefix):
+            description = description[len(prefix):]
+
+        row = QtWidgets.QWidget()
+        layout = QtWidgets.QVBoxLayout(row)
+        layout.setContentsMargins(10, 6, 10, 6)
+        layout.setSpacing(2)
+
+        device_label = QtWidgets.QLabel(port.device)
+        device_label.setStyleSheet("font-weight: 600; color: #111827;")
+
+        description_label = QtWidgets.QLabel(description)
+        description_label.setStyleSheet("color: #4b5563;")
+        description_label.setTextInteractionFlags(Qt.NoTextInteraction)
+        description_label.setWordWrap(True)
+
+        layout.addWidget(device_label)
+        layout.addWidget(description_label)
+        return row
+
+    def on_port_clicked(self, item):
+        self.selected_port = item.data(Qt.UserRole)
+        self.accept()
+
+
 class ConfigWindow(QtWidgets.QMainWindow):
     def __init__(self, config_manager: ConfigManager):
         super(ConfigWindow, self).__init__()
@@ -235,10 +312,15 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.ui.bin_file_path.setText(file_path)
 
     def on_btn_port_clicked(self):
-        com_ports = get_com_ports()
-        port, ok = QInputDialog.getItem(self, "Select a port", "Serial port:", com_ports)
-        if ok and port:
-            self.ui.txt_port.setText(port)
+        com_ports = get_com_port_options()
+        if not com_ports:
+            QMessageBox.information(self, "Select a port", "No serial ports were found.")
+            self.update_interface_state()
+            return
+
+        dialog = PortSelectDialog(com_ports, self.ui.txt_port.text(), self)
+        if dialog.exec() == QtWidgets.QDialog.Accepted and dialog.selected_port:
+            self.ui.txt_port.setText(dialog.selected_port)
 
         self.update_interface_state()
 

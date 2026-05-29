@@ -1,11 +1,18 @@
 import queue
 import logging
+from dataclasses import dataclass
 from .com_thread import COMThread
 import serial.tools.list_ports
 from . import packets
 
 
 log = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class ComPortOption:
+    device: str
+    label: str
 
 
 def get_item_from_queue(q):
@@ -29,12 +36,24 @@ def get_all_from_queue(q):
 
 
 def get_com_ports():
-    ports = serial.tools.list_ports.comports()
-    if ports is None:
-        return []
-    else:
-        # Use full device path on POSIX (e.g. /dev/ttyACM0) and COMx on Windows.
-        return [port.device for port in ports]
+    return [port.device for port in get_com_port_options()]
+
+
+def get_com_port_options():
+    ports = serial.tools.list_ports.comports() or []
+    return [
+        ComPortOption(device=port.device, label=format_com_port_label(port))
+        for port in ports
+    ]
+
+
+def format_com_port_label(port):
+    # Use full device path on POSIX (e.g. /dev/ttyACM0) and COMx on Windows.
+    description = (port.description or "").strip()
+    if description:
+        return f"{port.device}: {description}"
+
+    return port.device
 
 
 class ComController:
