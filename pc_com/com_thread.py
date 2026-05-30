@@ -2,6 +2,7 @@ import serial
 import threading
 import queue
 import logging
+import time
 
 from .hdlc import (HDLC, HDLCStatus)
 
@@ -67,10 +68,19 @@ class COMThread(threading.Thread):
             while self.alive.is_set():
                 # send the command packets in queue
                 for command in get_all_from_queue(self.command_q):
+                    if command is None:
+                        self.alive.clear()
+                        break
+
                     # frame the command packet with HDLC
                     command_framed = self.hdlc.frame_packet(command)
                     self.serial_port.write(command_framed)
+                    self.serial_port.flush()
                     # print("sending: {}".format(command_framed))
+
+                if not self.alive.is_set():
+                    time.sleep(0.15)
+                    break
 
                 # Read 1 char, blocking for "port_timeout" seconds until it's received
                 raw_packet = self.serial_port.read(1)

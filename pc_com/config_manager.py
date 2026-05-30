@@ -1,13 +1,24 @@
-from PySide6.QtCore import (Qt, QRegularExpression)
-from PySide6.QtGui import QRegularExpressionValidator
-from PySide6.QtWidgets import (QFrame, QGridLayout, QVBoxLayout, QLabel, QTextEdit, QLineEdit, QScrollArea, QToolButton)
-from importlib import resources
-
-from .messages.ConfigDB_pb2 import ConfigEntryDataResp, ConfigDBInfoResp, ConfigDBSetEntryReq
-from .com_controller import ComController
+from dataclasses import dataclass
 from enum import Enum, auto
+from importlib import resources
 import json
-from PySide6.QtGui import QIcon
+
+from PySide6.QtCore import (
+    QAbstractTableModel,
+    QEvent,
+    QModelIndex,
+    QObject,
+    QRect,
+    QRegularExpression,
+    QSize,
+    Qt,
+    Signal,
+)
+from PySide6.QtGui import QBrush, QColor, QFont, QIcon, QRegularExpressionValidator
+from PySide6.QtWidgets import QLineEdit, QStyle, QStyledItemDelegate
+
+from .com_controller import ComController
+from .messages.ConfigDB_pb2 import ConfigDBInfoResp, ConfigDBSetEntryReq, ConfigEntryDataResp
 
 
 class FileVersionMismatchError(Exception):
@@ -15,254 +26,259 @@ class FileVersionMismatchError(Exception):
         message = f"File is version {actual} but device expected version {expected}"
         super().__init__(message)
 
+
 class ConfigManagerState(Enum):
     UNINITIALIZED = auto()
     IDLE = auto()
     READING_DATABASE = auto()
 
 
-class ConfigManager:
-    def __init__(self, com_controller: ComController, txt_log: QTextEdit):
+@dataclass
+class ConfigEntry:
+    entry_id: int
+    name: str
+    value_type: str
+    device_value: object
+    editor_value: object
+    default_value: object
+
+    @property
+    def is_dirty(self):
+        return values_differ(self.value_type, self.editor_value, self.device_value)
+
+
+TYPE_LABELS = {
+    "value_bool": "Bool",
+    "value_uint32": "U32",
+    "value_int32": "I32",
+    "value_float32": "Float",
+}
+
+
+def normalize_value(value_type, value):
+    if value_type == "value_bool":
+        if isinstance(value, str):
+            return value.strip().lower() in ["1", "true", "yes", "on"]
+        return bool(value)
+
+    if value_type == "value_uint32":
+        parsed = int(value)
+        if parsed < 0:
+            raise ValueError("Unsigned values cannot be negative")
+        return parsed
+
+    if value_type == "value_int32":
+        return int(value)
+
+    if value_type == "value_float32":
+        return float(value)
+
+    return value
+
+
+def values_differ(value_type, first, second):
+    if value_type == "value_float32":
+        return abs(float(first) - float(second)) > 0.000001
+
+    return normalize_value(value_type, first) != normalize_value(value_type, second)
+
+
+def format_value(value_type, value):
+    if value_type == "value_bool":
+        return "On" if normalize_value(value_type, value) else "Off"
+
+    if value_type == "value_float32":
+        return f"{float(value):.6g}"
+
+    return str(value)
+
+
+class ConfigManager(QObject):
+    database_reset = Signal()
+    entry_updated = Signal(int)
+    dirty_count_changed = Signal(int)
+    load_progress_changed = Signal(int, int)
+    state_changed = Signal(str)
+    status_message = Signal(str)
+
+    def __init__(self, com_controller: ComController, txt_log=None):
+        super().__init__()
         self.com_controller = com_controller
         self.txt_log = txt_log
         self.number_of_elements = None
         self.config_version = None
-        self.config_entries = None
-
-        # frame and grid set/created with register function
-        self.config_view_frame = None
-        self.grid = None
-
+        self.entries = []
         self.state = ConfigManagerState.UNINITIALIZED
 
-        # tmp
-        # self.load_fake_entries()
+    @property
+    def config_entries(self):
+        return self.entries
 
-    def load_config_entries_from_json(self, jsonFile):
-        with open(jsonFile, 'r') as f:
+    def _set_state(self, state):
+        if self.state != state:
+            self.state = state
+            self.state_changed.emit(state.name.replace("_", " ").title())
+
+    def _emit_status(self, message):
+        if self.txt_log is not None:
+            self.txt_log.append(message)
+        self.status_message.emit(message)
+
+    def dirty_count(self):
+        return sum(1 for entry in self.entries if entry is not None and entry.is_dirty)
+
+    def _emit_dirty_count(self):
+        self.dirty_count_changed.emit(self.dirty_count())
+
+    def load_config_entries_from_json(self, json_file):
+        with open(json_file, "r") as f:
             file_data = json.load(f)
-    
-            # check if file version matches firmware
-            file_version = file_data['version']
-        
-            if file_version == self.config_version:
-                entries = file_data.get('entries', [])
 
-                for id, entry in enumerate(entries):
-                    self.transmit_entry_value_change_request(id, entry['value'])
-            else:
-                raise FileVersionMismatchError(expected=self.config_version, actual=file_version)           
-        
-    def save_config_entries_to_json(self, jsonFile): 
+        file_version = file_data["version"]
+        if file_version != self.config_version:
+            raise FileVersionMismatchError(expected=self.config_version, actual=file_version)
+
+        entries = file_data.get("entries", [])
+        changed = 0
+        for entry_id, entry_data in enumerate(entries):
+            if entry_id >= len(self.entries):
+                continue
+            self.set_entry_editor_value(entry_id, entry_data["value"])
+            changed += 1
+
+        self._emit_status(f"Imported {changed} config values. Review, then apply changes.")
+
+    def save_config_entries_to_json(self, json_file):
         filtered_entries = [
-            {"name": entry["name"], "value": entry["value"]}
-            for entry in self.config_entries
+            {"name": entry.name, "value": normalize_value(entry.value_type, entry.device_value)}
+            for entry in self.entries
+            if entry is not None
         ]
 
         data_to_save = {
-            "version": self.config_version,  
-            "entries": filtered_entries
+            "version": self.config_version,
+            "entries": filtered_entries,
         }
-        with open(jsonFile, 'w') as f:
-            json.dump(data_to_save, f, indent=4) 
+        with open(json_file, "w") as f:
+            json.dump(data_to_save, f, indent=4)
+
+        self._emit_status(f"Exported {len(filtered_entries)} config values.")
 
     def check_for_uncommitted_ui_changes(self):
-        uncommited_changes = False
+        return self.dirty_count() > 0
 
-        for entry in self.config_entries:
-            current_text = entry['ui_txt_value'].text()
-            stored_value = entry['value']
-            
-            if entry['value_type'] == 'value_bool':
-                stored_value = (int(stored_value))
-
-            if current_text != str(stored_value):
-                uncommited_changes = True
-
-        return uncommited_changes
-            
     def register_config_view_frame(self, frame):
-        self.config_view_frame = frame 
-        self.grid = QGridLayout(self.config_view_frame)
-        self.grid.setAlignment(Qt.AlignTop) 
-
+        _ = frame
 
     def remove_config_entry_widgets(self):
-        # no need to clear the dict entries themselves,
-        # the database will be rebuild with initialize_config_entries()
-        if self.config_entries is not None:
-            for entry in self.config_entries:
-                self.grid.removeWidget(entry['ui_label'])
-                self.grid.removeWidget(entry['ui_txt_value'])
-                entry['ui_label'].deleteLater()
-                entry['ui_txt_value'].deleteLater()
-   
-    def initialize_config_entries(self):        
-        # create array of blank dictionaries, to be updated later
-        # runs once database info is read and we know how many entries exist
-        self.config_entries = [{'name': None,
-                                'value_type': None,
-                                'value': None,
-                                'default_value': None,
-                                'ui_label': None,
-                                'ui_txt_value': None
-                                } 
-                                for i in range(self.number_of_elements)
-                               ]
-        
-    def load_fake_entries(self):
-        self.remove_config_entry_widgets()   
-        
-        self.number_of_elements = 100
-        self.initialize_config_entries()        
+        self.entries = []
+        self.database_reset.emit()
+        self._emit_dirty_count()
 
-        for i in range(self.number_of_elements):
-            name = "config variable {0} name".format(i)
-            value_type = 'value_int32'
-            value = i
-            default_value = i*10
+    def initialize_config_entries(self):
+        self.entries = [None for _ in range(self.number_of_elements)]
+        self.database_reset.emit()
+        self._emit_dirty_count()
 
-            self.create_entry(i, name, value_type, value, default_value) 
-
-        
     def load(self):
         if self.state in [ConfigManagerState.UNINITIALIZED, ConfigManagerState.IDLE]:
-            self.remove_config_entry_widgets()            
             self.number_of_elements = None
             self.config_version = None
-            self.config_entries = None
-
-            self.com_controller.transmit_config_db_info_req() 
-            self.state = ConfigManagerState.READING_DATABASE
+            self.entries = []
+            self.database_reset.emit()
+            self._emit_dirty_count()
+            self.com_controller.transmit_config_db_info_req()
+            self._set_state(ConfigManagerState.READING_DATABASE)
+            self._emit_status("Reading config database...")
 
     def create_entry(self, entry_id, entry_name, entry_value_type, entry_value, entry_default_value):
-        try:
-            self.config_entries[entry_id]['name'] = entry_name
-            self.config_entries[entry_id]['value_type'] = entry_value_type
-            self.config_entries[entry_id]['value'] = entry_value
-            self.config_entries[entry_id]['default_value'] = entry_default_value
-
-            lbl_name = QLabel(entry_name + ":")
-            txt_value = QLineEdit()
-            txt_value.setAlignment(Qt.AlignRight)            
-
-            match entry_value_type:
-                case 'value_bool':
-                    txt_value.setText(str(int(entry_value)))
-                   # allow only 0 and 1
-                    regex = QRegularExpression(r"[01]$")
-                case 'value_uint32':
-                    txt_value.setText(str(entry_value))
-                    # allow only digits
-                    regex = QRegularExpression(r"^\d+$")
-                case 'value_int32':
-                    txt_value.setText(str(entry_value))
-                    # allow negative number and digits
-                    regex = QRegularExpression(r"^-?\d*$")
-                case 'value_float32':
-                    txt_value.setText(str(entry_value))
-                    # only allow negative, digits and a single period
-                    regex = QRegularExpression(r"^-?\d*\.?\d*$")
-                case _:
-                    pass 
-
-            validator = QRegularExpressionValidator(regex, txt_value)
-            txt_value.setValidator(validator)
-            
-            #Revert to previously committed button
-            revert_bttn = QToolButton()
-            revert_bttn.setIcon(QIcon(str(resources.files("pc_com").joinpath("icons", "revert_icon.png"))))
-            revert_bttn.setToolTip("revert to previous value")
-            revert_bttn.clicked.connect(lambda _, eid=entry_id: self.on_revert_clicked(eid))
-            
-            #Revert to default value button
-            default_bttn = QToolButton()
-            default_bttn.setIcon(QIcon(str(resources.files("pc_com").joinpath("icons", "default_icon.png"))))
-            default_bttn.setToolTip("revert to default value")
-            default_bttn.clicked.connect(lambda _, eid=entry_id: self.on_default_clicked(eid))
-
-
-            txt_value.returnPressed.connect(lambda eid=entry_id: self.on_txt_value_return_pressed(eid))
-            txt_value.textChanged.connect(lambda text, eid=entry_id: self.on_txt_value_changed(eid, text))
-
-            self.grid.addWidget(lbl_name, entry_id, 0)
-            self.grid.addWidget(txt_value, entry_id, 1)
-            self.grid.addWidget(revert_bttn, entry_id, 2)
-            self.grid.addWidget(default_bttn, entry_id, 3)
-
-            self.config_entries[entry_id]['ui_label'] = lbl_name
-            self.config_entries[entry_id]['ui_txt_value'] = txt_value
-
-        except IndexError as e:
-            raise IndexError("config entry id out of range") from e
-        
-    def on_revert_clicked(self, entry_id):
-        last_value = self.config_entries[entry_id]['value']
-        self.config_entries[entry_id]['ui_txt_value'].setText(str(last_value))
-        print(f"[Revert] Entry {entry_id} reverted to {last_value}")
-        self.config_entries[entry_id]['ui_txt_value'].setStyleSheet("")
-
-    def on_default_clicked(self, entry_id):
-        default_value = self.config_entries[entry_id]['default_value']
-        self.config_entries[entry_id]['ui_txt_value'].setText(str(default_value))
-        self.config_entries[entry_id]['value'] = default_value 
-        print(f"[Default] Entry {entry_id} reset to {default_value}")
-        self.config_entries[entry_id]['ui_txt_value'].setStyleSheet("")
+        entry = ConfigEntry(
+            entry_id=entry_id,
+            name=entry_name,
+            value_type=entry_value_type,
+            device_value=normalize_value(entry_value_type, entry_value),
+            editor_value=normalize_value(entry_value_type, entry_value),
+            default_value=normalize_value(entry_value_type, entry_default_value),
+        )
+        self.entries[entry_id] = entry
+        self.entry_updated.emit(entry_id)
+        self._emit_dirty_count()
 
     def update_entry(self, entry_id, entry_name, entry_value_type, entry_value, entry_default_value):
-        try:
-            self.config_entries[entry_id]['name'] = entry_name
-            self.config_entries[entry_id]['value_type'] = entry_value_type
-            self.config_entries[entry_id]['value'] = entry_value            
-            self.config_entries[entry_id]['default_value'] = entry_default_value   
+        entry = self.entries[entry_id]
+        new_device_value = normalize_value(entry_value_type, entry_value)
 
-            self.config_entries[entry_id]['ui_label'].setText(str(entry_name))
+        entry.name = entry_name
+        entry.value_type = entry_value_type
+        entry.default_value = normalize_value(entry_value_type, entry_default_value)
+        entry.device_value = new_device_value
+        entry.editor_value = new_device_value
 
-            if (entry_value_type == 'value_bool'):                
-                self.config_entries[entry_id]['ui_txt_value'].setText(str(int(entry_value)))
-            else:
-                self.config_entries[entry_id]['ui_txt_value'].setText(str(entry_value)) 
+        self.entry_updated.emit(entry_id)
+        self._emit_dirty_count()
 
-            self.config_entries[entry_id]['ui_txt_value'].setStyleSheet("")                        
+    def set_entry_editor_value(self, entry_id, value):
+        entry = self.entries[entry_id]
+        entry.editor_value = normalize_value(entry.value_type, value)
+        self.entry_updated.emit(entry_id)
+        self._emit_dirty_count()
 
-        except IndexError as e:
-            raise IndexError("config entry id out of range") from e    
+    def revert_entry(self, entry_id):
+        entry = self.entries[entry_id]
+        entry.editor_value = entry.device_value
+        self.entry_updated.emit(entry_id)
+        self._emit_dirty_count()
 
-    def transmit_entry_value_change_request(self, entry_id, value):
-        # build req message
+    def restore_entry_default(self, entry_id):
+        entry = self.entries[entry_id]
+        entry.editor_value = entry.default_value
+        self.entry_updated.emit(entry_id)
+        self._emit_dirty_count()
+
+    def restore_all_defaults(self):
+        for entry in self.entries:
+            if entry is not None:
+                entry.editor_value = entry.default_value
+                self.entry_updated.emit(entry.entry_id)
+        self._emit_dirty_count()
+
+    def transmit_entry_value_change_request(self, entry_id, value=None):
+        entry = self.entries[entry_id]
+        value_to_send = entry.editor_value if value is None else normalize_value(entry.value_type, value)
+
         msg_config_db_set_entry_req = ConfigDBSetEntryReq()
         msg_config_db_set_entry_req.entry_id = entry_id
 
-        # for now, convert the value into the correct type, could also raise error
-        match self.config_entries[entry_id]['value_type']:
-            case 'value_bool':
-                msg_config_db_set_entry_req.value.value_bool = bool(int(value))
-            case 'value_uint32':
-                msg_config_db_set_entry_req.value.value_uint32 = int(value)
-            case 'value_int32':
-                msg_config_db_set_entry_req.value.value_int32 = int(value)
-            case 'value_float32':
-                msg_config_db_set_entry_req.value.value_float32 = float(value)
-            case _:
-                pass
+        match entry.value_type:
+            case "value_bool":
+                msg_config_db_set_entry_req.value.value_bool = bool(value_to_send)
+            case "value_uint32":
+                msg_config_db_set_entry_req.value.value_uint32 = int(value_to_send)
+            case "value_int32":
+                msg_config_db_set_entry_req.value.value_int32 = int(value_to_send)
+            case "value_float32":
+                msg_config_db_set_entry_req.value.value_float32 = float(value_to_send)
 
         self.com_controller.transmit_config_db_set_entry_req(msg_config_db_set_entry_req)
 
-    def commit_database_to_flash(self):
-        self.com_controller.transmit_config_db_save_to_nvm_req() 
+    def apply_changed_entries(self):
+        changed_entries = [entry for entry in self.entries if entry is not None and entry.is_dirty]
+        for entry in changed_entries:
+            self.transmit_entry_value_change_request(entry.entry_id)
 
-    def on_txt_value_changed(self, entry_id, text):
-        ui_txt_value = self.config_entries[entry_id]['ui_txt_value']
-
-        if text == str(self.config_entries[entry_id]['value']):
-            ui_txt_value.setStyleSheet("")
+        if changed_entries:
+            self._emit_status(f"Applying {len(changed_entries)} config change(s) to device RAM...")
         else:
-            ui_txt_value.setStyleSheet("background-color: lightyellow;")   
+            self._emit_status("No config changes to apply.")
 
-    def on_txt_value_return_pressed(self, entry_id):
-        ui_txt_value = self.config_entries[entry_id]['ui_txt_value']
+    def commit_database_to_flash(self):
+        if self.dirty_count() > 0:
+            self._emit_status("Apply edited values before saving to NVM.")
+            return False
 
-        self.transmit_entry_value_change_request(entry_id, ui_txt_value.text())
+        self.com_controller.transmit_config_db_save_to_nvm_req()
+        self._emit_status("Save-to-NVM request sent.")
+        return True
 
     def handle_msg_received(self, msg):
         if isinstance(msg, ConfigDBInfoResp):
@@ -271,35 +287,249 @@ class ConfigManager:
                 self.config_version = msg.version
                 self.initialize_config_entries()
 
-                msg_string = "db info received. length = {0}. version = {1}".format(msg.num_elements, msg.version)
-                self.txt_log.append(msg_string)
+                self._emit_status(
+                    f"Config database found: {msg.num_elements} entries, version {msg.version}."
+                )
 
-                # request first entry
                 if self.number_of_elements > 0:
+                    self.load_progress_changed.emit(0, self.number_of_elements)
                     self.com_controller.transmit_config_db_get_entry_req(0)
                 else:
-                    pass # no database exists yet!
+                    self._set_state(ConfigManagerState.IDLE)
+            return
 
         if isinstance(msg, ConfigEntryDataResp):
             entry_id = msg.entry_id
             entry_name = msg.name
-            entry_value_type = msg.value.WhichOneof('value')
+            entry_value_type = msg.value.WhichOneof("value")
             entry_value = getattr(msg.value, entry_value_type)
-            entry_default_value = getattr(msg.default_value, entry_value_type) 
+            entry_default_value = getattr(msg.default_value, entry_value_type)
 
             if self.state == ConfigManagerState.UNINITIALIZED:
-                pass # "received config entry before database info received
+                return
 
             if self.state == ConfigManagerState.IDLE:
-                self.update_entry(entry_id, entry_name, entry_value_type, entry_value, entry_default_value) 
+                self.update_entry(entry_id, entry_name, entry_value_type, entry_value, entry_default_value)
+                return
 
             if self.state == ConfigManagerState.READING_DATABASE:
-                self.create_entry(entry_id, entry_name, entry_value_type, entry_value, entry_default_value)            
+                self.create_entry(
+                    entry_id, entry_name, entry_value_type, entry_value, entry_default_value
+                )
 
-                # check to see if this is the last ID to be received
-                if msg.entry_id == self.number_of_elements - 1:
-                    # all done
-                    # TODO: enable controls
-                    self.state = ConfigManagerState.IDLE
+                current = entry_id + 1
+                self.load_progress_changed.emit(current, self.number_of_elements)
+
+                if entry_id == self.number_of_elements - 1:
+                    self._set_state(ConfigManagerState.IDLE)
+                    self._emit_status("Config database loaded.")
                 else:
-                    self.com_controller.transmit_config_db_get_entry_req(msg.entry_id + 1)
+                    self.com_controller.transmit_config_db_get_entry_req(entry_id + 1)
+
+
+class ConfigTableModel(QAbstractTableModel):
+    HEADERS = ["Name", "Value", "Default", "Type", "State", "", ""]
+    COL_NAME = 0
+    COL_VALUE = 1
+    COL_DEFAULT = 2
+    COL_TYPE = 3
+    COL_STATE = 4
+    COL_REVERT = 5
+    COL_RESTORE_DEFAULT = 6
+
+    def __init__(self, manager: ConfigManager, parent=None):
+        super().__init__(parent)
+        self.manager = manager
+        self.manager.database_reset.connect(self._on_database_reset)
+        self.manager.entry_updated.connect(self._on_entry_updated)
+
+    def rowCount(self, parent=QModelIndex()):
+        if parent.isValid():
+            return 0
+        return len(self.manager.entries)
+
+    def columnCount(self, parent=QModelIndex()):
+        if parent.isValid():
+            return 0
+        return len(self.HEADERS)
+
+    def headerData(self, section, orientation, role=Qt.DisplayRole):
+        if role == Qt.DisplayRole and orientation == Qt.Horizontal:
+            return self.HEADERS[section]
+        return None
+
+    def data(self, index, role=Qt.DisplayRole):
+        if not index.isValid():
+            return None
+
+        entry = self.manager.entries[index.row()]
+        if entry is None:
+            return None
+
+        column = index.column()
+
+        if role in [Qt.DisplayRole, Qt.EditRole]:
+            if column == self.COL_NAME:
+                return entry.name
+            if column == self.COL_VALUE:
+                return format_value(entry.value_type, entry.editor_value)
+            if column == self.COL_DEFAULT:
+                return format_value(entry.value_type, entry.default_value)
+            if column == self.COL_TYPE:
+                return TYPE_LABELS.get(entry.value_type, entry.value_type)
+            if column == self.COL_STATE:
+                return "Edited" if entry.is_dirty else "Applied"
+            if column in [self.COL_REVERT, self.COL_RESTORE_DEFAULT]:
+                return ""
+
+        if role == Qt.ToolTipRole:
+            if column == self.COL_REVERT:
+                return "Revert to the currently applied value"
+            if column == self.COL_RESTORE_DEFAULT:
+                return "Restore the default value"
+
+        if role == Qt.CheckStateRole and column == self.COL_VALUE and entry.value_type == "value_bool":
+            return Qt.Checked if bool(entry.editor_value) else Qt.Unchecked
+
+        if role == Qt.TextAlignmentRole:
+            if column in [self.COL_REVERT, self.COL_RESTORE_DEFAULT]:
+                return Qt.AlignCenter
+            if column in [self.COL_VALUE, self.COL_DEFAULT]:
+                return Qt.AlignRight | Qt.AlignVCenter
+            return Qt.AlignLeft | Qt.AlignVCenter
+
+        if role == Qt.BackgroundRole and entry.is_dirty:
+            return QBrush(QColor("#fff4c2"))
+
+        if role == Qt.ForegroundRole and column == self.COL_STATE:
+            return QBrush(QColor("#9a6700" if entry.is_dirty else "#1f7a3f"))
+
+        if role == Qt.FontRole and column in [self.COL_NAME, self.COL_STATE]:
+            font = QFont()
+            font.setBold(column == self.COL_STATE or entry.is_dirty)
+            return font
+
+        return None
+
+    def flags(self, index):
+        if not index.isValid():
+            return Qt.NoItemFlags
+
+        flags = Qt.ItemIsSelectable | Qt.ItemIsEnabled
+        entry = self.manager.entries[index.row()]
+        if entry is not None and index.column() == self.COL_VALUE:
+            flags |= Qt.ItemIsEditable
+            if entry.value_type == "value_bool":
+                flags |= Qt.ItemIsUserCheckable
+        return flags
+
+    def setData(self, index, value, role=Qt.EditRole):
+        if not index.isValid() or index.column() != self.COL_VALUE:
+            return False
+
+        entry = self.manager.entries[index.row()]
+        if entry is None:
+            return False
+
+        try:
+            if role == Qt.CheckStateRole and entry.value_type == "value_bool":
+                self.manager.set_entry_editor_value(index.row(), value == Qt.Checked)
+                return True
+
+            if role == Qt.EditRole:
+                self.manager.set_entry_editor_value(index.row(), value)
+                return True
+        except (TypeError, ValueError):
+            return False
+
+        return False
+
+    def _on_database_reset(self):
+        self.beginResetModel()
+        self.endResetModel()
+
+    def _on_entry_updated(self, entry_id):
+        top_left = self.index(entry_id, 0)
+        bottom_right = self.index(entry_id, self.columnCount() - 1)
+        self.dataChanged.emit(top_left, bottom_right, [])
+
+
+class ConfigValueDelegate(QStyledItemDelegate):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        icon_dir = resources.files("pc_com").joinpath("icons")
+        self.revert_icon = QIcon(str(icon_dir.joinpath("revert_icon.png")))
+        self.default_icon = QIcon(str(icon_dir.joinpath("default_icon.png")))
+
+    def createEditor(self, parent, option, index):
+        if index.column() != ConfigTableModel.COL_VALUE:
+            return super().createEditor(parent, option, index)
+
+        source_index = index.model().mapToSource(index) if hasattr(index.model(), "mapToSource") else index
+        entry = source_index.model().manager.entries[source_index.row()]
+        if entry.value_type == "value_bool":
+            return None
+
+        editor = QLineEdit(parent)
+        editor.setAlignment(Qt.AlignRight)
+
+        regex_by_type = {
+            "value_uint32": r"^\d+$",
+            "value_int32": r"^-?\d+$",
+            "value_float32": r"^-?\d*\.?\d+$",
+        }
+        regex = regex_by_type.get(entry.value_type)
+        if regex is not None:
+            editor.setValidator(QRegularExpressionValidator(QRegularExpression(regex), editor))
+
+        return editor
+
+    def paint(self, painter, option, index):
+        if index.column() not in [ConfigTableModel.COL_REVERT, ConfigTableModel.COL_RESTORE_DEFAULT]:
+            super().paint(painter, option, index)
+            return
+
+        painter.save()
+        if option.state & QStyle.State_Selected:
+            painter.fillRect(option.rect, option.palette.highlight())
+
+        icon_rect = self._icon_rect(option.rect)
+        if index.column() == ConfigTableModel.COL_REVERT:
+            self.revert_icon.paint(painter, icon_rect, Qt.AlignCenter)
+        else:
+            self.default_icon.paint(painter, icon_rect, Qt.AlignCenter)
+        painter.restore()
+
+    def editorEvent(self, event, model, option, index):
+        if index.column() not in [ConfigTableModel.COL_REVERT, ConfigTableModel.COL_RESTORE_DEFAULT]:
+            return super().editorEvent(event, model, option, index)
+
+        if event.type() != QEvent.MouseButtonRelease or event.button() != Qt.LeftButton:
+            return False
+
+        source_index = model.mapToSource(index) if hasattr(model, "mapToSource") else index
+        manager = source_index.model().manager
+
+        if not self._icon_rect(option.rect).contains(event.pos()):
+            return False
+
+        if index.column() == ConfigTableModel.COL_REVERT:
+            manager.revert_entry(source_index.row())
+            return True
+
+        manager.restore_entry_default(source_index.row())
+        return False
+
+    def _icon_rect(self, cell_rect):
+        icon_cell = QSize(26, 26)
+        left = cell_rect.center().x() - icon_cell.width() // 2
+        top = cell_rect.center().y() - icon_cell.height() // 2
+        return QRect(left, top, icon_cell.width(), icon_cell.height())
+
+    def setEditorData(self, editor, index):
+        if editor is not None:
+            editor.setText(index.data(Qt.EditRole))
+
+    def setModelData(self, editor, model, index):
+        if editor is not None:
+            model.setData(index, editor.text(), Qt.EditRole)

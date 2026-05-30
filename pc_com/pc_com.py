@@ -4,15 +4,15 @@ import logging
 from PySide6 import QtWidgets
 from PySide6.QtWidgets import QFileDialog, QMessageBox
 from . import config_manager
-from .config_manager import ConfigManager
+from .config_manager import ConfigManager, ConfigTableModel, ConfigValueDelegate
 from PySide6 import QtCore, QtWidgets
 from PySide6.QtCore import Qt
 from .messages.CLIData_pb2 import CLIData
 from .messages.LogPrint_pb2 import LogPrint
 from .messages.MotorData_pb2 import MotorData
 
+from .bootloader_tool import BootloaderWindow
 from .main_window import Ui_MainWindow
-from .bootloader_window import Ui_bootloader_window
 from .messages.ConfigDB_pb2 import ConfigEntryDataResp, ConfigDBInfoResp
 from .config_window import Ui_ConfigWindow
 from .com_controller import ComController, get_com_port_options
@@ -24,7 +24,6 @@ import time
 import usb.backend.libusb1
 import libusb_package
 import usb.core
-from .includes.dfu import download, dfuse_exit, dfuse_upload, dfuse_upload_block, wait_for_dfu_device, wait_for_no_dfu_device
 
 log = logging.getLogger(__name__)
 
@@ -33,8 +32,13 @@ class PortSelectDialog(QtWidgets.QDialog):
     def __init__(self, com_ports, current_port, parent=None):
         super().__init__(parent)
         self.selected_port = None
+        self.current_port = current_port
+        self.port_devices = []
         self.setWindowTitle("Select a port")
         self.setMinimumWidth(420)
+
+        self.status_label = QtWidgets.QLabel()
+        self.status_label.setStyleSheet("color: #64748b; padding: 2px;")
 
         self.port_list = QtWidgets.QListWidget()
         self.port_list.setFrameShape(QtWidgets.QFrame.NoFrame)
@@ -61,6 +65,41 @@ class PortSelectDialog(QtWidgets.QDialog):
             }
         """)
 
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.setContentsMargins(10, 10, 10, 10)
+        layout.setSpacing(8)
+        layout.addWidget(self.status_label)
+        layout.addWidget(self.port_list)
+
+        self.refresh_timer = QtCore.QTimer(self)
+        self.refresh_timer.timeout.connect(self.refresh_ports)
+        self.refresh_timer.start(1000)
+
+        self._populate_ports(com_ports)
+
+    def refresh_ports(self):
+        self._populate_ports(get_com_port_options())
+
+    def _populate_ports(self, com_ports):
+        devices = [port.device for port in com_ports]
+        if devices == self.port_devices:
+            return
+
+        selected_device = self.selected_port
+        current_item = self.port_list.currentItem()
+        if current_item is not None:
+            selected_device = current_item.data(Qt.UserRole)
+
+        self.port_devices = devices
+        self.port_list.clear()
+
+        if not com_ports:
+            self.status_label.setText("No serial ports found. Waiting for devices...")
+            return
+
+        self.status_label.setText("Select a port. This list refreshes automatically.")
+
+        fallback_item = None
         for port in com_ports:
             item = QtWidgets.QListWidgetItem()
             item.setData(Qt.UserRole, port.device)
@@ -68,13 +107,16 @@ class PortSelectDialog(QtWidgets.QDialog):
             self.port_list.addItem(item)
             self.port_list.setItemWidget(item, self._build_port_row(port))
 
-            if port.device == current_port:
+            if fallback_item is None:
+                fallback_item = item
+
+            if port.device == selected_device or port.device == self.current_port:
                 item.setSelected(True)
                 self.port_list.setCurrentItem(item)
+                selected_device = port.device
 
-        layout = QtWidgets.QVBoxLayout(self)
-        layout.setContentsMargins(10, 10, 10, 10)
-        layout.addWidget(self.port_list)
+        if self.port_list.currentItem() is None and fallback_item is not None:
+            self.port_list.setCurrentItem(fallback_item)
 
     def _build_port_row(self, port):
         description = port.label
@@ -110,18 +152,95 @@ class ConfigWindow(QtWidgets.QMainWindow):
 
         self.ui = Ui_ConfigWindow()
         self.ui.setupUi(self)
-        self._setup_ui_signals() 
-
-        # set app title
-        self.setWindowTitle("Config Manager")        
 
         self.config_manager = config_manager
-        self.config_manager.register_config_view_frame(self.ui.frame_config_viewer)
+        self.setWindowTitle("Config Manager")
+        self.setMinimumSize(980, 620)
+
+        self.model = ConfigTableModel(self.config_manager, self)
+        self.proxy_model = QtCore.QSortFilterProxyModel(self)
+        self.proxy_model.setSourceModel(self.model)
+        self.proxy_model.setFilterCaseSensitivity(Qt.CaseInsensitive)
+        self.proxy_model.setFilterKeyColumn(-1)
+
+        self._configure_table()
+        self._setup_ui_signals()
+        self._update_dirty_count(self.config_manager.dirty_count())
+        self._update_state("Disconnected")
+
+    def _configure_table(self):
+        self.table = self.ui.table_config_entries
+        self.table.setModel(self.proxy_model)
+        self.table.setItemDelegate(ConfigValueDelegate(self.table))
+        self.table.verticalHeader().setVisible(False)
+        self.table.verticalHeader().setDefaultSectionSize(34)
+        self.table.horizontalHeader().setStretchLastSection(False)
+        self.table.horizontalHeader().setSectionResizeMode(
+            ConfigTableModel.COL_NAME, QtWidgets.QHeaderView.Stretch
+        )
+        self.table.horizontalHeader().setSectionResizeMode(
+            ConfigTableModel.COL_VALUE, QtWidgets.QHeaderView.ResizeToContents
+        )
+        self.table.horizontalHeader().setSectionResizeMode(
+            ConfigTableModel.COL_DEFAULT, QtWidgets.QHeaderView.ResizeToContents
+        )
+        self.table.horizontalHeader().setSectionResizeMode(
+            ConfigTableModel.COL_TYPE, QtWidgets.QHeaderView.ResizeToContents
+        )
+        self.table.horizontalHeader().setSectionResizeMode(
+            ConfigTableModel.COL_STATE, QtWidgets.QHeaderView.ResizeToContents
+        )
+        self.table.horizontalHeader().setSectionResizeMode(
+            ConfigTableModel.COL_REVERT, QtWidgets.QHeaderView.Fixed
+        )
+        self.table.horizontalHeader().setSectionResizeMode(
+            ConfigTableModel.COL_RESTORE_DEFAULT, QtWidgets.QHeaderView.Fixed
+        )
+        self.table.setColumnWidth(ConfigTableModel.COL_REVERT, 38)
+        self.table.setColumnWidth(ConfigTableModel.COL_RESTORE_DEFAULT, 38)
 
     def _setup_ui_signals(self):
-        self.ui.btn_load_config_from_file.clicked.connect(self.on_btn_load_config_from_file_clicked)      
-        self.ui.btn_save_config_to_file.clicked.connect(self.on_btn_save_config_to_file_clicked)      
-        self.ui.btn_commit.clicked.connect(self.on_btn_commit_clicked)      
+        self.ui.txt_config_search.textChanged.connect(
+            lambda text: self.proxy_model.setFilterRegularExpression(
+                QtCore.QRegularExpression(QtCore.QRegularExpression.escape(text))
+            )
+        )
+        self.ui.btn_refresh_config.clicked.connect(self.on_btn_refresh_clicked)
+        self.ui.btn_load_config_from_file.clicked.connect(self.on_btn_load_config_from_file_clicked)
+        self.ui.btn_save_config_to_file.clicked.connect(self.on_btn_save_config_to_file_clicked)
+        self.ui.btn_apply_config.clicked.connect(self.on_btn_apply_clicked)
+        self.ui.btn_commit.clicked.connect(self.on_btn_commit_clicked)
+        self.config_manager.dirty_count_changed.connect(self._update_dirty_count)
+        self.config_manager.load_progress_changed.connect(self._update_progress)
+        self.config_manager.state_changed.connect(self._update_state)
+
+    def _update_dirty_count(self, count):
+        if count:
+            self.ui.lbl_config_dirty.setText(f"{count} edited")
+        else:
+            self.ui.lbl_config_dirty.setText("No pending edits")
+        self.ui.btn_apply_config.setEnabled(count > 0)
+
+    def _update_progress(self, current, total):
+        self.ui.progress_config_load.setVisible(total > 0 and current < total)
+        self.ui.progress_config_load.setRange(0, max(total, 1))
+        self.ui.progress_config_load.setValue(current)
+
+    def _update_state(self, state):
+        self.statusBar().showMessage(state)
+
+    def on_btn_refresh_clicked(self):
+        if self.config_manager.check_for_uncommitted_ui_changes():
+            answer = QMessageBox.question(
+                self,
+                "Discard edits?",
+                "Refreshing will discard edits that have not been applied.",
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No,
+            )
+            if answer != QMessageBox.Yes:
+                return
+        self.config_manager.load()
 
     def on_btn_load_config_from_file_clicked(self):
         file_path, _ = QFileDialog.getOpenFileName(
@@ -145,7 +264,9 @@ class ConfigWindow(QtWidgets.QMainWindow):
             
             msg.setWindowFlag(Qt.WindowStaysOnTopHint)  # Keep it on top
             msg.show()
-            msg.exec()            
+            msg.exec()
+        except (KeyError, ValueError, TypeError) as e:
+            QMessageBox.warning(self, "Import Failed", str(e))
 
 
     def on_btn_save_config_to_file_clicked(self):
@@ -173,7 +294,17 @@ class ConfigWindow(QtWidgets.QMainWindow):
             
             self.config_manager.save_config_entries_to_json(file_path)
 
+    def on_btn_apply_clicked(self):
+        self.config_manager.apply_changed_entries()
+
     def on_btn_commit_clicked(self):
+        if self.config_manager.check_for_uncommitted_ui_changes():
+            QMessageBox.warning(
+                self,
+                "Apply Changes First",
+                "Apply edited values to the device before saving to NVM.",
+            )
+            return
         self.config_manager.commit_database_to_flash()
            
 
@@ -197,6 +328,11 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.outfile = None
         self.outfile_errors = None
         self.last_motor_data_log_time = 0.0
+        self._auto_reconnect_port = ""
+        self._auto_reconnect_deadline = 0.0
+        self._auto_reconnect_timer = QtCore.QTimer(self)
+        self._auto_reconnect_timer.setInterval(750)
+        self._auto_reconnect_timer.timeout.connect(self._attempt_auto_reconnect)
 
         self.data_folder = os.path.dirname(os.path.normpath(__file__))
         self.ui.txt_data_dir.setText(self.data_folder)
@@ -327,14 +463,6 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.data_folder = os.path.normpath(folder)
             self.ui.txt_data_dir.setText(self.data_folder)
 
-    def on_btn_browse_bin_clicked(self):
-        file_path, _ = QFileDialog.getOpenFileName(None,
-                                                  'Select Binary File',
-                                                  self.data_folder)
-        if file_path != "":
-            #self.data_folder = os.path.normpath(folder)
-            self.ui.bin_file_path.setText(file_path)
-
     def on_btn_port_clicked(self):
         com_ports = get_com_port_options()
         if not com_ports:
@@ -345,14 +473,66 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         dialog = PortSelectDialog(com_ports, self.ui.txt_port.text(), self)
         if dialog.exec() == QtWidgets.QDialog.Accepted and dialog.selected_port:
             self.ui.txt_port.setText(dialog.selected_port)
+            self.connect_to_selected_port()
+            return
 
         self.update_interface_state()
 
     def on_btn_connect_clicked(self):
-        self.controller.connect(self.ui.txt_port.text())
-        self.ui.txt_log.setText("")
-        self.ui.terminal.reset()
+        self.connect_to_selected_port()
+
+    def connect_to_selected_port(self, clear_display=True):
+        selected_port = self.ui.txt_port.text()
+        if selected_port == "":
+            self.update_interface_state()
+            return
+
+        if self.controller.connected:
+            self.controller.disconnect()
+
+        self.controller.connect(selected_port)
+        if clear_display:
+            self.ui.txt_log.setText("")
+            self.ui.terminal.reset()
         self.update_interface_state() 
+
+    def start_auto_reconnect_to_selected_port(self, timeout_ms=10000):
+        selected_port = self.ui.txt_port.text().strip()
+        if selected_port == "" or self.controller.connected:
+            self.update_interface_state()
+            return
+
+        log.info("Starting automatic reconnect to %s", selected_port)
+        self._auto_reconnect_port = selected_port
+        self._auto_reconnect_deadline = time.monotonic() + (timeout_ms / 1000)
+        self._attempt_auto_reconnect()
+        if not self.controller.connected:
+            self._auto_reconnect_timer.start()
+
+    def _attempt_auto_reconnect(self):
+        if self.controller.connected:
+            self._auto_reconnect_timer.stop()
+            self.update_interface_state()
+            return
+
+        if self._auto_reconnect_port == "" or time.monotonic() > self._auto_reconnect_deadline:
+            self._auto_reconnect_timer.stop()
+            self.update_interface_state()
+            return
+
+        available_ports = [port.device for port in get_com_port_options()]
+        is_virtual_port = "://" in self._auto_reconnect_port
+        if self._auto_reconnect_port not in available_ports and not is_virtual_port:
+            self.ui.txt_status.setText("Reconnecting")
+            self.ui.txt_status.setStyleSheet("QLineEdit{background: rgb(237, 125, 49);}")
+            return
+
+        log.info("Attempting automatic reconnect to %s", self._auto_reconnect_port)
+        self.ui.txt_port.setText(self._auto_reconnect_port)
+        self.connect_to_selected_port(clear_display=False)
+
+        if self.controller.connected:
+            self._auto_reconnect_timer.stop()
 
     def on_btn_disconnect_clicked(self):
         self.controller.disconnect()
@@ -391,40 +571,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
     def on_btn_bootloader_clicked(self):
         popup = BootloaderWindow(self)
         popup.exec()
-        '''self.controller.transmit_cli_data(b"bootloader\n")
-        self.ui.txt_log.append("Sent 'bootloader' command, entering bootloader, resetting device...")
-        time.sleep(2) #Wait for USB re-enumeration
 
-        self.ui.txt_log.append("Finding bin path...")
-
-        bin_path = self.ui.bin_file_path.text()
-
-        self.ui.txt_log.append("Bin path found, running script")
-
-        if bin_path:
-            # USB backend setup
-            backend = usb.backend.libusb1.get_backend(
-                find_library=libusb_package.find_library
-            )
-
-            # Patch usb.core.find
-            _real_find = usb.core.find
-            def _patched_find(*args, **kwargs):
-                kwargs.setdefault("backend", backend)
-                return _real_find(*args, **kwargs)
-            usb.core.find = _patched_find
-
-            # Flash
-            start_addr = 0x08000000
-            download(filename=bin_path, address=start_addr)
-
-            self.ui.txt_log.append("Flash complete. Please reconnect the device to continue.")
-            time.sleep(2) #Wait for USB re-enumeration
-
-            self.ui.txt_log.append(self.ui.txt_port.text())
-            self.connected = True
-            self.controller.connect(self.ui.txt_port.text())
-            self.update_interface_state() '''
     def on_btn_open_config_clicked(self, data):
         if self.controller.connected:
             pass
@@ -479,151 +626,6 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.outfile_errors.close()
 
         event.accept()
-
-from PySide6.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton
-
-class BootloaderWindow(QDialog):
-    def __init__(self, main_window):
-        super().__init__()
-        self.main_window = main_window
-        self.ui = Ui_bootloader_window()
-        self.ui.setupUi(self)
-
-        self.controller = ComController()
-        # self.controller = ComControllerFake()
-
-        # set app title
-        self.setWindowTitle("Bootloader Tool")
-
-        self._setup_ui_signals()
-
-    def _setup_ui_signals(self):
-        self.ui.btn_browse_path.clicked.connect(self.on_btn_browse_bin_clicked)
-        self.ui.btn_verify.clicked.connect(self.on_btn_verify_clicked)
-        self.ui.btn_boot_mode.clicked.connect(self.on_btn_boot_mode_clicked)
-        self.ui.btn_flash.clicked.connect(self.on_btn_flash_clicked)
-        self.ui.btn_bl_disconnect.clicked.connect(self.on_btn_bl_disconnect_clicked)
-
-    def on_btn_bl_disconnect_clicked(self):
-        log.info("Bootloader disconnect clicked")
-        self.ui.boot_txt_log.append("Exiting DFU and jumping to application...")
-        try:
-            start_addr = 0x08000000
-            log.info("Sending DFU exit to 0x%08X", start_addr)
-            dfuse_exit(address=start_addr, vid=0x0483)
-            self.ui.boot_txt_log.append("DFU exit command sent. Waiting for device to leave DFU...")
-            QtWidgets.QApplication.processEvents()
-            wait_for_no_dfu_device(vid=0x0483, timeout=8.0)
-            self.ui.boot_txt_log.append("DFU device disconnected. Reconnect the serial port after the board restarts.")
-        except Exception as exc:
-            log.exception("Bootloader disconnect failed")
-            self.ui.boot_txt_log.append(f"[ERROR] {exc}")
-            self.ui.boot_txt_log.append("The board still appears to be in DFU mode.")
-
-    def on_btn_browse_bin_clicked(self):
-        file_path, _ = QFileDialog.getOpenFileName(
-            self,
-            'Select Binary File',
-            self.main_window.data_folder,
-            'Binary Files (*.bin);;All Files (*)',
-        )
-        if file_path != "":
-            #self.data_folder = os.path.normpath(folder)
-            self.ui.bin_file_path.setText(file_path)
-
-    def on_btn_boot_mode_clicked(self):
-        
-        if self.main_window.controller.connected:
-            log.info("Bootloader connect clicked; sending bootloader CLI command on %s", self.main_window.ui.txt_port.text())
-            self.main_window.controller.transmit_cli_data(b"bootloader\n")  
-            self.ui.boot_txt_log.append("Sent 'bootloader' command, entering bootloader, resetting device...")
-            QtWidgets.QApplication.processEvents()
-            time.sleep(0.25)
-            log.info("Releasing serial connection before waiting for DFU")
-            self.main_window.controller.disconnect()
-            self.main_window.update_interface_state()
-            self.ui.boot_txt_log.append("Serial connection released. Waiting for STM32 DFU...")
-            QtWidgets.QApplication.processEvents()
-
-            try:
-                wait_for_dfu_device(vid=0x0483, timeout=8.0)
-                self.ui.boot_txt_log.append("STM32 DFU device detected. Choose a .bin file, then click Flash.")
-            except Exception as exc:
-                log.exception("STM32 DFU device was not detected")
-                self.ui.boot_txt_log.append(f"[ERROR] {exc}")
-                self.ui.boot_txt_log.append("If the board LED stopped, it may be in bootloader mode but not visible to PyUSB.")
-        else:
-            log.info("Bootloader connect clicked while main controller is disconnected")
-            self.ui.boot_txt_log.append("Please connect to device serial port first")
-
-    def on_btn_flash_clicked(self):
-        log.info("Bootloader flash clicked")
-        self.ui.boot_txt_log.append("Finding bin path...")
-
-        bin_path = self.ui.bin_file_path.text()
-
-        if bin_path:
-            log.info("Flashing %s", bin_path)
-            self.ui.boot_txt_log.append("Bin path found, running script")
-
-            try:
-                start_addr = 0x08000000
-                download(filename=bin_path, address=start_addr, vid=0x0483)
-                self.ui.boot_txt_log.append("Flash complete. Click Disconnect to jump back to the application.")
-            except Exception as exc:
-                log.exception("Flash failed")
-                self.ui.boot_txt_log.append(f"[ERROR] Flash failed: {exc}")
-        else:
-            log.info("Flash clicked without a bin path")
-            self.ui.boot_txt_log.append("[ERROR] No bin path found")
-
-           
-    def on_btn_verify_clicked(self):
-        log.info("Bootloader verify clicked")
-        self.ui.boot_txt_log.append("Verifying flash...")
-        bin_path = self.ui.bin_file_path.text()
-
-        if not bin_path:
-            log.info("Verify clicked without a bin path")
-            self.ui.boot_txt_log.append("[ERROR] No binary file selected.")
-            return
-
-        # Load .bin file
-        with open(bin_path, "rb") as f:
-            bin_data = f.read()
-
-        total_size = len(bin_data)
-        log.info("Verifying %s (%d bytes)", bin_path, total_size)
-        self.ui.boot_txt_log.append(f"[INFO] Loaded {total_size} bytes from {bin_path}")
-
-        start_addr = 0x08000000
-
-        try:
-            readback = dfuse_upload_block(address=start_addr, data_size=total_size, vid=0x0483)
-        except Exception as exc:
-            log.exception("Verify failed")
-            self.ui.boot_txt_log.append(f"[ERROR] Verify failed: {exc}")
-            return
-
-        # Compare memory
-        self.ui.boot_txt_log.append("[INFO] Comparing file to flash contents...")
-        mismatch_count = 0
-        for i, (expected, actual) in enumerate(zip(bin_data, readback)):
-            if expected != actual:
-                if mismatch_count < 10:
-                    self.ui.boot_txt_log.append(
-                        f"[MISMATCH @ 0x{start_addr + i:08X}] File: 0x{expected:02X}, Device: 0x{actual:02X}"
-                    )
-                mismatch_count += 1
-
-        if mismatch_count == 0:
-            self.ui.boot_txt_log.append("[SUCCESS] Flash contents match the binary.")
-        else:
-            self.ui.boot_txt_log.append(f"[FAIL] {mismatch_count} mismatched bytes found.")
-
-        print(f"[VERIFY] Done. {mismatch_count} mismatches.")
-
-
 
 def main():
     logging.basicConfig(

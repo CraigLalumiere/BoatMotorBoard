@@ -134,6 +134,19 @@ class ComController:
         # print("Transmit CLI data: {0}".format(data))
         self.command_q.put(packet)
 
+    def transmit_cli_data_and_disconnect(self, data: bytes, timeout=0.5):
+        if not self.connected or self.com_thread is None:
+            return
+
+        packet = packets.build_packet_cli_data(data)
+        self.command_q.put(packet)
+        self.command_q.put(None)
+        self.com_thread.join(timeout)
+        self.com_thread = None
+        self.connected = False
+        log.info("controller disconnected after transmit")
+        self.event_q.put({'event': 'connection_status_changed'})
+
     def transmit_config_db_info_req(self):
         packet = packets.build_packet_config_db_info_req()
         self.command_q.put(packet)      

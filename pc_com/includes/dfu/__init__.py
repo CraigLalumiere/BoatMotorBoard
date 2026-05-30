@@ -9,6 +9,7 @@
 """
 
 import logging
+from contextlib import nullcontext
 from typing import List, Optional
 
 import usb
@@ -131,6 +132,7 @@ def _dfuse_download(
     data: bytes,
     xfer_size: int,
     start_address: int,
+    progress_callback=None,
 ) -> None:
     """Download data to DfuSe device.
 
@@ -147,7 +149,7 @@ def _dfuse_download(
         for page_num in range(segment.num_pages):
             page_addr = segment.addr + page_num * segment.page_size
             if start_address <= page_addr <= start_address + len(data):
-                logger.info(
+                logger.debug(
                     "Erasing page 0x%X of size %d in segment %d",
                     page_addr,
                     segment.page_size,
@@ -158,9 +160,12 @@ def _dfuse_download(
 
     # Download data
     dfuse.set_address(dev, interface, start_address)
-    progress = Progress()
-    with progress:
-        task = _make_progress_bar(progress, len(data))
+    if progress_callback is not None:
+        progress_callback(0, len(data))
+
+    progress = Progress() if progress_callback is None else None
+    with progress if progress is not None else nullcontext():
+        task = _make_progress_bar(progress, len(data)) if progress is not None else None
 
         bytes_downloaded = 0
         block_counter = 2 # must be greater than 1
@@ -183,6 +188,8 @@ def _dfuse_download(
             bytes_downloaded += chunk_size
             if task is not None:
                 progress.update(task, advance=chunk_size)
+            if progress_callback is not None:
+                progress_callback(bytes_downloaded, len(data))
 
 
 
@@ -273,7 +280,7 @@ def dfuse_upload_block(address: int, data_size: int, vid: Optional[int] = None, 
 
     # Read back flash in chunks
     block_counter = 2 # Must be greater than 1
-    print("Reading back flash from device...")
+    logger.debug("Reading back flash from device")
     for offset in range(0, data_size, xfer_size):
         chunk_addr = address + offset
         chunk_size = min(xfer_size, data_size - offset)
@@ -281,10 +288,10 @@ def dfuse_upload_block(address: int, data_size: int, vid: Optional[int] = None, 
         try:
             chunk = dfu.upload(dev, interface, wLength=chunk_size, block=block_counter)
             readback.extend(chunk)
-            print(f"Read 0x{chunk_addr:08X}")
+            logger.debug("Read 0x%08X", chunk_addr)
             block_counter += 1
         except Exception as e:
-            print(f"[ERROR] Failed to read 0x{chunk_addr:08X}: {e}")
+            logger.error("Failed to read 0x%08X: %s", chunk_addr, e)
             return
 
 
@@ -350,6 +357,7 @@ def _dfuse_download_with_retry(
     data: bytes,
     xfer_size: int,
     start_address: int,
+    progress_callback=None,
 ) -> None:
     """Download data to DfuSe device, with a retry to clear any leftover status.
 
@@ -361,18 +369,18 @@ def _dfuse_download_with_retry(
         start_address: Start address of data in device memory.
     """
     try:
-        _dfuse_download(dev, interface, data, xfer_size, start_address)
+        _dfuse_download(dev, interface, data, xfer_size, start_address, progress_callback)
     except usb.core.USBError as err:
         if "pipe error" in str(err).lower():
             logger.debug("Clearing status before DfuSe download")
             dfu.clear_status(dev, interface)
-            _dfuse_download(dev, interface, data, xfer_size, start_address)
+            _dfuse_download(dev, interface, data, xfer_size, start_address, progress_callback)
         else:
             raise err
 
 
 def _dfu_download(
-    dev: usb.core.Device, interface: int, data: bytes, xfer_size: int
+    dev: usb.core.Device, interface: int, data: bytes, xfer_size: int, progress_callback=None
 ) -> None:
     """Download data to DFU device.
 
@@ -383,9 +391,12 @@ def _dfu_download(
         xfer_size: Transfer size to use when downloading.
     """
     # Download data
-    progress = Progress()
-    with progress:
-        task = _make_progress_bar(progress, len(data))
+    if progress_callback is not None:
+        progress_callback(0, len(data))
+
+    progress = Progress() if progress_callback is None else None
+    with progress if progress is not None else nullcontext():
+        task = _make_progress_bar(progress, len(data)) if progress is not None else None
 
         transaction = 0
         bytes_downloaded = 0
@@ -405,6 +416,8 @@ def _dfu_download(
             bytes_downloaded += chunk_size
             if task is not None:
                 progress.update(task, advance=chunk_size)
+            if progress_callback is not None:
+                progress_callback(bytes_downloaded, len(data))
 
     # End with empty download
     try:
@@ -458,6 +471,7 @@ def download(
     vid: Optional[int] = None,
     pid: Optional[int] = None,
     address: Optional[int] = None,
+    progress_callback=None,
 ) -> None:
     """Download a file to the DFU device defined by vid:pid. If vid:pid is not
     provided and only one DFU device is present, that device will be used.
@@ -504,9 +518,9 @@ def download(
             if address is None:
                 raise ValueError("Must provide address for DfuSe")
             _dfuse_download_with_retry(
-                dev, interface, data, dfu_desc.wTransferSize, address
+                dev, interface, data, dfu_desc.wTransferSize, address, progress_callback
             )
         else:
-            _dfu_download(dev, interface, data, dfu_desc.wTransferSize)
+            _dfu_download(dev, interface, data, dfu_desc.wTransferSize, progress_callback)
     finally:
         dfu.release_interface(dev)

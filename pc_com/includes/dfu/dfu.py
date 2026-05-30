@@ -121,7 +121,7 @@ def claim_interface(dev: usb.core.Device, interface: int) -> None:
         dev: USB device.
         interface: USB device interface.
     """
-    logger.info("Claiming USB DFU interface %d", interface)
+    logger.debug("Claiming USB DFU interface %d", interface)
     usb.util.claim_interface(dev, interface)
 
 
@@ -131,7 +131,7 @@ def release_interface(dev: usb.core.Device) -> None:
     Args:
         dev: USB device in DFU mode.
     """
-    logger.info("Releasing USB DFU interface")
+    logger.debug("Releasing USB DFU interface")
     usb.util.dispose_resources(dev)
 
 def upload(dev, interface, wLength, block=0):

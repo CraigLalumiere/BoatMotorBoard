@@ -59,13 +59,15 @@ The GUI uses Qt/PySide.
 
 Humans and LLM coding assistants should edit the `.ui` files, not the generated Python files created by `GUIRebuild.bat`. Generated UI Python files are overwritten when the GUI is rebuilt.
 
-1. From the repo root with the virtual environment active, launch Qt Designer:
+1. From the repo root with the virtual environment active, launch Qt Designer for the UI file you want to edit:
 
 ```powershell
 pyside6-designer .\pc_com\main_window.ui
+pyside6-designer .\pc_com\config_window.ui
+pyside6-designer .\pc_com\bootloader_window.ui
 ```
 
-2. Edit and save `main_window.ui` in Qt Designer.
+2. Edit and save the `.ui` file in Qt Designer.
 3. Rebuild the generated Python UI files:
 
 ```powershell

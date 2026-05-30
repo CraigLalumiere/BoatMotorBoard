@@ -6,12 +6,77 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>800</width>
-    <height>600</height>
+    <width>980</width>
+    <height>620</height>
    </rect>
   </property>
+  <property name="minimumSize">
+   <size>
+    <width>980</width>
+    <height>620</height>
+   </size>
+  </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string>Config Manager</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">QMainWindow {
+    background: #f6f8fa;
+}
+QGroupBox {
+    border: 0;
+    background: #eef2f6;
+}
+QTableView {
+    background: #ffffff;
+    alternate-background-color: #f8fafc;
+    border: 1px solid #cbd5e1;
+    gridline-color: #e2e8f0;
+    selection-background-color: #dbeafe;
+    selection-color: #0f172a;
+}
+QHeaderView::section {
+    background: #e8eef5;
+    border: 0;
+    border-right: 1px solid #cbd5e1;
+    padding: 7px;
+    font-weight: 700;
+}
+QLineEdit {
+    border: 1px solid #cbd5e1;
+    border-radius: 5px;
+    padding: 5px 8px;
+    background: #ffffff;
+}
+QToolButton {
+    border: 1px solid #b8c4d2;
+    border-radius: 5px;
+    padding: 5px 10px;
+    background: #ffffff;
+}
+QToolButton:hover {
+    background: #f1f5f9;
+}
+QToolButton#btn_apply_config {
+    background: #2563eb;
+    border-color: #1d4ed8;
+    color: white;
+    font-weight: 700;
+}
+QToolButton#btn_commit {
+    background: #0f766e;
+    border-color: #0f766e;
+    color: white;
+    font-weight: 700;
+}
+QLabel#lbl_config_dirty {
+    color: #334155;
+    font-weight: 700;
+    background: #e8eef5;
+    border: 1px solid #cbd5e1;
+    border-radius: 5px;
+    padding: 5px 8px;
+}</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout">
@@ -23,25 +88,109 @@
         <verstretch>0</verstretch>
        </sizepolicy>
       </property>
-      <property name="minimumSize">
-       <size>
-        <width>60</width>
-        <height>0</height>
-       </size>
-      </property>
       <property name="maximumSize">
        <size>
         <width>16777215</width>
-        <height>60</height>
+        <height>70</height>
        </size>
       </property>
       <property name="title">
        <string/>
       </property>
-      <property name="flat">
-       <bool>false</bool>
-      </property>
       <layout class="QHBoxLayout" name="horizontalLayout">
+       <property name="spacing">
+        <number>8</number>
+       </property>
+       <property name="leftMargin">
+        <number>8</number>
+       </property>
+       <property name="topMargin">
+        <number>8</number>
+       </property>
+       <property name="rightMargin">
+        <number>8</number>
+       </property>
+       <property name="bottomMargin">
+        <number>8</number>
+       </property>
+       <item>
+        <widget class="QLineEdit" name="txt_config_search">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>220</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>260</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <property name="placeholderText">
+          <string>Search config</string>
+         </property>
+         <property name="clearButtonEnabled">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="lbl_config_dirty">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>140</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>160</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <property name="text">
+          <string>No pending edits</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignmentFlag::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QProgressBar" name="progress_config_load">
+         <property name="visible">
+          <bool>false</bool>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>90</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <property name="maximum">
+          <number>1</number>
+         </property>
+         <property name="value">
+          <number>0</number>
+         </property>
+         <property name="textVisible">
+          <bool>false</bool>
+         </property>
+        </widget>
+       </item>
        <item>
         <spacer name="horizontalSpacer">
          <property name="orientation">
@@ -49,30 +198,35 @@
          </property>
          <property name="sizeHint" stdset="0">
           <size>
-           <width>547</width>
+           <width>20</width>
            <height>20</height>
           </size>
          </property>
         </spacer>
        </item>
        <item>
+        <widget class="QToolButton" name="btn_refresh_config">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>30</height>
+          </size>
+         </property>
+         <property name="text">
+          <string>Refresh</string>
+         </property>
+        </widget>
+       </item>
+       <item>
         <widget class="QToolButton" name="btn_load_config_from_file">
          <property name="minimumSize">
           <size>
-           <width>170</width>
-           <height>0</height>
+           <width>0</width>
+           <height>30</height>
           </size>
          </property>
-         <property name="font">
-          <font>
-           <pointsize>11</pointsize>
-          </font>
-         </property>
-         <property name="styleSheet">
-          <string notr="true"/>
-         </property>
          <property name="text">
-          <string>Load Config From File</string>
+          <string>Import</string>
          </property>
         </widget>
        </item>
@@ -80,20 +234,25 @@
         <widget class="QToolButton" name="btn_save_config_to_file">
          <property name="minimumSize">
           <size>
-           <width>170</width>
-           <height>0</height>
+           <width>0</width>
+           <height>30</height>
           </size>
          </property>
-         <property name="font">
-          <font>
-           <pointsize>11</pointsize>
-          </font>
+         <property name="text">
+          <string>Export</string>
          </property>
-         <property name="styleSheet">
-          <string notr="true"/>
+        </widget>
+       </item>
+       <item>
+        <widget class="QToolButton" name="btn_apply_config">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>30</height>
+          </size>
          </property>
          <property name="text">
-          <string>Save Config To File</string>
+          <string>Apply Changes</string>
          </property>
         </widget>
        </item>
@@ -101,20 +260,12 @@
         <widget class="QToolButton" name="btn_commit">
          <property name="minimumSize">
           <size>
-           <width>120</width>
-           <height>0</height>
+           <width>0</width>
+           <height>30</height>
           </size>
          </property>
-         <property name="font">
-          <font>
-           <pointsize>11</pointsize>
-          </font>
-         </property>
-         <property name="styleSheet">
-          <string notr="true"/>
-         </property>
          <property name="text">
-          <string>Commit</string>
+          <string>Save To NVM</string>
          </property>
         </widget>
        </item>
@@ -122,23 +273,19 @@
      </widget>
     </item>
     <item>
-     <widget class="QScrollArea" name="scroll_frame_config_viewer">
-      <property name="horizontalScrollBarPolicy">
-       <enum>Qt::ScrollBarPolicy::ScrollBarAlwaysOff</enum>
-      </property>
-      <property name="widgetResizable">
+     <widget class="QTableView" name="table_config_entries">
+      <property name="alternatingRowColors">
        <bool>true</bool>
       </property>
-      <widget class="QWidget" name="frame_config_viewer">
-       <property name="geometry">
-        <rect>
-         <x>0</x>
-         <y>0</y>
-         <width>780</width>
-         <height>507</height>
-        </rect>
-       </property>
-      </widget>
+      <property name="selectionBehavior">
+       <enum>QAbstractItemView::SelectionBehavior::SelectRows</enum>
+      </property>
+      <property name="selectionMode">
+       <enum>QAbstractItemView::SelectionMode::ExtendedSelection</enum>
+      </property>
+      <property name="sortingEnabled">
+       <bool>true</bool>
+      </property>
      </widget>
     </item>
    </layout>
